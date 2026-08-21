@@ -1106,24 +1106,66 @@ if (addProductForm) {
 }
 
 // ========================================================================
-// 8. Startup Execution & Live Feed
+// 8. Real-Time RFC 6455 WebSocket Client & Live Stream
 // ========================================================================
+function initWebSocket() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${location.host}/ws`;
+  
+  let ws;
+  try {
+    ws = new WebSocket(wsUrl);
+  } catch (e) {
+    console.warn('[WebSocket Init Error]', e);
+    return;
+  }
+
+  const wsBadge = document.getElementById('wsLiveStatus');
+
+  ws.onopen = () => {
+    console.log('[VietLang WebSocket] Connection Established to', wsUrl);
+    if (wsBadge) {
+      wsBadge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;"></span> WEBSOCKET LIVE`;
+      wsBadge.style.color = '#10B981';
+    }
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('[VietLang WS Event]', data);
+
+      if (data.type === 'order_placed') {
+        showToast(`⚡ [LIVE WS] Khách hàng ${data.customer_name} (${data.city || 'Việt Nam'}) vừa đặt đơn ${formatVND(data.total)}!`, 'success');
+        fetchInitialData();
+      } else if (data.type === 'stock_updated') {
+        showToast(`📦 [LIVE WS] Kho vừa nhập thêm +${data.amount} sản phẩm!`, 'info');
+        fetchInitialData();
+      } else if (data.type === 'product_created') {
+        showToast(`🌿 [LIVE WS] Nông sản mới [${data.product_name}] vừa lên kệ!`, 'success');
+        fetchInitialData();
+      } else if (data.type === 'user_registered') {
+        showToast(`👤 [LIVE WS] Thành viên mới [${data.user_name}] (${data.role}) vừa gia nhập!`, 'info');
+      }
+    } catch (e) {
+      console.log('[WS Raw Message]', event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    if (wsBadge) {
+      wsBadge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#F59E0B;display:inline-block;"></span> WS RECONNECTING`;
+      wsBadge.style.color = '#F59E0B';
+    }
+    setTimeout(initWebSocket, 3000);
+  };
+
+  ws.onerror = (err) => {
+    console.warn('[WS Error]', err);
+  };
+}
+
 initFlashSaleTimer();
 fetchInitialData();
+initWebSocket();
 
-function initLiveActivityFeed() {
-  const activities = [
-    "Khách hàng tại Sóc Trăng vừa đặt mua 10kg Gạo ST25 Lúa Tôm OCOP!",
-    "Khách hàng tại Quận 1 vừa áp mã NONGSANVIET20 giảm 76.000 VNĐ!",
-    "HTX Xoài Cát Hòa Lộc vừa hoàn tất xuất xưởng lô VietGAP mới!",
-    "Khách hàng tại Cần Thơ vừa thanh toán đơn hàng VietQR thành công!",
-    "HTX Cà Phê Cư M'gar vừa xuất xưởng lô Robusta Organic USDA!"
-  ];
-  let idx = 0;
-  setInterval(() => {
-    const text = activities[idx % activities.length];
-    showToast(text, "success");
-    idx++;
-  }, 24000);
-}
-initLiveActivityFeed();

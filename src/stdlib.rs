@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH, Instant};
 use std::io::{Read, Write};
+use std::sync::{Arc, Mutex};
 use crate::error::{VietError, VietResult};
 use crate::interpreter::value::Value;
 
@@ -451,7 +452,7 @@ pub fn builtin_uuid(_args: &[Value], _line: usize, _col: usize) -> VietResult<Va
 }
 
 /// RFC 3174 SHA-1 Digest implementation
-fn sha1_digest(data: &[u8]) -> [u8; 20] {
+pub fn sha1_digest(data: &[u8]) -> [u8; 20] {
     let mut h0: u32 = 0x67452301;
     let mut h1: u32 = 0xEFCDAB89;
     let mut h2: u32 = 0x98BADCFE;
@@ -512,7 +513,7 @@ fn sha1_digest(data: &[u8]) -> [u8; 20] {
     out
 }
 
-fn base64_encode_bytes(bytes: &[u8]) -> String {
+pub fn base64_encode_bytes(bytes: &[u8]) -> String {
     const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::new();
     for chunk in bytes.chunks(3) {
@@ -544,6 +545,61 @@ pub fn builtin_sha1(args: &[Value], line: usize, col: usize) -> VietResult<Value
     let digest = sha1_digest(s);
     let hex: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
     Ok(Value::String(hex))
+}
+
+pub static WEBSOCKET_CLIENTS: Mutex<Option<Vec<Arc<Mutex<std::net::TcpStream>>>>> = Mutex::new(None);
+
+pub fn encode_ws_text_frame(payload: &str) -> Vec<u8> {
+    let bytes = payload.as_bytes();
+    let mut frame = Vec::new();
+    frame.push(0x81); // FIN + Opcode 1 (Text)
+    let len = bytes.len();
+    if len <= 125 {
+        frame.push(len as u8);
+    } else if len <= 65535 {
+        frame.push(126);
+        frame.extend_from_slice(&(len as u16).to_be_bytes());
+    } else {
+        frame.push(127);
+        frame.extend_from_slice(&(len as u64).to_be_bytes());
+    }
+    frame.extend_from_slice(bytes);
+    frame
+}
+
+pub fn broadcast_ws_message(msg: &str) {
+    let frame = encode_ws_text_frame(msg);
+    let mut guard = WEBSOCKET_CLIENTS.lock().unwrap();
+    if let Some(ref mut clients) = *guard {
+        clients.retain(|client_lock: &Arc<Mutex<std::net::TcpStream>>| {
+            if let Ok(mut stream) = client_lock.lock() {
+                stream.write_all(&frame).is_ok() && stream.flush().is_ok()
+            } else {
+                false
+            }
+        });
+    }
+}
+
+pub fn register_ws_client(stream: Arc<Mutex<std::net::TcpStream>>) {
+    let mut guard = WEBSOCKET_CLIENTS.lock().unwrap();
+    let clients = guard.get_or_insert_with(Vec::new);
+    clients.push(stream);
+}
+
+pub fn builtin_ws_broadcast(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("ws_broadcast() takes at least 1 argument (data)".into(), line, col));
+    }
+    let msg = match &args[0] {
+        Value::String(s) => s.clone(),
+        other => match builtin_json_stringify(&[other.clone()], line, col) {
+            Ok(Value::String(s)) => s,
+            _ => format!("{}", other),
+        }
+    };
+    broadcast_ws_message(&msg);
+    Ok(Value::Bool(true))
 }
 
 pub fn builtin_ws_accept_key(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
@@ -1638,7 +1694,6 @@ pub fn builtin_time_unix_ms(_args: &[Value], _line: usize, _col: usize) -> VietR
 // std.db_sqlite — Real File-Backed SQLite ACID Storage Engine
 // ============================================================
 
-use std::sync::Mutex;
 use rusqlite::{Connection, types::ValueRef};
 
 static SQLITE_REGISTRY: Mutex<Option<HashMap<usize, Connection>>> = Mutex::new(None);

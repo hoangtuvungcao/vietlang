@@ -85,6 +85,8 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         if map_has(res, "error") {
             return api_error(400, to_string(map_get(res, "error")))
         }
+
+        ws_broadcast("{\"type\":\"user_registered\",\"user_name\":\"" + name + "\",\"role\":\"" + role + "\",\"timestamp\":" + to_string(time_now()) + "}")
         return api_response(201, res, "Dang ky tai khoan thanh cong!")
     }
 
@@ -172,6 +174,8 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         let mut res = map_new()
         res = map_set(res, "id", prod_id)
         res = map_set(res, "name", name)
+
+        ws_broadcast("{\"type\":\"product_created\",\"product_name\":\"" + name + "\",\"price\":" + to_string(price) + ",\"timestamp\":" + to_string(time_now()) + "}")
         return api_response(201, res, "Them nong san moi vao he thong thanh cong!")
     }
 
@@ -185,6 +189,8 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         let prod_id = map_get(body_map, "product_id")
         let amount = map_get(body_map, "amount")
         sqlite_execute(db, "UPDATE products SET stock = stock + ? WHERE id = ?;", [amount, prod_id])
+
+        ws_broadcast("{\"type\":\"stock_updated\",\"product_id\":" + to_string(prod_id) + ",\"amount\":" + to_string(amount) + ",\"timestamp\":" + to_string(time_now()) + "}")
         return api_response(200, map_set(map_new(), "product_id", prod_id), "Nhap hang thanh cong")
     }
 
@@ -224,6 +230,8 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         if map_has(res, "error") {
             return api_error(400, to_string(map_get(res, "error")))
         }
+
+        ws_broadcast("{\"type\":\"order_placed\",\"customer_name\":\"" + customer_name + "\",\"city\":\"" + city + "\",\"total\":" + to_string(map_get(res, "total")) + ",\"timestamp\":" + to_string(time_now()) + "}")
         return api_response(201, res, "Dat hang thanh cong")
     }
 

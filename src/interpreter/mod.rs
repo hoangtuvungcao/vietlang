@@ -132,10 +132,11 @@ impl Interpreter {
             ("builtin_mysql_exec", Some(2)),
             ("builtin_mysql_execute", None),
             ("builtin_mysql_query", None),
-            // HTTP & Network Clients
+            // HTTP & Network Clients & WebSockets
             ("http_fetch", None),
             ("csv_parse", Some(1)),
             ("csv_stringify", Some(1)),
+            ("ws_broadcast", None),
 
             // Concurrency
             ("spawn", None),
@@ -1338,6 +1339,7 @@ impl Interpreter {
             "http_fetch" | "builtin_http_fetch" => crate::stdlib::builtin_http_fetch(args, span.line, span.column),
             "csv_parse" | "builtin_csv_parse" => crate::stdlib::builtin_csv_parse(args, span.line, span.column),
             "csv_stringify" | "builtin_csv_stringify" => crate::stdlib::builtin_csv_stringify(args, span.line, span.column),
+            "ws_broadcast" | "builtin_ws_broadcast" => crate::stdlib::builtin_ws_broadcast(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),
@@ -1494,6 +1496,50 @@ impl Interpreter {
                         let mut buf = vec![0u8; content_length];
                         let _ = reader.read_exact(&mut buf);
                         body = String::from_utf8_lossy(&buf).to_string();
+                    }
+
+                    // WebSocket RFC 6455 Handshake Upgrade
+                    if headers_map.contains_key("sec-websocket-key") || headers_map.get("upgrade").map(|v| match v { Value::String(s) => s.to_lowercase().contains("websocket"), _ => false }).unwrap_or(false) {
+                        let ws_key = match headers_map.get("sec-websocket-key") {
+                            Some(Value::String(s)) => s.clone(),
+                            _ => "".to_string(),
+                        };
+                        if !ws_key.is_empty() {
+                            let concat = format!("{}258EAFA5-E914-47DA-95CA-C5AB0DC85B11", ws_key);
+                            let digest = crate::stdlib::sha1_digest(concat.as_bytes());
+                            let accept_key = crate::stdlib::base64_encode_bytes(&digest);
+                            let handshake_resp = format!(
+                                "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {}\r\nServer: VietLang-WebSocket/1.0\r\n\r\n",
+                                accept_key
+                            );
+                            let _ = stream.write_all(handshake_resp.as_bytes());
+                            let _ = stream.flush();
+
+                            let welcome = format!("{{\"type\":\"connection_established\",\"message\":\"VietLang Real-Time WebSocket Connected\",\"timestamp\":{}}}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs());
+                            let welcome_frame = crate::stdlib::encode_ws_text_frame(&welcome);
+                            let _ = stream.write_all(&welcome_frame);
+                            let _ = stream.flush();
+
+                            let stream_arc = std::sync::Arc::new(std::sync::Mutex::new(stream));
+                            crate::stdlib::register_ws_client(stream_arc.clone());
+
+                            std::thread::spawn(move || {
+                                let mut buf = [0u8; 4096];
+                                loop {
+                                    let res = if let Ok(mut s) = stream_arc.lock() {
+                                        s.read(&mut buf)
+                                    } else {
+                                        break;
+                                    };
+                                    match res {
+                                        Ok(0) | Err(_) => break,
+                                        Ok(_) => {}
+                                    }
+                                }
+                            });
+
+                            continue;
+                        }
                     }
 
                     // CORS OPTIONS Preflight
