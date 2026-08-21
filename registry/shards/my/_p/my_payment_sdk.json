@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "author": "hoangtuvungcao",
   "repository": "https://github.com/hoangtuvungcao/my_payment_sdk.git",
-  "type": "lib",
   "description": "VietLang Payment Gateway SDK with VietQR and HMAC SHA256",
-  "main": "src/main.vl",
-  "dependencies": {},
-  "license": "MIT"
+  "checksum": "vlt_bd9f9e7f97dd31f4",
+  "keywords": ["my_payment_sdk"]
 }

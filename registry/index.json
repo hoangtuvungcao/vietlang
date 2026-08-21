@@ -2,6 +2,21 @@
   "registry_version": "1.0.0",
   "updated_at": "2026-08-21T08:15:00Z",
   "packages": {
+    "my_payment_sdk": {
+      "name": "my_payment_sdk",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "VietLang Payment Gateway SDK with VietQR and HMAC SHA256",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/my_payment_sdk.git",
+          "checksum": "vlt_bd9f9e7f97dd31f4",
+          "keywords": ["my_payment_sdk"]
+        }
+      }
+    },
+
     "viet_agri_pay": {
       "name": "viet_agri_pay",
       "latest": "1.0.0",

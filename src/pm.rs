@@ -783,15 +783,20 @@ pub fn show_docs(module_name: &str) {
     let clean = module_name.trim_start_matches("std.");
     let std_path = format!("std/{}.vl", clean);
     let mod_path = format!("modules/{}/src/main.vl", module_name);
+    let pkg_src_path = format!("{}/src/main.vl", module_name);
+    let pkg_readme_path = format!("{}/README.md", module_name);
+    let mod_readme_path = format!("modules/{}/README.md", module_name);
 
     let target_path = if Path::new(&std_path).exists() {
         std_path
     } else if Path::new(&mod_path).exists() {
         mod_path
-    } else if Path::new(module_name).exists() {
+    } else if Path::new(&pkg_src_path).exists() {
+        pkg_src_path
+    } else if Path::new(module_name).exists() && !Path::new(module_name).is_dir() {
         module_name.to_string()
     } else {
-        eprintln!("\x1b[31mError:\x1b[0m Module '{}' not found in std/ or modules/.", module_name);
+        eprintln!("\x1b[31mError:\x1b[0m Module '{}' not found in std/, modules/, or local path.", module_name);
         return;
     };
 
@@ -799,6 +804,22 @@ pub fn show_docs(module_name: &str) {
     println!("\x1b[36m║ Module: \x1b[32m{:<58}\x1b[36m ║\x1b[0m", module_name);
     println!("\x1b[36m║ File:   \x1b[33m{:<58}\x1b[36m ║\x1b[0m", target_path);
     println!("\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m\n");
+
+    let readme_file = if Path::new(&pkg_readme_path).exists() {
+        Some(pkg_readme_path)
+    } else if Path::new(&mod_readme_path).exists() {
+        Some(mod_readme_path)
+    } else {
+        None
+    };
+
+    if let Some(r_path) = readme_file {
+        if let Ok(readme_content) = fs::read_to_string(&r_path) {
+            println!("\x1b[35m=== Package Documentation ({}) ===\x1b[0m\n", r_path);
+            println!("{}\n", readme_content.trim());
+            println!("\x1b[36m=== Exported Function Signatures ===\x1b[0m\n");
+        }
+    }
 
     if let Ok(content) = fs::read_to_string(&target_path) {
         let mut doc_buf: Vec<String> = Vec::new();

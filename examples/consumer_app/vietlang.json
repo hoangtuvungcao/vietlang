@@ -1,0 +1,11 @@
+{
+  "name": "examples/consumer_app",
+  "version": "1.0.0",
+  "author": "your_github_username",
+  "repository": "https://github.com/your_github_username/examples/consumer_app.git",
+  "type": "api",
+  "description": "High-performance backend module built with VietLang",
+  "main": "src/main.vl",
+  "dependencies": {},
+  "license": "MIT"
+}
