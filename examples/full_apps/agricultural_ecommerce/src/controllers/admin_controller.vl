@@ -4,8 +4,8 @@
 // ========================================================================
 
 import std.http_router
-import examples.full_apps.agricultural_ecommerce.src.repositories.order_repo
-import examples.full_apps.agricultural_ecommerce.src.repositories.product_repo
+import src.repositories.order_repo
+import src.repositories.product_repo
 
 fn handle_admin_analytics(db) {
     let orders = order_repo_get_all(db)

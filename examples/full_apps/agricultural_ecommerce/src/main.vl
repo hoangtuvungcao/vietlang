@@ -9,8 +9,8 @@ import std.http2
 import std.middleware
 import std.metrics
 import std.ws
-import examples.full_apps.agricultural_ecommerce.src.config.database
-import examples.full_apps.agricultural_ecommerce.src.routes.api_router
+import src.config.database
+import src.routes.api_router
 
 // ------------------------------------------------------------------------
 // Dynamic Configuration Loader (.env, config.json, and OS Environment)

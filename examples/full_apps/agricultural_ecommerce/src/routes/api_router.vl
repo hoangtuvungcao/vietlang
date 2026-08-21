@@ -3,11 +3,11 @@
 // Unified Enterprise REST API Dispatcher (Auth, RBAC, Catalog, Orders, Admin)
 // ========================================================================
 
-import examples.full_apps.agricultural_ecommerce.src.repositories.product_repo
-import examples.full_apps.agricultural_ecommerce.src.repositories.order_repo
-import examples.full_apps.agricultural_ecommerce.src.services.order_service
-import examples.full_apps.agricultural_ecommerce.src.services.auth_service
-import examples.full_apps.agricultural_ecommerce.src.controllers.admin_controller
+import src.repositories.product_repo
+import src.repositories.order_repo
+import src.services.order_service
+import src.services.auth_service
+import src.controllers.admin_controller
 import std.db_sqlite
 import std.openapi
 import std.sse

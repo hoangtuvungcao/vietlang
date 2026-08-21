@@ -454,12 +454,27 @@ impl Interpreter {
                     format!("modules/{}/src/main.vl", joined),
                     format!("modules/{}/src/lib.vl", joined),
                     format!("modules/{}/mod.vl", joined),
-                    if path.len() > 1 && path[0] == "std" {
-                        format!("std/{}.vl", path[1..].join("/"))
-                    } else {
-                        String::new()
-                    },
                 ];
+
+                // If path contains 'src', also search from 'src' onwards
+                if let Some(src_pos) = path.iter().position(|seg| seg == "src") {
+                    let from_src = path[src_pos..].join("/");
+                    let after_src = path[src_pos+1..].join("/");
+                    search_paths.push(format!("{}.vl", from_src));
+                    search_paths.push(format!("{}.vl", after_src));
+                    search_paths.push(format!("src/{}.vl", after_src));
+                }
+
+                // If path contains 'examples', also search relative to current repo
+                if let Some(app_pos) = path.iter().position(|seg| seg == "agricultural_ecommerce" || seg == "viet_fintech_gateway" || seg == "viet_finance_desktop") {
+                    let from_app = path[app_pos+1..].join("/");
+                    search_paths.push(format!("{}.vl", from_app));
+                    search_paths.push(format!("src/{}.vl", from_app));
+                }
+
+                if path.len() > 1 && path[0] == "std" {
+                    search_paths.push(format!("std/{}.vl", path[1..].join("/")));
+                }
 
                 // Global ~/.vietlang paths
                 if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {

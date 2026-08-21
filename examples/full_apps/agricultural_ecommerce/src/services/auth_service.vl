@@ -5,7 +5,7 @@
 
 import std.security
 import std.jwt
-import examples.full_apps.agricultural_ecommerce.src.repositories.user_repo
+import src.repositories.user_repo
 
 fn auth_service_register(db, name: String, email: String, param3: String, param4: String = "", role: String = "CUSTOMER") {
     let mut phone = ""

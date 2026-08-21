@@ -3,7 +3,7 @@
 // Business Logic for Categories, Products, and Filters
 // ========================================================================
 
-import examples.full_apps.agricultural_ecommerce.src.repositories.product_repo
+import src.repositories.product_repo
 
 fn catalog_service_get_categories(db) {
     return product_repo_get_categories(db)
