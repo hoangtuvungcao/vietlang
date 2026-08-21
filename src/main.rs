@@ -14,6 +14,7 @@ mod parser;
 mod interpreter;
 mod stdlib;
 pub mod vm;
+mod pm;
 
 use std::env;
 use std::fs;
@@ -50,6 +51,9 @@ fn main() {
         match args[1].as_str() {
             "--help" | "-h" => print_help(),
             "--version" | "-v" => println!("VietLang v{}", VERSION),
+            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" => {
+                pm::handle_vpm_command(&args[1..]);
+            }
             "--tokens" => {
                 if args.len() < 3 {
                     eprintln!("Usage: vietlang --tokens <file.vl>");
@@ -77,19 +81,30 @@ fn main() {
 }
 
 fn print_help() {
-    println!("VietLang v{} — A Backend-First Programming Language", VERSION);
+    println!("VietLang v{} - A Backend-First Programming Language", VERSION);
     println!();
     println!("USAGE:");
-    println!("  vietlang                  Start interactive REPL");
-    println!("  vietlang <file.vl>        Execute a VietLang source file");
-    println!("  vietlang --tokens <file>  Show tokenized output");
-    println!("  vietlang --ast <file>     Show parsed AST");
-    println!("  vietlang --version        Show version");
-    println!("  vietlang --help           Show this help");
+    println!("  vietlang                          Start interactive REPL");
+    println!("  vietlang <file.vl>                Execute a VietLang source file");
+    println!("  vietlang --vm <file.vl>           Execute via Bytecode VM");
+    println!("  vietlang install <pkg[@version]>  Install community package (e.g. redis@1.2.0)");
+    println!("  vietlang update [pkg[@version]]   Update package(s) to latest or target version");
+    println!("  vietlang remove <pkg>             Remove an installed package");
+    println!("  vietlang search <query>           Search community package registry");
+    println!("  vietlang init <name> [template]   Initialize project (api | lib | microservice)");
+    println!("  vietlang list                     List installed dependencies");
+    println!("  vietlang docs <module>            Inspect module exported functions");
+    println!("  vietlang publish                  Validate & prepare release metadata");
+    println!("  vietlang --tokens <file>          Show tokenized output");
+    println!("  vietlang --ast <file>             Show parsed AST");
+    println!("  vietlang --version                Show version");
+    println!("  vietlang --help                   Show this help");
     println!();
     println!("EXAMPLES:");
-    println!("  vietlang hello.vl         Run hello.vl");
-    println!("  vietlang                  Start REPL");
+    println!("  vietlang install redis@1.2.0      Install Redis module");
+    println!("  vietlang search postgres          Search for PostgreSQL packages");
+    println!("  vietlang hello.vl                 Run hello.vl");
+    println!("  vietlang                          Start REPL");
 }
 
 fn run_file(path: &str) {

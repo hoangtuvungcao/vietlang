@@ -80,8 +80,9 @@ fn vpm_install(source: String) {
     if source == "" {
         println("Error: Module name or Git URL required.")
         println("Examples:")
+        println("  vietlang vpm.vl install redis")
+        println("  vietlang vpm.vl install redis@1.2.0")
         println("  vietlang vpm.vl install https://github.com/user/my_module.git")
-        println("  vietlang vpm.vl install local_auth_module")
         return none
     }
 
@@ -92,29 +93,41 @@ fn vpm_install(source: String) {
 
     dir_create("modules")
 
-    let mut pkg_name = source
-    let is_git = source.starts_with("http://") || source.starts_with("https://") || source.starts_with("git@")
+    let parts = source.split("@")
+    let raw_name = parts[0]
+    let mut version = "latest"
+    if parts.len() > 1 && parts[1] != "" {
+        version = parts[1]
+    }
+
+    let mut pkg_name = raw_name
+    let mut git_url = raw_name
+    let is_git = raw_name.starts_with("http://") || raw_name.starts_with("https://") || raw_name.starts_with("git@")
 
     if is_git {
-        let mut clean_url = source
-        if source.ends_with(".git") {
-            clean_url = substring(source, 0, source.len() - 4)
+        let mut clean_url = raw_name
+        if raw_name.ends_with(".git") {
+            clean_url = substring(raw_name, 0, raw_name.len() - 4)
         }
-        let parts = clean_url.split("/")
-        pkg_name = parts[parts.len() - 1]
-
-        println("Cloning Git repository: " + source + " into modules/" + pkg_name + "...")
-        let clone_cmd = "git clone " + source + " modules/" + pkg_name
-        let res = system_cmd(clone_cmd)
-        if !map_get(res, "success") {
-            println("Git clone error: " + to_string(map_get(res, "stderr")))
-            return none
-        }
+        let url_parts = clean_url.split("/")
+        pkg_name = url_parts[url_parts.len() - 1]
+    } else if raw_name.contains("/") {
+        let url_parts = raw_name.split("/")
+        pkg_name = url_parts[url_parts.len() - 1]
+        git_url = "https://github.com/" + raw_name + ".git"
     } else {
-        dir_create("modules/" + pkg_name)
-        dir_create("modules/" + pkg_name + "/src")
-        let stub_content = "// Community module: " + pkg_name + "\nfn info() -> String {\n    return \"Module " + pkg_name + "\"\n}\n"
-        file_write("modules/" + pkg_name + "/src/main.vl", stub_content)
+        // Community registry
+        pkg_name = raw_name
+        git_url = "https://github.com/hoangtuvungcao/vietlang_" + raw_name + ".git"
+    }
+
+    println("Resolving module '" + pkg_name + "' (version: " + version + ") from " + git_url + "...")
+    let clone_cmd = "git clone " + git_url + " modules/" + pkg_name
+    let res = system_cmd(clone_cmd)
+
+    if version != "latest" && file_exists("modules/" + pkg_name + "/.git") {
+        let checkout_cmd = "cd modules/" + pkg_name + " && git checkout " + version
+        system_cmd(checkout_cmd)
     }
 
     // Update vietlang.json
@@ -125,7 +138,7 @@ fn vpm_install(source: String) {
         deps = map_get(manifest, "dependencies")
     }
 
-    let new_deps = map_set(deps, pkg_name, source)
+    let new_deps = map_set(deps, pkg_name, version)
     let updated_manifest = map_set(manifest, "dependencies", new_deps)
     file_write("vietlang.json", json_stringify(updated_manifest, true))
 
