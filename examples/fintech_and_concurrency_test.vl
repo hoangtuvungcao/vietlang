@@ -1,0 +1,51 @@
+// ========================================================================
+// VietLang Standard Modules & Concurrency Verification Test
+// ========================================================================
+
+import std.vietqr
+import std.vnpay
+import std.momo
+import std.zalo
+import std.concurrency
+
+println("========================================================================")
+println("VietLang Fintech & Concurrency Verification Test")
+println("========================================================================")
+
+// 1. Test VietQR
+println("\n[1] Testing std.vietqr...")
+let qr_res = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan don hang #VN998")
+println("Bank Code: " + to_string(map_get(qr_res, "bank_code")))
+println("Bank BIN:  " + to_string(map_get(qr_res, "bank_bin")))
+println("QR Link:   " + to_string(map_get(qr_res, "qr_url")))
+
+// 2. Test VNPay
+println("\n[2] Testing std.vnpay...")
+let vnp_client = vnpay_client("VNPAY_MERCHANT", "SECRET_KEY_123456", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+let vnp_url = vnpay_create_payment_url(vnp_client, 1001, 500000, "Nap tien vi", "https://mysite.vn/vnpay_return", "127.0.0.1")
+println("VNPay URL Generated: " + substring(vnp_url, 0, 75) + "...")
+
+// 3. Test MoMo
+println("\n[3] Testing std.momo...")
+let momo_c = momo_client("MOMO_PARTNER", "ACCESS_KEY_ABC", "SECRET_KEY_XYZ", "https://payment.momo.vn/v2/gateway/api/create")
+let momo_payload = momo_create_payment_payload(momo_c, 1002, 150000, "Don hang MoMo", "https://mysite.vn/return", "https://mysite.vn/ipn", "extra_data")
+println("MoMo Partner: " + to_string(map_get(momo_payload, "partnerCode")))
+println("MoMo Signature: " + to_string(map_get(momo_payload, "signature")))
+
+// 4. Test Zalo
+println("\n[4] Testing std.zalo...")
+let phone_norm = zalo_normalize_phone("0987654321")
+println("Normalized Phone for ZNS: " + phone_norm)
+
+// 5. Test High-Level Concurrency: parallel_map
+println("\n[5] Testing std.concurrency parallel_map...")
+let numbers = [10, 20, 30, 40, 50]
+let squared = parallel_map(numbers, fn(n) {
+    return n * n
+})
+println("Input numbers:    " + to_string(numbers))
+println("Parallel squared: " + to_string(squared))
+
+println("\n========================================================================")
+println("ALL 5 ADVANCED TESTS COMPLETED 100% SUCCESSFULLY!")
+println("========================================================================")

@@ -1,0 +1,59 @@
+// ========================================================================
+// Module: std.momo
+// Official MoMo E-Wallet Payment Gateway Integration
+// Supports HMAC-SHA256 Signatures, QR Payment & Webhook IPN Verification
+// ========================================================================
+
+/// Create a new MoMo Client Configuration
+fn momo_client(partner_code, access_key, secret_key, endpoint) {
+    let mut client = map_new()
+    client = map_set(client, "partner_code", partner_code)
+    client = map_set(client, "access_key", access_key)
+    client = map_set(client, "secret_key", secret_key)
+    client = map_set(client, "endpoint", endpoint)
+    return client
+}
+
+/// Create MoMo Payment Payload with HMAC-SHA256 Signature
+fn momo_create_payment_payload(client, order_id, amount, order_info, redirect_url, ipn_url, extra_data) {
+    let partner_code = to_string(map_get(client, "partner_code"))
+    let access_key = to_string(map_get(client, "access_key"))
+    let secret_key = to_string(map_get(client, "secret_key"))
+    let request_id = uuid()
+
+    let raw_signature = "accessKey=" + access_key +
+        "&amount=" + to_string(amount) +
+        "&extraData=" + extra_data +
+        "&ipnUrl=" + ipn_url +
+        "&orderId=" + to_string(order_id) +
+        "&orderInfo=" + order_info +
+        "&partnerCode=" + partner_code +
+        "&redirectUrl=" + redirect_url +
+        "&requestId=" + request_id +
+        "&requestType=captureWallet"
+
+    let signature = hmac_sha256(raw_signature, secret_key)
+
+    let mut payload = map_new()
+    payload = map_set(payload, "partnerCode", partner_code)
+    payload = map_set(payload, "partnerName", "VietLang Merchant")
+    payload = map_set(payload, "storeId", "MoMoStore")
+    payload = map_set(payload, "requestId", request_id)
+    payload = map_set(payload, "amount", amount)
+    payload = map_set(payload, "orderId", to_string(order_id))
+    payload = map_set(payload, "orderInfo", order_info)
+    payload = map_set(payload, "redirectUrl", redirect_url)
+    payload = map_set(payload, "ipnUrl", ipn_url)
+    payload = map_set(payload, "lang", "vi")
+    payload = map_set(payload, "extraData", extra_data)
+    payload = map_set(payload, "requestType", "captureWallet")
+    payload = map_set(payload, "signature", signature)
+    return payload
+}
+
+/// Verify MoMo Webhook IPN Signature
+fn momo_verify_ipn(client, raw_sig_string, incoming_signature) {
+    let secret_key = to_string(map_get(client, "secret_key"))
+    let calculated = hmac_sha256(raw_sig_string, secret_key)
+    return calculated == incoming_signature
+}

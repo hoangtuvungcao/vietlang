@@ -1,0 +1,35 @@
+// ========================================================================
+// Module: std.zalo
+// Official Zalo Notification Service (ZNS) & Zalo OA Integration
+// ========================================================================
+
+/// Create Zalo OA Client
+fn zalo_client(app_id, secret_key, access_token) {
+    let mut client = map_new()
+    client = map_set(client, "app_id", app_id)
+    client = map_set(client, "secret_key", secret_key)
+    client = map_set(client, "access_token", access_token)
+    return client
+}
+
+/// Create ZNS (Zalo Notification Service) Template Payload
+fn zalo_create_zns_payload(phone, template_id, template_data, tracking_id) {
+    let mut payload = map_new()
+    payload = map_set(payload, "phone", phone)
+    payload = map_set(payload, "template_id", template_id)
+    payload = map_set(payload, "template_data", template_data)
+    payload = map_set(payload, "tracking_id", tracking_id)
+    return payload
+}
+
+/// Helper: Normalize Vietnamese Phone Number for ZNS (e.g. "0901234567" -> "84901234567")
+fn zalo_normalize_phone(phone) {
+    let p = trim(phone)
+    if starts_with(p, "0") {
+        return "84" + substring(p, 1, len(p))
+    }
+    if starts_with(p, "+84") {
+        return substring(p, 1, len(p))
+    }
+    return p
+}

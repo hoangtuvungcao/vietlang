@@ -1,0 +1,99 @@
+// ========================================================================
+// Module: std.concurrency
+// High-Level Concurrency, Worker Pool & Task Pipeline Abstractions
+// ========================================================================
+
+/// Worker Pool struct
+struct WorkerPool {
+    size: Int,
+    job_ch: Struct,
+    result_ch: Struct,
+    active: Bool,
+}
+
+/// Create and spawn a new Worker Pool
+/// @param size - Number of concurrent worker threads to spawn
+/// @param worker_fn - Task handler function: fn(job) -> result
+/// @return WorkerPool instance
+fn worker_pool_new(size, worker_fn) {
+    let job_ch = channel_new(size * 2)
+    let result_ch = channel_new(size * 2)
+
+    let mut w = 0
+    while w < size {
+        let wid = w + 1
+        spawn(fn() {
+            let mut running = true
+            while running {
+                let job = channel_recv(job_ch)
+                if job == "__STOP_WORKER__" {
+                    running = false
+                } else {
+                    let res = worker_fn(job)
+                    channel_send(result_ch, res)
+                }
+            }
+        })
+        w += 1
+    }
+
+    return WorkerPool {
+        size: size,
+        job_ch: job_ch,
+        result_ch: result_ch,
+        active: true,
+    }
+}
+
+/// Submit a job to the Worker Pool
+fn worker_pool_submit(pool: WorkerPool, job) {
+    return channel_send(pool.job_ch, job)
+}
+
+/// Receive a completed result from the Worker Pool (blocking)
+fn worker_pool_recv(pool: WorkerPool) {
+    return channel_recv(pool.result_ch)
+}
+
+/// Non-blocking check for completed result
+fn worker_pool_try_recv(pool: WorkerPool) {
+    return channel_try_recv(pool.result_ch)
+}
+
+/// Gracefully shutdown the Worker Pool
+fn worker_pool_shutdown(pool: WorkerPool) {
+    let mut w = 0
+    while w < pool.size {
+        channel_send(pool.job_ch, "__STOP_WORKER__")
+        w += 1
+    }
+}
+
+/// Run an array of items in parallel across Worker Threads and collect all results
+fn parallel_map(items, task_fn) {
+    let count = len(items)
+    if count == 0 {
+        return []
+    }
+    
+    let mut pool_size = count
+    if count > 8 {
+        pool_size = 8
+    }
+    let pool = worker_pool_new(pool_size, task_fn)
+
+    for item in items {
+        worker_pool_submit(pool, item)
+    }
+
+    let mut results = []
+    let mut collected = 0
+    while collected < count {
+        let res = worker_pool_recv(pool)
+        results = push(results, res)
+        collected += 1
+    }
+
+    worker_pool_shutdown(pool)
+    return results
+}

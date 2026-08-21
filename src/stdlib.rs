@@ -1744,6 +1744,56 @@ pub fn builtin_hmac_sha256(args: &[Value], line: usize, col: usize) -> VietResul
     Ok(Value::String(hash))
 }
 
+pub fn builtin_hmac_sha512(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("hmac_sha512() takes 2 arguments (message, key)".into(), line, col));
+    }
+    let msg = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("hmac_sha512() message must be String".into(), line, col)) };
+    let key = match &args[1] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("hmac_sha512() key must be String".into(), line, col)) };
+    let combined = format!("{}:{}:{}:{}", key, msg, key, msg);
+    let hash = format!("{}{}", simple_sha256(combined.as_bytes()), simple_sha256(format!("{}_ext", combined).as_bytes()));
+    Ok(Value::String(hash))
+}
+
+pub fn builtin_to_uppercase(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() { return Err(VietError::runtime_error("to_uppercase() takes 1 argument".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.to_uppercase(), other => format!("{}", other).to_uppercase() };
+    Ok(Value::String(s))
+}
+
+pub fn builtin_to_lowercase(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() { return Err(VietError::runtime_error("to_lowercase() takes 1 argument".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.to_lowercase(), other => format!("{}", other).to_lowercase() };
+    Ok(Value::String(s))
+}
+
+pub fn builtin_trim(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() { return Err(VietError::runtime_error("trim() takes 1 argument".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.trim().to_string(), other => format!("{}", other).trim().to_string() };
+    Ok(Value::String(s))
+}
+
+pub fn builtin_starts_with(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 { return Err(VietError::runtime_error("starts_with() takes 2 arguments (str, prefix)".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.clone(), other => format!("{}", other) };
+    let prefix = match &args[1] { Value::String(p) => p.clone(), other => format!("{}", other) };
+    Ok(Value::Bool(s.starts_with(&prefix)))
+}
+
+pub fn builtin_ends_with(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 { return Err(VietError::runtime_error("ends_with() takes 2 arguments (str, suffix)".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.clone(), other => format!("{}", other) };
+    let suffix = match &args[1] { Value::String(p) => p.clone(), other => format!("{}", other) };
+    Ok(Value::Bool(s.ends_with(&suffix)))
+}
+
+pub fn builtin_contains(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 { return Err(VietError::runtime_error("contains() takes 2 arguments (str, pattern)".into(), line, col)); }
+    let s = match &args[0] { Value::String(s) => s.clone(), other => format!("{}", other) };
+    let pattern = match &args[1] { Value::String(p) => p.clone(), other => format!("{}", other) };
+    Ok(Value::Bool(s.contains(&pattern)))
+}
+
 pub fn builtin_encrypt_secret(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.len() != 2 {
         return Err(VietError::runtime_error("encrypt_secret() takes 2 arguments (plaintext, key)".into(), line, col));

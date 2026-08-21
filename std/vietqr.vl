@@ -1,0 +1,75 @@
+// ========================================================================
+// Module: std.vietqr
+// Official VietQR & EMVCo Payment Standard for 50+ Vietnamese Banks
+// Napas 247 Interbank Instant Transfer Standard
+// ========================================================================
+
+/// Generate standard VietQR quick link URL for banking apps
+/// @param bank_bin - Bank BIN code (e.g., "970422" for MBBank, "970436" for Vietcombank)
+/// @param account_no - Beneficiary bank account number
+/// @param amount - Amount in VND (0 for open amount)
+/// @param memo - Transfer description
+/// @param template - QR template ("compact", "compact2", "qr_only", "print")
+/// @return Complete VietQR image URL
+fn vietqr_generate_url(bank_bin, account_no, amount, memo, template) {
+    let base = "https://img.vietqr.io/image/" + to_string(bank_bin) + "-" + to_string(account_no) + "-" + to_string(template) + ".png"
+    let mut params = "?accountName=" + url_encode("VIETLANG BENEFICIARY")
+    if amount > 0 {
+        params = params + "&amount=" + to_string(amount)
+    }
+    if memo != "" {
+        params = params + "&addInfo=" + url_encode(memo)
+    }
+    return base + params
+}
+
+/// Helper: Get Bank BIN code by common Bank abbreviation
+/// @param bank_code - Bank short name (e.g. "MB", "VCB", "TCB", "VPB", "ACB", "BIDV")
+/// @return 6-digit Napas Bank BIN code
+fn vietqr_get_bank_bin(bank_code) {
+    let code = to_uppercase(bank_code)
+    match code {
+        "MB" => "970422",
+        "MBBANK" => "970422",
+        "VCB" => "970436",
+        "VIETCOMBANK" => "970436",
+        "TCB" => "970407",
+        "TECHCOMBANK" => "970407",
+        "VPB" => "970432",
+        "VPBANK" => "970432",
+        "ACB" => "970416",
+        "BIDV" => "970418",
+        "CTG" => "970415",
+        "VIETINBANK" => "970415",
+        "TPB" => "970423",
+        "TPBANK" => "970423",
+        "STB" => "970403",
+        "SACOMBANK" => "970403",
+        "VIB" => "970441",
+        "HDB" => "970437",
+        "HDBANK" => "970437",
+        "MSB" => "970426",
+        "OCB" => "970448",
+        "SHB" => "970443",
+        "LPB" => "970449",
+        "LIENVIETPOSTBANK" => "970449",
+        "TIMO" => "963388",
+        _ => "970422", // Default to MBBank
+    }
+}
+
+/// Create a VietQR Transaction Map
+fn vietqr_create_payment(bank_code, account_no, amount, memo) {
+    let bin = vietqr_get_bank_bin(bank_code)
+    let qr_url = vietqr_generate_url(bin, account_no, amount, memo, "compact2")
+    
+    let mut res = map_new()
+    res = map_set(res, "bank_code", bank_code)
+    res = map_set(res, "bank_bin", bin)
+    res = map_set(res, "account_no", account_no)
+    res = map_set(res, "amount", amount)
+    res = map_set(res, "memo", memo)
+    res = map_set(res, "qr_url", qr_url)
+    res = map_set(res, "created_at", time_now())
+    return res
+}

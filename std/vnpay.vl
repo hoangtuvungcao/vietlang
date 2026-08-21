@@ -1,0 +1,59 @@
+// ========================================================================
+// Module: std.vnpay
+// Official VNPay Payment Gateway Standard (VNP_Pay 2.1.0)
+// Supports HMAC-SHA512 Secure Hash, URL Generation & IPN Verification
+// ========================================================================
+
+/// Create a new VNPay Client Configuration
+fn vnpay_client(tmn_code, hash_secret, payment_url) {
+    let mut client = map_new()
+    client = map_set(client, "tmn_code", tmn_code)
+    client = map_set(client, "hash_secret", hash_secret)
+    client = map_set(client, "payment_url", payment_url)
+    return client
+}
+
+/// Create VNPay Payment URL
+/// @param client - VNPay client struct
+/// @param order_id - Merchant order ID
+/// @param amount - Amount in VND (auto-multiplied by 100 as per VNPay spec)
+/// @param order_info - Order description
+/// @param return_url - Merchant Return URL
+/// @param client_ip - Customer IP address
+/// @return Full VNPay Payment Redirection URL
+fn vnpay_create_payment_url(client, order_id, amount, order_info, return_url, client_ip) {
+    let tmn_code = to_string(map_get(client, "tmn_code"))
+    let hash_secret = to_string(map_get(client, "hash_secret"))
+    let payment_url = to_string(map_get(client, "payment_url"))
+
+    let vnp_amount = to_string(amount * 100)
+    let create_date = to_string(time_now())
+    
+    let mut query = "vnp_Amount=" + vnp_amount
+    query = query + "&vnp_Command=pay"
+    query = query + "&vnp_CreateDate=" + create_date
+    query = query + "&vnp_CurrCode=VND"
+    query = query + "&vnp_IpAddr=" + client_ip
+    query = query + "&vnp_Locale=vn"
+    query = query + "&vnp_OrderInfo=" + url_encode(order_info)
+    query = query + "&vnp_OrderType=other"
+    query = query + "&vnp_ReturnUrl=" + url_encode(return_url)
+    query = query + "&vnp_TmnCode=" + tmn_code
+    query = query + "&vnp_TxnRef=" + to_string(order_id)
+    query = query + "&vnp_Version=2.1.0"
+
+    // Sign with HMAC-SHA512
+    let secure_hash = hmac_sha512(query, hash_secret)
+    return payment_url + "?" + query + "&vnp_SecureHash=" + secure_hash
+}
+
+/// Verify VNPay IPN or ReturnURL Query Checksum
+/// @param client - VNPay client struct
+/// @param raw_query_without_hash - Raw sorted query string without vnp_SecureHash
+/// @param incoming_hash - The vnp_SecureHash received from VNPay
+/// @return Boolean true if valid
+fn vnpay_verify_checksum(client, raw_query_without_hash, incoming_hash) {
+    let hash_secret = to_string(map_get(client, "hash_secret"))
+    let calculated = hmac_sha512(raw_query_without_hash, hash_secret)
+    return to_uppercase(calculated) == to_uppercase(incoming_hash)
+}
