@@ -1,0 +1,90 @@
+// ========================================================================
+// VietFintech Multi-Channel Payment Gateway Service
+// Built natively on VietLang Backend-First Runtime
+// ========================================================================
+
+import std.http_router
+import std.http2
+import std.middleware
+import examples.viet_fintech_gateway.src.config.database
+import examples.viet_fintech_gateway.src.routes.router
+
+// ------------------------------------------------------------------------
+// Dynamic Runtime Configuration Loader
+// ------------------------------------------------------------------------
+let mut port = 8888
+let mut workers = 500
+let mut db_path = "examples/viet_fintech_gateway/data/gateway.sqlite"
+
+// 1. Try reading config.json if present
+try {
+    if file_exists("config.json") {
+        let cfg = json_parse(file_read("config.json"))
+        if map_has(cfg, "port") { port = to_int(map_get(cfg, "port")) }
+        if map_has(cfg, "workers") { workers = to_int(map_get(cfg, "workers")) }
+        if map_has(cfg, "db_path") {
+            let udb = to_string(map_get(cfg, "db_path"))
+            if !file_exists("data/gateway.sqlite") && file_exists("examples/viet_fintech_gateway/data/gateway.sqlite") {
+                db_path = "examples/viet_fintech_gateway/data/gateway.sqlite"
+            } else {
+                db_path = udb
+            }
+        }
+    }
+} catch err {}
+
+// 2. Try reading .env if present
+try {
+    if file_exists(".env") {
+        let env_raw = file_read(".env")
+        let lines = str_split_lines(env_raw)
+        for line in lines {
+            let l = trim(line)
+            if l != "" && !starts_with(l, "#") && contains(l, "=") {
+                let parts = l.split("=")
+                if len(parts) >= 2 {
+                    let k = trim(parts[0])
+                    let v = trim(parts[1])
+                    if k == "PORT" { port = to_int(v) }
+                    if k == "DATABASE_PATH" || k == "DB_PATH" { db_path = v }
+                    if k == "WORKERS" { workers = to_int(v) }
+                }
+            }
+        }
+    }
+} catch err {}
+
+// 3. Override with OS Environment Variables
+let env_p = env_get("PORT")
+if env_p != "" && env_p != none && env_p != "none" {
+    port = to_int(env_p)
+}
+let env_db = env_get("DATABASE_PATH")
+if env_db != "" && env_db != none && env_db != "none" {
+    db_path = to_string(env_db)
+}
+
+// ------------------------------------------------------------------------
+// Start Gateway Database & HTTP Engine
+// ------------------------------------------------------------------------
+let db = gateway_db_init(db_path)
+
+println("========================================================================")
+println("VietFintech Multi-Channel Payment Gateway Service")
+println("========================================================================")
+println("[Config] Listening Port: " + to_string(port))
+println("[Config] Database Path:  " + db_path)
+println("[Channels] Active: VietQR Napas247, VNPay 2.1.0, MoMo E-Wallet, Zalo ZNS")
+println("[Concurrency] Native CSP Thread Pool: " + to_string(workers) + " Workers")
+println("========================================================================")
+println("Gateway Backend listening on http://0.0.0.0:" + to_string(port) + " [HTTP/1.1, HTTP/2, HTTP/3 Alt-Svc]")
+println("========================================================================")
+
+let server_cfg = http2_server_config(port, workers)
+http_listen(server_cfg, fn(req) {
+    let method = to_string(map_get(req, "method"))
+    let path = to_string(map_get(req, "path"))
+    let body = to_string(map_get(req, "body"))
+
+    return dispatch_gateway_api(db, method, path, body)
+})

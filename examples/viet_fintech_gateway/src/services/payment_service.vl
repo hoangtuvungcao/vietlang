@@ -1,0 +1,87 @@
+import std.vietqr
+import std.vnpay
+import std.momo
+import std.zalo
+import std.concurrency
+import std.json
+
+// 1. Process VietQR Payment Request
+fn process_vietqr_payment(db, bank_code: String, account_no: String, amount: Int, order_id: String, note: String) {
+    let qr_res = vietqr_create_payment(bank_code, account_no, amount, note)
+    let qr_url = to_string(map_get(qr_res, "qr_url"))
+
+    let query = "INSERT OR REPLACE INTO transactions (order_id, channel, amount, customer_phone, status, response_payload, created_at) VALUES ('" + order_id + "', 'VIETQR', " + to_string(amount) + ", '" + account_no + "', 'PENDING', '" + qr_url + "', " + to_string(time_now()) + ")"
+    sqlite_exec(db, query)
+
+    let mut res = map_new()
+    res = map_set(res, "order_id", order_id)
+    res = map_set(res, "channel", "VIETQR_NAPAS247")
+    res = map_set(res, "bank_code", bank_code)
+    res = map_set(res, "amount", amount)
+    res = map_set(res, "qr_url", qr_url)
+    res = map_set(res, "status", "PENDING_SCAN")
+    return res
+}
+
+// 2. Process VNPay Gateway URL Creation
+fn process_vnpay_payment(db, order_id: String, amount: Int, order_info: String, client_ip: String) {
+    let vnp = vnpay_client("VIETLANG_TMN", "VIETLANG_HASH_SECRET_KEY_512", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+    let pay_url = vnpay_create_payment_url(vnp, 1001, amount, order_info, "https://gateway.vietlang.vn/vnpay/return", client_ip)
+
+    let query = "INSERT OR REPLACE INTO transactions (order_id, channel, amount, customer_phone, status, response_payload, created_at) VALUES ('" + order_id + "', 'VNPAY', " + to_string(amount) + ", '127.0.0.1', 'INITIALIZED', '" + pay_url + "', " + to_string(time_now()) + ")"
+    sqlite_exec(db, query)
+
+    let mut res = map_new()
+    res = map_set(res, "order_id", order_id)
+    res = map_set(res, "channel", "VNPAY_GATEWAY_2.1.0")
+    res = map_set(res, "amount", amount)
+    res = map_set(res, "payment_url", pay_url)
+    res = map_set(res, "checksum_type", "HMAC-SHA512")
+    return res
+}
+
+// 3. Process MoMo QR Payload Creation
+fn process_momo_payment(db, order_id: String, amount: Int, order_info: String) {
+    let momo = momo_client("MOMO_PARTNER", "MOMO_ACCESS_KEY", "MOMO_SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
+    let payload = momo_create_payment_payload(momo, 1002, amount, order_info, "https://site.vn/return", "https://site.vn/ipn", "")
+
+    let mut res = map_new()
+    res = map_set(res, "order_id", order_id)
+    res = map_set(res, "channel", "MOMO_EWALLET")
+    res = map_set(res, "amount", amount)
+    res = map_set(res, "payload", payload)
+    return res
+}
+
+// 4. Send ZNS Customer Message
+fn process_zns_notification(phone: String, template_id: String, tracking_id: String) {
+    let normalized = zalo_normalize_phone(phone)
+    let payload = zalo_create_zns_payload(normalized, template_id, map_new(), tracking_id)
+
+    let mut res = map_new()
+    res = map_set(res, "recipient_phone", normalized)
+    res = map_set(res, "template_id", template_id)
+    res = map_set(res, "tracking_id", tracking_id)
+    res = map_set(res, "delivery_status", "QUEUED")
+    return res
+}
+
+// 5. Query Transactions List
+fn get_all_transactions(db) {
+    return sqlite_query(db, "SELECT id, order_id, channel, amount, customer_phone, status, created_at FROM transactions ORDER BY id DESC LIMIT 50")
+}
+
+// 6. Process Batch Orders in Parallel across Worker Threads
+fn process_batch_transactions(items) {
+    let processed = parallel_map(items, fn(item) {
+        let order_id = to_string(map_get(item, "order_id"))
+        let amount = to_int(map_get(item, "amount"))
+        let mut item_res = map_new()
+        item_res = map_set(item_res, "order_id", order_id)
+        item_res = map_set(item_res, "amount", amount)
+        item_res = map_set(item_res, "fee", to_int(amount * 0.01))
+        item_res = map_set(item_res, "settlement_status", "PROCESSED_CONCURRENTLY")
+        return item_res
+    })
+    return processed
+}

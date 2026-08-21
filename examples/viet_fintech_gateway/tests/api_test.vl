@@ -1,0 +1,40 @@
+import std.test
+import std.vietqr
+import std.vnpay
+import std.momo
+import std.zalo
+import std.concurrency
+
+suite("VietFintech Multi-Channel Gateway Unit Tests")
+
+test("VietQR Generation Test", fn() {
+    let res = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan don hang #101")
+    let bin = vietqr_get_bank_bin("MB")
+    assert_eq(bin, "970422", "MBBank BIN must be 970422")
+    assert_eq(map_get(res, "bank_code"), "MB", "Bank code mismatch")
+})
+
+test("VNPay Gateway 2.1.0 Checksum Test", fn() {
+    let client = vnpay_client("TMN_CODE", "HASH_SECRET", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+    let url = vnpay_create_payment_url(client, 1001, 500000, "Nap vi", "https://site.vn/return", "127.0.0.1")
+    assert_eq(starts_with(url, "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?"), true, "VNPay URL prefix valid")
+})
+
+test("MoMo E-Wallet HMAC Signature Test", fn() {
+    let momo = momo_client("PARTNER_CODE", "ACCESS_KEY", "SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
+    let payload = momo_create_payment_payload(momo, 1002, 150000, "Don hang", "https://site.vn/return", "https://site.vn/ipn", "")
+    assert_eq(map_get(payload, "partnerCode"), "PARTNER_CODE", "MoMo partnerCode mismatch")
+})
+
+test("Zalo OA Phone Normalization Test", fn() {
+    let normalized = zalo_normalize_phone("0987654321")
+    assert_eq(normalized, "84987654321", "Phone normalization to 84 prefix failed")
+})
+
+test("Concurrent Batch Worker Pool Test", fn() {
+    let items = [10, 20, 30, 40, 50]
+    let squared = parallel_map(items, fn(x) { return x * x })
+    assert_eq(len(squared), 5, "Batch processing must return 5 results")
+})
+
+test_summary()

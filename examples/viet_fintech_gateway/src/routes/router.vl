@@ -1,0 +1,87 @@
+import std.json
+import examples.viet_fintech_gateway.src.services.payment_service
+import examples.viet_fintech_gateway.src.config.database
+
+fn dispatch_gateway_api(db, method: String, path: String, body_raw: String) {
+    // 1. GET /api/v1/health
+    if method == "GET" && path == "/api/v1/health" {
+        let mut h = map_new()
+        h = map_set(h, "service", "VietFintech Multi-Channel Payment Gateway")
+        h = map_set(h, "status", "OPERATIONAL")
+        h = map_set(h, "uptime_s", time_now())
+        h = map_set(h, "channels", ["VietQR_Napas247", "VNPay_512", "MoMo_256", "Zalo_ZNS", "CSP_Parallel_Worker"])
+        return json_response(200, h)
+    }
+
+    // 2. POST /api/v1/payments/vietqr
+    if method == "POST" && path == "/api/v1/payments/vietqr" {
+        let payload = json_parse(body_raw)
+        if payload == none { return json_response(400, "Invalid JSON body") }
+
+        let bank_code = to_string(map_get(payload, "bank_code"))
+        let account_no = to_string(map_get(payload, "account_no"))
+        let amount = to_int(map_get(payload, "amount"))
+        let order_id = to_string(map_get(payload, "order_id"))
+        let note = to_string(map_get(payload, "note"))
+
+        let res = process_vietqr_payment(db, bank_code, account_no, amount, order_id, note)
+        return json_response(201, res)
+    }
+
+    // 3. POST /api/v1/payments/vnpay
+    if method == "POST" && path == "/api/v1/payments/vnpay" {
+        let payload = json_parse(body_raw)
+        if payload == none { return json_response(400, "Invalid JSON body") }
+
+        let order_id = to_string(map_get(payload, "order_id"))
+        let amount = to_int(map_get(payload, "amount"))
+        let order_info = to_string(map_get(payload, "order_info"))
+
+        let res = process_vnpay_payment(db, order_id, amount, order_info, "127.0.0.1")
+        return json_response(201, res)
+    }
+
+    // 4. POST /api/v1/payments/momo
+    if method == "POST" && path == "/api/v1/payments/momo" {
+        let payload = json_parse(body_raw)
+        if payload == none { return json_response(400, "Invalid JSON body") }
+
+        let order_id = to_string(map_get(payload, "order_id"))
+        let amount = to_int(map_get(payload, "amount"))
+        let order_info = to_string(map_get(payload, "order_info"))
+
+        let res = process_momo_payment(db, order_id, amount, order_info)
+        return json_response(201, res)
+    }
+
+    // 5. POST /api/v1/notifications/zns
+    if method == "POST" && path == "/api/v1/notifications/zns" {
+        let payload = json_parse(body_raw)
+        if payload == none { return json_response(400, "Invalid JSON body") }
+
+        let phone = to_string(map_get(payload, "phone"))
+        let template_id = to_string(map_get(payload, "template_id"))
+        let tracking_id = to_string(map_get(payload, "tracking_id"))
+
+        let res = process_zns_notification(phone, template_id, tracking_id)
+        return json_response(200, res)
+    }
+
+    // 6. GET /api/v1/transactions
+    if method == "GET" && path == "/api/v1/transactions" {
+        let txs = get_all_transactions(db)
+        return json_response(200, txs)
+    }
+
+    // 7. POST /api/v1/batch/process
+    if method == "POST" && path == "/api/v1/batch/process" {
+        let payload = json_parse(body_raw)
+        if payload == none { return json_response(400, "Invalid JSON body") }
+
+        let items = map_get(payload, "orders")
+        let batch_result = process_batch_transactions(items)
+        return json_response(200, batch_result)
+    }
+
+    return json_response(404, "Fintech Route not found: " + path)
+}
