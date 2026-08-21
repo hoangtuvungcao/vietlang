@@ -37,7 +37,7 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
     }
 
     if method == "GET" && path == "/api/v1/swagger.json" {
-        let mut spec = openapi_spec_new("Nong San Viet Enterprise Platform API", "1.0.0", "San Thuong Mai Dien Tu Nong San & OCOP Quoc Gia")
+        let mut spec = openapi_spec_new("Nong San Viet Enterprise Platform API", "1.0.0", "San Thuong Mai Dien Tu Nong San & OCOP Quoc Gia (VietLang Powered)")
         spec = openapi_add_path(spec, "/api/v1/health", "GET", "Kiem tra trang thai he thong", ["System"])
         spec = openapi_add_path(spec, "/api/v1/categories", "GET", "Danh sach danh muc nong san", ["Catalog"])
         spec = openapi_add_path(spec, "/api/v1/products", "GET", "Tra cuu & loc san pham da tieu chi", ["Catalog"])
@@ -46,7 +46,12 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         spec = openapi_add_path(spec, "/api/v1/orders/checkout", "POST", "Dat hang giao dich ACID", ["Orders"])
         spec = openapi_add_path(spec, "/api/v1/orders/track", "GET", "Tra cuu don hang theo SDT", ["Orders"])
         spec = openapi_add_path(spec, "/api/v1/admin/analytics", "GET", "Bao cao thong ke tong quan", ["Admin"])
-        return api_response(200, spec, "OpenAPI 3.0 Spec Generated")
+
+        let mut resp = map_new()
+        resp = map_set(resp, "status_code", 200)
+        resp = map_set(resp, "content_type", "application/json; charset=utf-8")
+        resp = map_set(resp, "body", json_stringify(spec))
+        return resp
     }
 
     if method == "GET" && path == "/api/v1/live/events" {
