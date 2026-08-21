@@ -11,6 +11,10 @@ import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
 import std.db_sqlite
 import std.openapi
 import std.sse
+import std.csv
+import std.logger
+import std.session
+import std.queue
 
 fn api_response(status_code: Int, data, message: String = "OK") {
     let mut resp = map_new()
@@ -233,6 +237,25 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
 
         ws_broadcast("{\"type\":\"order_placed\",\"customer_name\":\"" + customer_name + "\",\"city\":\"" + city + "\",\"total\":" + to_string(map_get(res, "total")) + ",\"timestamp\":" + to_string(time_now()) + "}")
         return api_response(201, res, "Dat hang thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/admin/export_csv" {
+        let headers = ["ID", "Customer", "Phone", "Address", "Payment", "Total", "Status"]
+        let orders = order_service_track_order(db, "")
+        let mut rows = []
+        let mut i = 0
+        while i < len(orders) {
+            let o = orders[i]
+            let r = [to_string(map_get(o, "id")), to_string(map_get(o, "customer_name")), to_string(map_get(o, "phone")), to_string(map_get(o, "address")), to_string(map_get(o, "payment_method")), to_string(map_get(o, "total")), to_string(map_get(o, "status"))]
+            rows = push(rows, r)
+            i = i + 1
+        }
+        let csv_content = csv_encode(headers, rows)
+        let mut resp = map_new()
+        resp = map_set(resp, "status_code", 200)
+        resp = map_set(resp, "content_type", "text/csv; charset=utf-8")
+        resp = map_set(resp, "body", csv_content)
+        return resp
     }
 
     return api_error(404, "Endpoint not found: " + method + " " + path)

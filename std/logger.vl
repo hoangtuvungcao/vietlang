@@ -1,0 +1,58 @@
+// ========================================================================
+// Module: std.logger
+// Enterprise Structured JSON Logger & Observability Engine
+// ========================================================================
+
+fn logger_new(service_name: String = "vietlang_service", min_level: String = "INFO") {
+    let mut l = map_new()
+    l = map_set(l, "service", service_name)
+    l = map_set(l, "min_level", min_level)
+    return l
+}
+
+fn logger_format_entry(l, level: String, message: String, extra_map) -> String {
+    let mut entry = map_new()
+    entry = map_set(entry, "timestamp", time_now())
+    entry = map_set(entry, "level", level)
+    entry = map_set(entry, "service", map_get(l, "service"))
+    entry = map_set(entry, "message", message)
+    if extra_map != none {
+        entry = map_set(entry, "context", extra_map)
+    }
+    return json_stringify(entry, false)
+}
+
+fn logger_info(l, message: String, extra_map = none) -> String {
+    let log_line = logger_format_entry(l, "INFO", message, extra_map)
+    println("[INFO] " + log_line)
+    return log_line
+}
+
+fn logger_warn(l, message: String, extra_map = none) -> String {
+    let log_line = logger_format_entry(l, "WARN", message, extra_map)
+    println("[WARN] " + log_line)
+    return log_line
+}
+
+fn logger_error(l, message: String, error_msg: String = "", extra_map = none) -> String {
+    let mut ctx = map_new()
+    if extra_map != none {
+        ctx = extra_map
+    }
+    if error_msg != "" {
+        ctx = map_set(ctx, "error", error_msg)
+    }
+    let log_line = logger_format_entry(l, "ERROR", message, ctx)
+    println("[ERROR] " + log_line)
+    return log_line
+}
+
+fn logger_debug(l, message: String, extra_map = none) -> String {
+    let min_level = to_string(map_get(l, "min_level"))
+    if min_level == "DEBUG" {
+        let log_line = logger_format_entry(l, "DEBUG", message, extra_map)
+        println("[DEBUG] " + log_line)
+        return log_line
+    }
+    return ""
+}

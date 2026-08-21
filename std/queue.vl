@@ -1,63 +1,60 @@
-// ===================================================
-// VietLang Background Job Queue (std.queue)
-// Task scheduling with retries and dead-letter handling
-// ===================================================
+// ========================================================================
+// Module: std.queue
+// Asynchronous Job Queue & Background Task Worker Engine
+// ========================================================================
 
-fn queue_new() {
-    let q = map_new()
-    let q = map_set(q, "tasks", [])
-    let q = map_set(q, "dead_letter", [])
+fn queue_new(name: String = "default_queue") {
+    let mut q = map_new()
+    q = map_set(q, "name", name)
+    q = map_set(q, "jobs", [])
+    q = map_set(q, "processed_count", 0)
     return q
 }
 
-fn queue_push(q, task_type: String, payload, max_retries: Int = 3) {
-    let task = map_new()
-    let task = map_set(task, "id", uuid())
-    let task = map_set(task, "type", task_type)
-    let task = map_set(task, "payload", payload)
-    let task = map_set(task, "retries", 0)
-    let task = map_set(task, "max_retries", max_retries)
-    let task = map_set(task, "created_at", time_now())
+fn queue_push(q, job_type: String, payload_map) {
+    let mut job = map_new()
+    job = map_set(job, "id", "job_" + to_string(time_now()))
+    job = map_set(job, "type", job_type)
+    job = map_set(job, "payload", payload_map)
+    job = map_set(job, "created_at", time_now())
+    job = map_set(job, "status", "QUEUED")
 
-    let current = map_get(q, "tasks")
-    let new_tasks = push(current, task)
-    return map_set(q, "tasks", new_tasks)
+    let jobs = map_get(q, "jobs")
+    let new_jobs = push(jobs, job)
+    return map_set(q, "jobs", new_jobs)
+}
+
+fn queue_size(q) -> Int {
+    let jobs = map_get(q, "jobs")
+    if jobs == none {
+        return 0
+    }
+    return len(jobs)
 }
 
 fn queue_pop(q) {
-    let tasks = map_get(q, "tasks")
-    if tasks.len() == 0 {
-        let res = map_new()
-        let res = map_set(res, "has_task", false)
-        let res = map_set(res, "task", none)
-        let res = map_set(res, "queue", q)
-        return res
+    let jobs = map_get(q, "jobs")
+    if jobs == none || len(jobs) == 0 {
+        let mut empty_res = map_new()
+        empty_res = map_set(empty_res, "job", none)
+        empty_res = map_set(empty_res, "queue", q)
+        return empty_res
     }
 
-    let next_task = tasks[0]
-    let remaining = slice(tasks, 1)
-    let updated_q = map_set(q, "tasks", remaining)
+    let first_job = jobs[0]
+    let mut remaining = []
+    let mut i = 1
+    while i < len(jobs) {
+        remaining = push(remaining, jobs[i])
+        i = i + 1
+    }
 
-    let res = map_new()
-    let res = map_set(res, "has_task", true)
-    let res = map_set(res, "task", next_task)
-    let res = map_set(res, "queue", updated_q)
+    let mut updated_q = map_set(q, "jobs", remaining)
+    let processed = map_get(q, "processed_count") + 1
+    updated_q = map_set(updated_q, "processed_count", processed)
+
+    let mut res = map_new()
+    res = map_set(res, "job", first_job)
+    res = map_set(res, "queue", updated_q)
     return res
-}
-
-fn queue_retry_or_fail(q, task) {
-    let retries = map_get(task, "retries") + 1
-    let max_r = map_get(task, "max_retries")
-
-    if retries <= max_r {
-        let updated_task = map_set(task, "retries", retries)
-        let current_tasks = map_get(q, "tasks")
-        let new_tasks = push(current_tasks, updated_task)
-        return map_set(q, "tasks", new_tasks)
-    } else {
-        // Move to dead letter queue
-        let dead = map_get(q, "dead_letter")
-        let new_dead = push(dead, task)
-        return map_set(q, "dead_letter", new_dead)
-    }
 }

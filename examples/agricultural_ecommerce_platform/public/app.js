@@ -616,46 +616,60 @@ function updateCartUI() {
 }
 
 // Voucher Application
-applyVoucherBtn.addEventListener('click', () => {
-  const code = voucherInput.value.trim().toUpperCase();
-  if (!code) {
-    showToast('Vui lòng nhập mã giảm giá!', 'error');
-    return;
-  }
+if (applyVoucherBtn && voucherInput) {
+  applyVoucherBtn.addEventListener('click', () => {
+    const code = voucherInput.value.trim().toUpperCase();
+    if (!code) {
+      showToast('Vui lòng nhập mã giảm giá!', 'error');
+      return;
+    }
 
-  const validCodes = ['NONGSANVIET20', 'FREESHIP', 'HELLOTET', 'OCOP10'];
-  if (!validCodes.includes(code)) {
-    showToast('Mã voucher không hợp lệ hoặc đã hết hạn!', 'error');
-    return;
-  }
+    const validCodes = ['NONGSANVIET20', 'FREESHIP', 'HELLOTET', 'OCOP10'];
+    if (!validCodes.includes(code)) {
+      showToast('Mã voucher không hợp lệ hoặc đã hết hạn!', 'error');
+      return;
+    }
 
-  state.voucher = code;
-  updateCartUI();
-  showToast(`Áp dụng mã [${code}] thành công!`);
-});
+    state.voucher = code;
+    updateCartUI();
+    showToast(`Áp dụng mã [${code}] thành công!`);
+  });
+}
 
 // Filters
-regionSelect.addEventListener('change', (e) => {
-  state.selectedRegion = e.target.value;
-  renderProducts();
-});
-certSelect.addEventListener('change', (e) => {
-  state.selectedCert = e.target.value;
-  renderProducts();
-});
-sortSelect.addEventListener('change', (e) => {
-  state.sortBy = e.target.value;
-  renderProducts();
-});
+if (regionSelect) {
+  regionSelect.addEventListener('change', (e) => {
+    state.selectedRegion = e.target.value;
+    renderProducts();
+  });
+}
+if (certSelect) {
+  certSelect.addEventListener('change', (e) => {
+    state.selectedCert = e.target.value;
+    renderProducts();
+  });
+}
+if (sortSelect) {
+  sortSelect.addEventListener('change', (e) => {
+    state.sortBy = e.target.value;
+    renderProducts();
+  });
+}
 
 function handleSearch() {
-  state.searchQuery = searchInput.value;
-  renderProducts();
+  if (searchInput) {
+    state.searchQuery = searchInput.value;
+    renderProducts();
+  }
 }
-searchBtn.addEventListener('click', handleSearch);
-searchInput.addEventListener('keyup', (e) => {
-  if (e.key === 'Enter') handleSearch();
-});
+if (searchBtn) {
+  searchBtn.addEventListener('click', handleSearch);
+}
+if (searchInput) {
+  searchInput.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') handleSearch();
+  });
+}
 
 // Product Detail Modal
 window.openProductDetail = async function(productId) {
@@ -831,83 +845,90 @@ function showVietQRModal(order) {
 // ========================================================================
 // 6. Order Tracking (GET /api/v1/orders/track)
 // ========================================================================
-navTrackOrderBtn.addEventListener('click', () => {
-  trackModal.classList.add('open');
-});
+if (navTrackOrderBtn && trackModal) {
+  navTrackOrderBtn.addEventListener('click', () => {
+    trackModal.classList.add('open');
+  });
+}
 
 window.closeTrackModal = function() {
-  trackModal.classList.remove('open');
+  if (trackModal) trackModal.classList.remove('open');
 };
 
-doTrackBtn.addEventListener('click', async () => {
-  const query = trackInput.value.trim().toUpperCase();
-  if (!query) {
-    trackResultBox.innerHTML = '<p style="color: var(--color-danger);">Vui lòng nhập số điện thoại hoặc mã đơn hàng để tra cứu!</p>';
-    return;
-  }
-
-  trackResultBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Đang truy vấn CSDL...</p>';
-
-  try {
-    const res = await fetch(`/api/v1/orders/track`);
-    if (res.ok) {
-      const json = await res.json();
-      const allOrders = json.data || [];
-      const matches = allOrders.filter(o => String(o.id).toUpperCase().includes(query) || String(o.phone).includes(query));
-
-      trackResultBox.innerHTML = '';
-      if (matches.length === 0) {
-        trackResultBox.innerHTML = `
-          <div style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <p style="color: var(--text-muted); font-size: 14px;">Không tìm thấy đơn hàng trong CSDL cho thông tin: <strong>${query}</strong></p>
-          </div>
-        `;
-        return;
-      }
-
-      matches.forEach(o => {
-        const div = document.createElement('div');
-        div.style = 'background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 12px;';
-        div.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <h4 style="color: var(--color-primary-light);">Đơn Hàng #${o.id}</h4>
-            <span class="cert-badge">${o.status}</span>
-          </div>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Khách hàng: <strong>${o.customer_name}</strong> — ${o.phone}</p>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Địa chỉ: ${o.address || ''} (${o.city || ''})</p>
-          <div style="border-top: 1px solid var(--border-subtle); padding-top: 8px; font-size: 13px;">
-            <p>Tổng thanh toán: <strong style="color: var(--color-primary-light);">${formatVND(o.total)}</strong> (${o.payment_method})</p>
-          </div>
-        `;
-        trackResultBox.appendChild(div);
-      });
+if (doTrackBtn && trackInput && trackResultBox) {
+  doTrackBtn.addEventListener('click', async () => {
+    const query = trackInput.value.trim().toUpperCase();
+    if (!query) {
+      trackResultBox.innerHTML = '<p style="color: var(--color-danger);">Vui lòng nhập số điện thoại hoặc mã đơn hàng để tra cứu!</p>';
+      return;
     }
-  } catch (err) {
-    trackResultBox.innerHTML = `<p style="color: var(--color-danger);">Lỗi truy vấn: ${err.message}</p>`;
-  }
-});
+
+    trackResultBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Đang truy vấn CSDL...</p>';
+
+    try {
+      const res = await fetch(`/api/v1/orders/track`);
+      if (res.ok) {
+        const json = await res.json();
+        const allOrders = json.data || [];
+        const matches = allOrders.filter(o => String(o.id).toUpperCase().includes(query) || String(o.phone).includes(query));
+
+        trackResultBox.innerHTML = '';
+        if (matches.length === 0) {
+          trackResultBox.innerHTML = `
+            <div style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <p style="color: var(--text-muted); font-size: 14px;">Không tìm thấy đơn hàng trong CSDL cho thông tin: <strong>${query}</strong></p>
+            </div>
+          `;
+          return;
+        }
+
+        matches.forEach(o => {
+          const div = document.createElement('div');
+          div.style = 'background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 12px;';
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h4 style="color: var(--color-primary-light);">Đơn Hàng #${o.id}</h4>
+              <span class="cert-badge">${o.status}</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Khách hàng: <strong>${o.customer_name}</strong> — ${o.phone}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Địa chỉ: ${o.address || ''} (${o.city || ''})</p>
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 8px; font-size: 13px;">
+              <p>Tổng thanh toán: <strong style="color: var(--color-primary-light);">${formatVND(o.total)}</strong> (${o.payment_method})</p>
+            </div>
+          `;
+          trackResultBox.appendChild(div);
+        });
+      }
+    } catch (err) {
+      trackResultBox.innerHTML = `<p style="color: var(--color-danger);">Lỗi truy vấn: ${err.message}</p>`;
+    }
+  });
+}
 
 // ========================================================================
 // 7. Protected Admin Portal & RBAC Management Console
 // ========================================================================
-navAdminBtn.addEventListener('click', () => {
-  // RBAC Permission Check
-  if (!state.currentUser) {
-    showToast('Vui lòng đăng nhập với tài khoản [ADMIN] để vào Cổng Quản Trị!', 'error');
-    authModal.classList.add('open');
-    return;
-  }
+if (navAdminBtn) {
+  navAdminBtn.addEventListener('click', () => {
+    // RBAC Permission Check
+    if (!state.currentUser) {
+      showToast('Vui lòng đăng nhập với tài khoản [ADMIN] để vào Cổng Quản Trị!', 'error');
+      if (authModal) authModal.classList.add('open');
+      return;
+    }
 
-  if (state.currentUser.role !== 'ADMIN') {
-    showToast(`Từ chối truy cập! Tài khoản [${state.currentUser.name}] có vai trò (${state.currentUser.role}), yêu cầu quyền (ADMIN)!`, 'error');
-    return;
-  }
+    if (state.currentUser.role !== 'ADMIN') {
+      showToast(`Từ chối truy cập! Tài khoản [${state.currentUser.name}] có vai trò (${state.currentUser.role}), yêu cầu quyền (ADMIN)!`, 'error');
+      return;
+    }
 
-  document.getElementById('adminRoleBadge').textContent = `ADMIN ACCESS: ${state.currentUser.name}`;
-  updateAdminAnalytics();
-  loadAdminUsers();
-  adminModal.classList.add('open');
-});
+    const badge = document.getElementById('adminRoleBadge');
+    if (badge) badge.textContent = `ADMIN ACCESS: ${state.currentUser.name}`;
+    updateAdminAnalytics();
+    loadAdminUsers();
+    if (adminModal) adminModal.classList.add('open');
+  });
+}
 
 window.closeAdminModal = function() {
   adminModal.classList.remove('open');

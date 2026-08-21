@@ -10,6 +10,9 @@ import std.csv
 import std.security
 import std.jwt
 import std.validator
+import std.logger
+import std.session
+import std.queue
 
 suite("VietLang Enterprise Backend Framework & Architecture Ecosystem")
 
@@ -68,4 +71,35 @@ test("4. Cryptographic Hashing, JWT Token Signing & Verification (std.security &
 test("5. Outgoing HTTP Microservice Client Builder (std.http_client)", fn() {
     let client = http_client_builder("http://127.0.0.1:9090", map_set(map_new(), "X-Custom-Header", "VietLangClient"))
     assert_eq(map_get(client, "base_url"), "http://127.0.0.1:9090", "Base URL phai khop")
+})
+
+test("6. Structured JSON Logger & Observability (std.logger)", fn() {
+    let log = logger_new("nong_san_service", "INFO")
+    let ctx = map_set(map_new(), "user_id", 101)
+    let log_line = logger_info(log, "User checkout completed", ctx)
+    assert_true(log_line.contains("User checkout completed"), "Log JSON phai chua message")
+    assert_true(log_line.contains("nong_san_service"), "Log JSON phai chua service name")
+})
+
+test("7. Session & State Store Engine (std.session)", fn() {
+    let store = session_store_new()
+    let res = session_create(store, 888, "ADMIN", 3600)
+    let token = map_get(res, "token")
+    let updated_store = map_get(res, "store")
+
+    let session = session_get(updated_store, token)
+    assert_true(session != none, "Session phai tim thay tu token")
+    assert_eq(map_get(session, "role"), "ADMIN", "Session role phai la ADMIN")
+})
+
+test("8. Asynchronous Background Job Queue (std.queue)", fn() {
+    let q = queue_new("email_queue")
+    let job_payload = map_set(map_new(), "to", "customer@gmail.com")
+    let updated_q = queue_push(q, "send_order_email", job_payload)
+    assert_eq(queue_size(updated_q), 1, "Queue phai co 1 job")
+
+    let pop_res = queue_pop(updated_q)
+    let job = map_get(pop_res, "job")
+    assert_true(job != none, "Job phai pop ra duoc")
+    assert_eq(map_get(job, "type"), "send_order_email", "Job type phai khop")
 })

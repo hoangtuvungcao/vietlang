@@ -1,0 +1,55 @@
+// ========================================================================
+// Module: std.session
+// High-Performance In-Memory & Distributed Session Store
+// ========================================================================
+
+import std.security
+
+fn session_store_new() {
+    let mut store = map_new()
+    store = map_set(store, "sessions", map_new())
+    return store
+}
+
+fn session_create(store, user_id: Int, role: String, ttl_seconds: Int = 86400) {
+    let raw_token = to_string(user_id) + "_" + to_string(time_now()) + "_" + role
+    let token = sha256(raw_token)
+    let expires_at = time_now() + ttl_seconds
+
+    let mut session_data = map_new()
+    session_data = map_set(session_data, "user_id", user_id)
+    session_data = map_set(session_data, "role", role)
+    session_data = map_set(session_data, "created_at", time_now())
+    session_data = map_set(session_data, "expires_at", expires_at)
+
+    let mut sessions = map_get(store, "sessions")
+    sessions = map_set(sessions, token, session_data)
+    let updated_store = map_set(store, "sessions", sessions)
+
+    let mut result = map_new()
+    result = map_set(result, "token", token)
+    result = map_set(result, "expires_at", expires_at)
+    result = map_set(result, "store", updated_store)
+    return result
+}
+
+fn session_get(store, token: String) {
+    let sessions = map_get(store, "sessions")
+    let s = map_get(sessions, token)
+    if s == none {
+        return none
+    }
+
+    let expires_at = map_get(s, "expires_at")
+    if expires_at != none && time_now() > expires_at {
+        return none
+    }
+
+    return s
+}
+
+fn session_destroy(store, token: String) {
+    let mut sessions = map_get(store, "sessions")
+    sessions = map_set(sessions, token, none)
+    return map_set(store, "sessions", sessions)
+}
