@@ -198,12 +198,12 @@ fn parse_json_value(s: &str, line: usize, col: usize) -> VietResult<Value> {
         }
         return Ok(Value::Array(result));
     }
-    // Object
+    // Object / Map
     if s.starts_with('{') && s.ends_with('}') {
         let inner = &s[1..s.len()-1].trim();
         if inner.is_empty() {
             return Ok(Value::Struct {
-                type_name: "Object".to_string(),
+                type_name: "Map".to_string(),
                 fields: HashMap::new(),
             });
         }
@@ -218,7 +218,7 @@ fn parse_json_value(s: &str, line: usize, col: usize) -> VietResult<Value> {
             }
         }
         return Ok(Value::Struct {
-            type_name: "Object".to_string(),
+            type_name: "Map".to_string(),
             fields,
         });
     }
