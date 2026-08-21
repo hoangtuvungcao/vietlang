@@ -1,0 +1,17 @@
+// ========================================================================
+// Module: menu_view.vl
+// Main Navigation Menu View
+// ========================================================================
+
+import apps.viet_finance_desktop.src.config.theme
+
+pub fn render_main_menu() {
+    println(C_BOLD + "DANH MỤC TÍNH NĂNG ỨNG DỤNG:" + C_RESET)
+    println("  [" + C_CYAN + "1" + C_RESET + "] 💳 Sinh & Xác Thực Mã Thanh Toán VietQR (Napas 247)")
+    println("  [" + C_YELLOW + "2" + C_RESET + "] ⚡ Đo Hiệu Năng Đa Luồng CSP Goroutines & Channel Benchmark")
+    println("  [" + C_BLUE + "3" + C_RESET + "] 📊 Quản Lý Sổ Cái Giao Dịch CSDL SQLite ACID")
+    println("  [" + C_RED + "4" + C_RESET + "] 🔐 Công Cụ Mã Hóa & Ký Số (HMAC-SHA256, HMAC-SHA512)")
+    println("  [" + C_GREEN + "5" + C_RESET + "] 📈 Máy Tính Lãi Suất Kép & Đầu Tư Tích Lũy")
+    println("  [" + C_MAGENTA + "0" + C_RESET + "] 🚪 Thoát Ứng Dụng (Exit)")
+    println()
+}

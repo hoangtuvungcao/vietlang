@@ -1,0 +1,27 @@
+// ========================================================================
+// Module: vietqr_service.vl
+// VietQR Payment generation and persistence
+// ========================================================================
+
+import std.vietqr
+import std.db_sqlite
+
+pub fn create_vietqr_transaction(db, bank_code: String, account_no: String, amount: Int, note: String) {
+    let bin = vietqr_get_bank_bin(bank_code)
+    let qr_res = vietqr_create_payment(bank_code, account_no, amount, note)
+    let qr_url = to_string(map_get(qr_res, "qr_url"))
+    let order_id = "ORD_" + to_string(time_now())
+
+    let query = "INSERT INTO transactions (order_id, bank_code, account_no, amount, note, created_at) VALUES ('" + order_id + "', '" + bank_code + "', '" + account_no + "', " + to_string(amount) + ", '" + note + "', " + to_string(time_now()) + ")"
+    sqlite_exec(db, query)
+
+    let mut result = map_new()
+    result = map_set(result, "order_id", order_id)
+    result = map_set(result, "bank_code", bank_code)
+    result = map_set(result, "bin", bin)
+    result = map_set(result, "account_no", account_no)
+    result = map_set(result, "amount", amount)
+    result = map_set(result, "note", note)
+    result = map_set(result, "qr_url", qr_url)
+    return result
+}

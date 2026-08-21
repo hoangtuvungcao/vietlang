@@ -1,0 +1,76 @@
+// ========================================================================
+// Module: std.gui
+// Native Desktop GUI Window & Dialog Integration for VietLang
+// Supports Linux (Zenity / GTK), macOS (osascript), and Windows (PowerShell/MessageBox)
+// ========================================================================
+
+/// Show a native Desktop Message Box window
+pub fn gui_msgbox(title: String, message: String) {
+    let os_type = env_get("OS")
+    if os_type == "Windows_NT" {
+        let ps_cmd = "powershell -Command \"[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('" + message + "', '" + title + "')\""
+        system_cmd(ps_cmd)
+    } else {
+        // Linux / GTK Zenity or fallback
+        if file_exists("/usr/bin/zenity") {
+            let cmd = "zenity --info --title=\"" + title + "\" --text=\"" + message + "\" --width=450 2>/dev/null"
+            system_cmd(cmd)
+        } else if file_exists("/usr/bin/osascript") {
+            let cmd = "osascript -e 'display dialog \"" + message + "\" with title \"" + title + "\" buttons {\"OK\"} default button \"OK\"'"
+            system_cmd(cmd)
+        } else {
+            println("=== [" + title + "] ===")
+            println(message)
+        }
+    }
+}
+
+/// Show a native Desktop Input Prompt window and return user input
+pub fn gui_input(title: String, prompt: String, default_value: String) -> String {
+    let os_type = env_get("OS")
+    if os_type == "Windows_NT" {
+        let ps_cmd = "powershell -Command \"[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic'); [Microsoft.VisualBasic.Interaction]::InputBox('" + prompt + "', '" + title + "', '" + default_value + "')\""
+        return trim(to_string(system_cmd(ps_cmd)))
+    } else {
+        if file_exists("/usr/bin/zenity") {
+            let cmd = "zenity --entry --title=\"" + title + "\" --text=\"" + prompt + "\" --entry-text=\"" + default_value + "\" --width=400 2>/dev/null"
+            return trim(to_string(system_cmd(cmd)))
+        } else if file_exists("/usr/bin/osascript") {
+            let cmd = "osascript -e 'text returned of (display dialog \"" + prompt + "\" with title \"" + title + "\" default answer \"" + default_value + "\")'"
+            return trim(to_string(system_cmd(cmd)))
+        } else {
+            return input(prompt + ": ")
+        }
+    }
+}
+
+/// Show a native Desktop Selection List window
+pub fn gui_select(title: String, prompt: String, options) -> String {
+    if file_exists("/usr/bin/zenity") {
+        let mut opt_str = ""
+        for opt in options {
+            opt_str = opt_str + " \"" + to_string(opt) + "\""
+        }
+        let cmd = "zenity --list --title=\"" + title + "\" --text=\"" + prompt + "\" --column=\"Lựa chọn\"" + opt_str + " --width=450 --height=350 2>/dev/null"
+        return trim(to_string(system_cmd(cmd)))
+    } else {
+        println(title + " - " + prompt)
+        let mut idx = 1
+        for opt in options {
+            println("  [" + to_string(idx) + "] " + to_string(opt))
+            idx += 1
+        }
+        let sel = input("Chọn: ")
+        return sel
+    }
+}
+
+/// Show a native Desktop System Notification popup
+pub fn gui_notify(title: String, message: String) {
+    if file_exists("/usr/bin/notify-send") {
+        let cmd = "notify-send \"" + title + "\" \"" + message + "\""
+        system_cmd(cmd)
+    } else {
+        gui_msgbox(title, message)
+    }
+}

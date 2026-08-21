@@ -1,0 +1,181 @@
+// ========================================================================
+// VietFintech Desktop Terminal Pro — Multi-File Modular Application
+// Built 100% natively in VietLang Clean Architecture
+// ========================================================================
+
+import apps.viet_finance_desktop.src.config.theme
+import apps.viet_finance_desktop.src.config.database
+import apps.viet_finance_desktop.src.services.vietqr_service
+import apps.viet_finance_desktop.src.services.crypto_service
+import apps.viet_finance_desktop.src.services.benchmark_service
+import apps.viet_finance_desktop.src.services.calculator_service
+import apps.viet_finance_desktop.src.views.banner_view
+import apps.viet_finance_desktop.src.views.menu_view
+import apps.viet_finance_desktop.src.views.qr_view
+import apps.viet_finance_desktop.src.views.ledger_view
+import std.db_sqlite
+import std.gui
+
+fn handle_vietqr(db) {
+    clear_screen()
+    println(C_MAGENTA + C_BOLD + "=== [1] MÁY TẠO & XÁC THỰC MÃ THANH TOÁN VIETQR (NAPAS 247) ===" + C_RESET)
+    println()
+    println("Danh sách ngân hàng hỗ trợ: " + C_YELLOW + "MB (Quân Đội), VCB, TCB, VPB, ACB, BIDV, CTG, TPB, TIMO" + C_RESET)
+    println()
+
+    let bank = input(C_BOLD + "-> Nhập mã ngân hàng [Mặc định: MB]: " + C_RESET)
+    let mut bank_code = "MB"
+    if trim(bank) != "" { bank_code = to_uppercase(trim(bank)) }
+
+    let acc = input(C_BOLD + "-> Nhập số tài khoản thụ hưởng [Mặc định: 0901234567]: " + C_RESET)
+    let mut account_no = "0901234567"
+    if trim(acc) != "" { account_no = trim(acc) }
+
+    let amt_str = input(C_BOLD + "-> Nhập số tiền giao dịch (VNĐ) [Mặc định: 250000]: " + C_RESET)
+    let mut amount = 250000
+    if trim(amt_str) != "" { amount = to_int(trim(amt_str)) }
+
+    let note_str = input(C_BOLD + "-> Nhập nội dung chuyển khoản [Mặc định: Thanh toan don hang]: " + C_RESET)
+    let mut note = "Thanh toan don hang"
+    if trim(note_str) != "" { note = trim(note_str) }
+
+    let tx_res = create_vietqr_transaction(db, bank_code, account_no, amount, note)
+    render_qr_receipt(tx_res)
+
+    input(C_DIM + "Bấm phím ENTER để quay lại Menu chính..." + C_RESET)
+}
+
+fn handle_benchmark() {
+    clear_screen()
+    println(C_YELLOW + C_BOLD + "=== [2] BỘ ĐO HIỆU NĂNG ĐA LUỒNG CSP GOROUTINES & CHANNELS ===" + C_RESET)
+    println()
+    println("Hệ thống sẽ khởi tạo " + C_CYAN + "100 tác vụ song song" + C_RESET + " trên các Green Thread Workers.")
+    println()
+    input(C_BOLD + "Nhấn ENTER để bắt đầu chạy Benchmark đa luồng..." + C_RESET)
+    println()
+
+    println(C_CYAN + "[1/2] Đang phân bổ 100 tác vụ tính toán vào Worker Pool..." + C_RESET)
+    let report = execute_parallel_benchmark(100)
+
+    println(C_GREEN + C_BOLD + "[2/2] HOÀN TẤT 100% CÁC TÁC VỤ ĐỒNG THỜI!" + C_RESET)
+    println()
+    println(C_BOLD + "📊 KẾT QUẢ ĐO HIỆU NĂNG:" + C_RESET)
+    println("  - Số tác vụ xử lý:     " + C_YELLOW + to_string(map_get(report, "task_count")) + " tác vụ" + C_RESET)
+    println("  - Tổng thời gian:      " + C_GREEN + to_string(map_get(report, "elapsed_ms")) + " ms" + C_RESET)
+    println("  - Tốc độ xử lý:        " + C_CYAN + C_BOLD + to_string(map_get(report, "throughput_tps")) + " Tasks / giây" + C_RESET)
+    println("  - Cơ chế:              " + C_MAGENTA + "Rust OS Threads + Safe Mutex Condvar Queues" + C_RESET)
+    println()
+    input(C_DIM + "Bấm phím ENTER để quay lại Menu chính..." + C_RESET)
+}
+
+fn handle_ledger(db) {
+    clear_screen()
+    println(C_BLUE + C_BOLD + "=== [3] SỔ CÁI GIAO DỊCH LƯU TRỮ TRÊN SQLITE ACID ===" + C_RESET)
+    println()
+
+    let rows = sqlite_query(db, "SELECT id, order_id, bank_code, account_no, amount, note, created_at FROM transactions ORDER BY id DESC LIMIT 20")
+    render_ledger_table(rows)
+
+    println()
+    input(C_DIM + "Bấm phím ENTER để quay lại Menu chính..." + C_RESET)
+}
+
+fn handle_crypto() {
+    clear_screen()
+    println(C_RED + C_BOLD + "=== [4] CÔNG CỤ MÃ HÓA & CHỮ KÝ SỐ (HMAC & SHA-512) ===" + C_RESET)
+    println()
+
+    let msg = input(C_BOLD + "-> Nhập chuỗi văn bản cần ký số: " + C_RESET)
+    let mut message = "VIETLANG_ENTERPRISE_TRANSACTION"
+    if trim(msg) != "" { message = trim(msg) }
+
+    let key_in = input(C_BOLD + "-> Nhập khóa bí mật (Secret Key) [Mặc định: secret_key_2026]: " + C_RESET)
+    let mut key = "secret_key_2026"
+    if trim(key_in) != "" { key = trim(key_in) }
+
+    let bundle = compute_security_bundle(message, key)
+
+    println()
+    println(C_CYAN + C_BOLD + "Kết quả băm và mã hóa bảo mật:" + C_RESET)
+    println("  ● SHA-256 Digest:   " + C_YELLOW + to_string(map_get(bundle, "sha256")) + C_RESET)
+    println("  ● HMAC-SHA256:      " + C_GREEN + to_string(map_get(bundle, "hmac256")) + C_RESET)
+    println("  ● HMAC-SHA512:      " + C_CYAN + to_string(map_get(bundle, "hmac512")) + C_RESET)
+    println("  ● AES XOR Cipher:   " + C_MAGENTA + to_string(map_get(bundle, "encrypted")) + C_RESET)
+    println()
+    input(C_DIM + "Bấm phím ENTER để quay lại Menu chính..." + C_RESET)
+}
+
+fn handle_calculator() {
+    clear_screen()
+    println(C_GREEN + C_BOLD + "=== [5] MÁY TÍNH LÃI SUẤT KÉP & ĐẦU TƯ TÍCH LŨY ===" + C_RESET)
+    println()
+
+    let p_str = input(C_BOLD + "-> Nhập số vốn ban đầu (VNĐ) [Mặc định: 100000000]: " + C_RESET)
+    let mut principal = 100000000
+    if trim(p_str) != "" { principal = to_int(trim(p_str)) }
+
+    let r_str = input(C_BOLD + "-> Nhập lãi suất năm (%) [Mặc định: 8.5]: " + C_RESET)
+    let mut rate = 0.085
+    if trim(r_str) != "" { rate = to_float(trim(r_str)) / 100.0 }
+
+    let y_str = input(C_BOLD + "-> Nhập số năm đầu tư [Mặc định: 5]: " + C_RESET)
+    let mut years = 5
+    if trim(y_str) != "" { years = to_int(trim(y_str)) }
+
+    let res = calculate_compound_growth(principal, rate, years)
+    let schedule = map_get(res, "schedule")
+
+    println()
+    println(C_BOLD + "BẢNG TIẾN TRÌNH TĂNG TRƯỞNG TÀI SẢN QUA CÁC NĂM:" + C_RESET)
+    println(C_DIM + "┌──────┬──────────────────────┬──────────────────────┬──────────────────────┐" + C_RESET)
+    println(C_BOLD + "│ Năm  │ Vốn Đầu Năm          │ Tiền Lãi Trong Năm   │ Tổng Số Dư Cuối Năm  │" + C_RESET)
+    println(C_DIM + "├──────┼──────────────────────┼──────────────────────┼──────────────────────┤" + C_RESET)
+
+    for item in schedule {
+        let yr = to_string(map_get(item, "year"))
+        let sb = to_string(map_get(item, "start_balance")) + " VNĐ"
+        let it = "+" + to_string(map_get(item, "interest")) + " VNĐ"
+        let eb = to_string(map_get(item, "end_balance")) + " VNĐ"
+        println("│  " + yr + "   │ " + sb + "        │ " + it + "        │ " + C_GREEN + eb + C_RESET + "        │")
+    }
+    println(C_DIM + "└──────┴──────────────────────┴──────────────────────┴──────────────────────┘" + C_RESET)
+
+    let total_profit = to_int(map_get(res, "total_profit"))
+    println()
+    println("Tổng lợi nhuận sau " + to_string(years) + " năm: " + C_GREEN + C_BOLD + "+" + to_string(total_profit) + " VNĐ (" + to_string(to_int((total_profit * 100) / principal)) + "%)" + C_RESET)
+    println()
+    input(C_DIM + "Bấm phím ENTER để quay lại Menu chính..." + C_RESET)
+}
+
+fn app_main() {
+    let db_path = "apps/viet_finance_desktop/data/app.sqlite"
+    let db = app_db_init(db_path)
+
+    let mut running = true
+    while running {
+        clear_screen()
+        render_app_banner()
+        render_main_menu()
+
+        let choice = input(C_BOLD + C_CYAN + "👉 Nhập lựa chọn của bạn [0-5]: " + C_RESET)
+        let c = trim(choice)
+
+        if c == "1" {
+            handle_vietqr(db)
+        } else if c == "2" {
+            handle_benchmark()
+        } else if c == "3" {
+            handle_ledger(db)
+        } else if c == "4" {
+            handle_crypto()
+        } else if c == "5" {
+            handle_calculator()
+        } else if c == "0" || c == "q" || c == "exit" {
+            running = false
+            clear_screen()
+            println(C_GREEN + C_BOLD + "Cảm ơn bạn đã sử dụng VietFintech Desktop Terminal Pro! Hẹn gặp lại." + C_RESET)
+        }
+    }
+}
+
+app_main()

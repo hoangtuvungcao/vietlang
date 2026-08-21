@@ -1,0 +1,12 @@
+// ========================================================================
+// Module: database.vl
+// SQLite Database initialization and queries
+// ========================================================================
+
+import std.db_sqlite
+
+pub fn app_db_init(db_path: String) {
+    let db = sqlite_open(db_path)
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT, bank_code TEXT, account_no TEXT, amount INTEGER, note TEXT, created_at INTEGER)")
+    return db
+}
