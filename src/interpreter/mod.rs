@@ -144,6 +144,12 @@ impl Interpreter {
             ("udp_send", Some(3)),
             ("str_split_lines", Some(1)),
             ("system_cmd", Some(1)),
+            ("url_encode", Some(1)),
+            ("url_decode", Some(1)),
+            ("hmac_sha256", Some(2)),
+            ("encrypt_secret", Some(2)),
+            ("decrypt_secret", Some(2)),
+            ("ip_in_cidr", Some(2)),
         ];
 
         for (name, arity) in builtins {
@@ -1263,6 +1269,12 @@ impl Interpreter {
             "udp_send" => crate::stdlib::builtin_udp_send(args, span.line, span.column),
             "str_split_lines" => crate::stdlib::builtin_str_split_lines(args, span.line, span.column),
             "system_cmd" => crate::stdlib::builtin_system_cmd(args, span.line, span.column),
+            "url_encode" => crate::stdlib::builtin_url_encode(args, span.line, span.column),
+            "url_decode" => crate::stdlib::builtin_url_decode(args, span.line, span.column),
+            "hmac_sha256" => crate::stdlib::builtin_hmac_sha256(args, span.line, span.column),
+            "encrypt_secret" => crate::stdlib::builtin_encrypt_secret(args, span.line, span.column),
+            "decrypt_secret" => crate::stdlib::builtin_decrypt_secret(args, span.line, span.column),
+            "ip_in_cidr" => crate::stdlib::builtin_ip_in_cidr(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

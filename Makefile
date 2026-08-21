@@ -56,6 +56,8 @@ demo: build
 	./target/release/vietlang examples/realtime_websocket_server.vl
 	@echo "\n--- full_backend_suite.vl ---"
 	./target/release/vietlang examples/full_backend_suite.vl
+	@echo "\n--- king_of_backend_benchmark.vl ---"
+	./target/release/vietlang examples/king_of_backend_benchmark.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"

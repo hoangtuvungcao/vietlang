@@ -1,0 +1,25 @@
+// ===================================================
+// VietLang Enterprise Cryptography & API Shield (std.crypto_advanced)
+// Webhook Verification, Secret Encryption, API Key Validation
+// ===================================================
+
+fn crypto_verify_webhook(payload: String, signature: String, secret_key: String) -> Bool {
+    let expected_sig = hmac_sha256(payload, secret_key)
+    return security_constant_time_compare(signature, expected_sig)
+}
+
+fn crypto_generate_api_key(environment: String = "live") -> String {
+    let raw = uuid() + ":" + to_string(time_now_us())
+    let hash = substring(sha256(raw), 0, 32)
+    return "ak_" + environment + "_" + hash
+}
+
+fn crypto_encrypt_payload(data, secret_key: String) -> String {
+    let json_str = json_stringify(data)
+    return encrypt_secret(json_str, secret_key)
+}
+
+fn crypto_decrypt_payload(encrypted_b64: String, secret_key: String) {
+    let json_str = decrypt_secret(encrypted_b64, secret_key)
+    return json_parse(json_str)
+}

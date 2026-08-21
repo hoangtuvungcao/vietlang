@@ -1322,3 +1322,157 @@ pub fn builtin_system_cmd(args: &[Value], line: usize, col: usize) -> VietResult
     }
 }
 
+pub fn builtin_url_encode(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("url_encode() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.as_str(), _ => return Err(VietError::type_error("url_encode() expects String".into(), line, col)) };
+    let mut encoded = String::new();
+    for b in s.bytes() {
+        match b {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => encoded.push(b as char),
+            b' ' => encoded.push('+'),
+            _ => encoded.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    Ok(Value::String(encoded))
+}
+
+pub fn builtin_url_decode(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("url_decode() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.as_str(), _ => return Err(VietError::type_error("url_decode() expects String".into(), line, col)) };
+    let mut decoded = Vec::new();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(val) = u8::from_str_radix(std::str::from_utf8(&bytes[i+1..i+3]).unwrap_or(""), 16) {
+                decoded.push(val);
+                i += 3;
+                continue;
+            }
+        } else if bytes[i] == b'+' {
+            decoded.push(b' ');
+        } else {
+            decoded.push(bytes[i]);
+        }
+        i += 1;
+    }
+    Ok(Value::String(String::from_utf8_lossy(&decoded).to_string()))
+}
+
+pub fn builtin_hmac_sha256(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("hmac_sha256() takes 2 arguments (message, key)".into(), line, col));
+    }
+    let msg = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("hmac_sha256() message must be String".into(), line, col)) };
+    let key = match &args[1] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("hmac_sha256() key must be String".into(), line, col)) };
+    let combined = format!("{}:{}:{}", key, msg, key);
+    let hash = simple_sha256(combined.as_bytes());
+    Ok(Value::String(hash))
+}
+
+pub fn builtin_encrypt_secret(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("encrypt_secret() takes 2 arguments (plaintext, key)".into(), line, col));
+    }
+    let text = match &args[0] { Value::String(s) => s.as_bytes(), _ => return Err(VietError::type_error("encrypt_secret() plaintext must be String".into(), line, col)) };
+    let key = match &args[1] { Value::String(s) => s.as_bytes(), _ => return Err(VietError::type_error("encrypt_secret() key must be String".into(), line, col)) };
+    if key.is_empty() { return Err(VietError::runtime_error("Key cannot be empty".into(), line, col)); }
+    
+    let mut encrypted = Vec::with_capacity(text.len());
+    for (i, &b) in text.iter().enumerate() {
+        let k = key[i % key.len()];
+        encrypted.push(b ^ k ^ ((i as u8).wrapping_mul(7)));
+    }
+    Ok(Value::String(base64_encode_bytes(&encrypted)))
+}
+
+pub fn builtin_decrypt_secret(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("decrypt_secret() takes 2 arguments (ciphertext, key)".into(), line, col));
+    }
+    let b64 = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("decrypt_secret() ciphertext must be String".into(), line, col)) };
+    let key = match &args[1] { Value::String(s) => s.as_bytes(), _ => return Err(VietError::type_error("decrypt_secret() key must be String".into(), line, col)) };
+    if key.is_empty() { return Err(VietError::runtime_error("Key cannot be empty".into(), line, col)); }
+
+    // Decode base64
+    let mut bytes = Vec::new();
+    let clean = b64.replace(['\r', '\n', ' '], "");
+    let mut buf = [0u8; 4];
+    let mut count = 0;
+    for &c in clean.as_bytes() {
+        if c == b'=' { break; }
+        let val = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => continue,
+        };
+        buf[count] = val;
+        count += 1;
+        if count == 4 {
+            bytes.push((buf[0] << 2) | (buf[1] >> 4));
+            bytes.push((buf[1] << 4) | (buf[2] >> 2));
+            bytes.push((buf[2] << 6) | buf[3]);
+            count = 0;
+        }
+    }
+    if count == 2 {
+        bytes.push((buf[0] << 2) | (buf[1] >> 4));
+    } else if count == 3 {
+        bytes.push((buf[0] << 2) | (buf[1] >> 4));
+        bytes.push((buf[1] << 4) | (buf[2] >> 2));
+    }
+
+    let mut decrypted = Vec::with_capacity(bytes.len());
+    for (i, &b) in bytes.iter().enumerate() {
+        let k = key[i % key.len()];
+        decrypted.push(b ^ k ^ ((i as u8).wrapping_mul(7)));
+    }
+    Ok(Value::String(String::from_utf8_lossy(&decrypted).to_string()))
+}
+
+pub fn builtin_ip_in_cidr(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("ip_in_cidr() takes 2 arguments (ip, cidr)".into(), line, col));
+    }
+    let ip_str = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("ip must be String".into(), line, col)) };
+    let cidr_str = match &args[1] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("cidr must be String".into(), line, col)) };
+
+    if cidr_str == "0.0.0.0/0" || cidr_str == "*" {
+        return Ok(Value::Bool(true));
+    }
+    if !cidr_str.contains('/') {
+        return Ok(Value::Bool(ip_str == cidr_str));
+    }
+
+    let parts: Vec<&str> = cidr_str.split('/').collect();
+    if parts.len() != 2 { return Ok(Value::Bool(false)); }
+    let prefix = parts[0];
+    let mask: u32 = parts[1].parse().unwrap_or(32);
+
+    let ip_num = parse_ipv4(&ip_str);
+    let net_num = parse_ipv4(prefix);
+    if ip_num.is_none() || net_num.is_none() {
+        return Ok(Value::Bool(false));
+    }
+
+    let mask_bits = if mask == 0 { 0 } else { !0u32 << (32 - mask) };
+    Ok(Value::Bool((ip_num.unwrap() & mask_bits) == (net_num.unwrap() & mask_bits)))
+}
+
+fn parse_ipv4(s: &str) -> Option<u32> {
+    let octets: Vec<&str> = s.trim().split('.').collect();
+    if octets.len() != 4 { return None; }
+    let o1: u32 = octets[0].parse().ok()?;
+    let o2: u32 = octets[1].parse().ok()?;
+    let o3: u32 = octets[2].parse().ok()?;
+    let o4: u32 = octets[3].parse().ok()?;
+    Some((o1 << 24) | (o2 << 16) | (o3 << 8) | o4)
+}
+

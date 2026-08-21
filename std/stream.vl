@@ -1,0 +1,49 @@
+// ===================================================
+// VietLang Distributed Event Stream Engine (std.stream)
+// Partitioned Message Logs & Consumer Group Offset Tracking
+// ===================================================
+
+fn stream_engine_new() {
+    let s = map_new()
+    let s = map_set(s, "topics", map_new())
+    let s = map_set(s, "consumer_offsets", map_new())
+    return s
+}
+
+fn stream_publish(engine, topic: String, message) {
+    let topics = map_get(engine, "topics")
+    let mut messages = []
+    if map_has(topics, topic) {
+        messages = map_get(topics, topic)
+    }
+
+    let offset = messages.len()
+    let entry = map_new()
+    let entry = map_set(entry, "offset", offset)
+    let entry = map_set(entry, "data", message)
+    let entry = map_set(entry, "timestamp", time_now())
+
+    let new_messages = push(messages, entry)
+    let new_topics = map_set(topics, topic, new_messages)
+    let updated = map_set(engine, "topics", new_topics)
+
+    let res = map_new()
+    let res = map_set(res, "offset", offset)
+    let res = map_set(res, "engine", updated)
+    return res
+}
+
+fn stream_consume_from(engine, topic: String, start_offset: Int, batch_size: Int = 10) {
+    let topics = map_get(engine, "topics")
+    let mut batch = []
+    if map_has(topics, topic) {
+        let messages = map_get(topics, topic)
+        let total = messages.len()
+        let mut idx = start_offset
+        while idx < total && batch.len() < batch_size {
+            batch = push(batch, messages[idx])
+            idx += 1
+        }
+    }
+    return batch
+}

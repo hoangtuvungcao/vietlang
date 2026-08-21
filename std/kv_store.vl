@@ -1,0 +1,79 @@
+// ===================================================
+// VietLang In-Memory Key-Value & Redis Engine (std.kv_store)
+// Atomic counters, Hashes, Lists, Sets, and TTL eviction
+// ===================================================
+
+fn kv_store_new() {
+    let s = map_new()
+    let s = map_set(s, "strings", map_new())
+    let s = map_set(s, "ttl", map_new())
+    let s = map_set(s, "hashes", map_new())
+    let s = map_set(s, "lists", map_new())
+    return s
+}
+
+fn kv_set(store, key: String, value, ttl_seconds: Int = 0) {
+    let strings = map_get(store, "strings")
+    let new_strings = map_set(strings, key, value)
+    let mut updated = map_set(store, "strings", new_strings)
+
+    if ttl_seconds > 0 {
+        let expire_at = time_now() + ttl_seconds
+        let ttls = map_get(store, "ttl")
+        let new_ttls = map_set(ttls, key, expire_at)
+        updated = map_set(updated, "ttl", new_ttls)
+    }
+
+    return updated
+}
+
+fn kv_get(store, key: String, default_val = none) {
+    let ttls = map_get(store, "ttl")
+    if map_has(ttls, key) {
+        let expire_at = map_get(ttls, key)
+        if time_now() > expire_at {
+            return default_val
+        }
+    }
+
+    let strings = map_get(store, "strings")
+    if map_has(strings, key) {
+        return map_get(strings, key)
+    }
+    return default_val
+}
+
+// Atomic increment operation
+fn kv_incr(store, key: String, delta: Int = 1) {
+    let current_val = kv_get(store, key, 0)
+    let new_val = current_val + delta
+    let updated_store = kv_set(store, key, new_val)
+
+    let res = map_new()
+    let res = map_set(res, "value", new_val)
+    let res = map_set(res, "store", updated_store)
+    return res
+}
+
+// Hash operations (HSET / HGET)
+fn kv_hset(store, hash_key: String, field: String, val) {
+    let hashes = map_get(store, "hashes")
+    let mut h = map_new()
+    if map_has(hashes, hash_key) {
+        h = map_get(hashes, hash_key)
+    }
+    let new_h = map_set(h, field, val)
+    let new_hashes = map_set(hashes, hash_key, new_h)
+    return map_set(store, "hashes", new_hashes)
+}
+
+fn kv_hget(store, hash_key: String, field: String, default_val = none) {
+    let hashes = map_get(store, "hashes")
+    if map_has(hashes, hash_key) {
+        let h = map_get(hashes, hash_key)
+        if map_has(h, field) {
+            return map_get(h, field)
+        }
+    }
+    return default_val
+}

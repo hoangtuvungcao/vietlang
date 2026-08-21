@@ -262,6 +262,65 @@ test("Validation sanity", fn() {
 test_summary()
 ```
 
+### 2.17 In-Memory Key-Value & Redis Engine (`std.kv_store`)
+```rust
+import std.kv_store
+
+let mut store = kv_store_new()
+
+// Atomic counter increment
+let res = kv_incr(store, "rate_limit:ip:101", 1)
+store = map_get(res, "store")
+let current_hits = map_get(res, "value")
+
+// Hash operations (HSET / HGET)
+store = kv_hset(store, "session:usr_99", "token", "jwt_abc_123")
+let token = kv_hget(store, "session:usr_99", "token")
+```
+
+### 2.18 Distributed Event Stream Engine (`std.stream`)
+```rust
+import std.stream
+
+let mut stream = stream_engine_new()
+
+// Publish event to partition log
+let pub_res = stream_publish(stream, "telemetry_events", event_data)
+stream = map_get(pub_res, "engine")
+let offset = map_get(pub_res, "offset")
+
+// Consumer group batch polling
+let batch = stream_consume_from(stream, "telemetry_events", 0, 50)
+```
+
+### 2.19 Enterprise Cryptography & API Shield (`std.crypto_advanced`)
+```rust
+import std.crypto_advanced
+
+// Webhook signature verification (Stripe, MoMo, ZaloPay)
+let is_valid = crypto_verify_webhook(raw_payload, signature_header, webhook_secret)
+
+// Symmetric secret payload encryption & decryption
+let enc_b64 = crypto_encrypt_payload(credit_card_data, encryption_key)
+let decrypted = crypto_decrypt_payload(enc_b64, encryption_key)
+
+// Secure API Key generation
+let api_key = crypto_generate_api_key("live") // -> "ak_live_a1b2c3..."
+```
+
+### 2.20 Enterprise HTTP Pipeline & Middleware Chain (`std.http_pipeline`)
+```rust
+import std.http_pipeline
+
+let pipeline = http_pipeline_new()
+
+// Check CIDR IP whitelist
+let is_allowed = http_check_ip_allowed(pipeline, client_ip)
+
+// Build response with automatic Security Headers (CSP, HSTS, X-Frame-Options, nosniff)
+let response = http_build_response(200, payload_data)
+```
+
 ---
 
 ## 3. Package Management with VPM (`vpm.vl`)
