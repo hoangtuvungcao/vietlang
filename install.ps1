@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Version = "0.1.0"
+$Version = "0.1.1"
 $Repo = "hoangtuvungcao/vietlang"
 $VietLangHome = Join-Path $HOME ".vietlang"
 $BinDir = Join-Path $VietLangHome "bin"

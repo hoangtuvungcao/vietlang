@@ -6,7 +6,7 @@
 
 set -e
 
-VIETLANG_VERSION="0.1.0"
+VIETLANG_VERSION="0.1.1"
 REPO="hoangtuvungcao/vietlang"
 VIETLANG_HOME="${HOME}/.vietlang"
 BIN_DIR="${VIETLANG_HOME}/bin"

@@ -26,7 +26,7 @@ use interpreter::Interpreter;
 use vm::compiler::Compiler;
 use vm::VM;
 
-const VERSION: &str = "0.1.0";
+const VERSION: &str = "0.1.1";
 
 const BANNER: &str = r#"
  ╔════════════════════════════════════════════════════════════╗
@@ -37,7 +37,7 @@ const BANNER: &str = r#"
  ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
  ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
  ║                                               __/ |        ║
- ║              Backend-First Language v0.1.0    |___/        ║
+ ║              Backend-First Language v0.1.1    |___/        ║
  ║              Type 'help' for usage, 'exit' to quit         ║
  ╚════════════════════════════════════════════════════════════╝
 "#;
