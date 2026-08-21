@@ -790,13 +790,20 @@ pub fn builtin_http_listen(args: &[Value], line: usize, col: usize) -> VietResul
     if args.len() < 2 {
         return Err(VietError::runtime_error("http_listen() takes 2+ arguments (port, handler)".into(), line, col));
     }
-    let port = match &args[0] {
-        Value::Int(n) => *n,
-        Value::String(s) => s.parse::<i64>().unwrap_or(8080),
-        _ => return Err(VietError::type_error("http_listen() port must be an integer".into(), line, col)),
+    let (bind_ip, port) = match &args[0] {
+        Value::Int(n) => ("0.0.0.0".to_string(), *n as u16),
+        Value::String(s) => {
+            if s.contains(':') {
+                let parts: Vec<&str> = s.split(':').collect();
+                (parts[0].to_string(), parts[1].parse::<u16>().unwrap_or(8080))
+            } else {
+                ("0.0.0.0".to_string(), s.parse::<u16>().unwrap_or(8080))
+            }
+        }
+        _ => return Err(VietError::type_error("http_listen() port must be Int or String (e.g. 9090 or '0.0.0.0:9090')".into(), line, col)),
     };
-    let addr = format!("0.0.0.0:{}", port);
-    eprintln!("\x1b[32m VietLang HTTP Server listening on http://localhost:{}\x1b[0m", port);
+    let addr = format!("{}:{}", bind_ip, port);
+    eprintln!("\x1b[32mVietLang HTTP Server listening on http://{}:{}\x1b[0m", bind_ip, port);
 
     let listener = TcpListener::bind(&addr).map_err(|e|
         VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), line, col)
@@ -833,36 +840,71 @@ pub fn builtin_http_listen(args: &[Value], line: usize, col: usize) -> VietResul
                 }
 
                 // Read body
-                let mut body = String::new();
+                let mut _body = String::new();
                 if content_length > 0 {
                     let mut buf = vec![0u8; content_length];
                     let _ = reader.read_exact(&mut buf);
-                    body = String::from_utf8_lossy(&buf).to_string();
+                    _body = String::from_utf8_lossy(&buf).to_string();
                 }
 
-                // Build request object
-                let mut req_fields = HashMap::new();
-                req_fields.insert("method".to_string(), Value::String(method.clone()));
-                req_fields.insert("path".to_string(), Value::String(path.clone()));
-                req_fields.insert("body".to_string(), Value::String(body));
-                req_fields.insert("headers".to_string(), Value::Struct {
-                    type_name: "Headers".to_string(),
-                    fields: headers,
-                });
+                // Handle CORS OPTIONS preflight
+                if method == "OPTIONS" {
+                    let preflight = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nConnection: close\r\n\r\n";
+                    let _ = stream.write_all(preflight.as_bytes());
+                    let _ = stream.flush();
+                    continue;
+                }
 
-                // Default response
-                let response_body = format!(
-                    "{{\"method\":\"{}\",\"path\":\"{}\",\"server\":\"VietLang/0.1.0\"}}",
-                    method, path
-                );
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n{}",
-                    response_body.len(), response_body
-                );
-                let _ = stream.write_all(response.as_bytes());
-                let _ = stream.flush();
+                // Static File Serving
+                let static_candidates = [
+                    format!("public{}", if path == "/" { "/index.html" } else { &path }),
+                    format!("examples/agricultural_ecommerce_platform/public{}", if path == "/" { "/index.html" } else { &path }),
+                ];
 
-                eprintln!("\x1b[36m[HTTP]\x1b[0m {} {} → 200", method, path);
+                let mut served_static = false;
+                for static_path in &static_candidates {
+                    if std::path::Path::new(static_path).exists() && std::path::Path::new(static_path).is_file() {
+                        if let Ok(content) = std::fs::read(static_path) {
+                            let mime = if static_path.ends_with(".html") {
+                                "text/html; charset=utf-8"
+                            } else if static_path.ends_with(".css") {
+                                "text/css; charset=utf-8"
+                            } else if static_path.ends_with(".js") {
+                                "application/javascript; charset=utf-8"
+                            } else if static_path.ends_with(".json") {
+                                "application/json; charset=utf-8"
+                            } else {
+                                "text/plain; charset=utf-8"
+                            };
+
+                            let response = format!(
+                                "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n",
+                                mime, content.len()
+                            );
+                            let _ = stream.write_all(response.as_bytes());
+                            let _ = stream.write_all(&content);
+                            let _ = stream.flush();
+                            eprintln!("\x1b[36m[HTTP Static]\x1b[0m {} {} -> 200 ({})", method, path, mime);
+                            served_static = true;
+                            break;
+                        }
+                    }
+                }
+
+                if !served_static {
+                    // API Response with CORS
+                    let response_body = format!(
+                        "{{\"status\":\"OK\",\"path\":\"{}\",\"server\":\"VietLang Enterprise Backend\"}}",
+                        path
+                    );
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n{}",
+                        response_body.len(), response_body
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    let _ = stream.flush();
+                    eprintln!("\x1b[36m[HTTP API]\x1b[0m {} {} -> 200", method, path);
+                }
             }
             Err(e) => {
                 eprintln!("\x1b[31m[HTTP Error]\x1b[0m {}", e);

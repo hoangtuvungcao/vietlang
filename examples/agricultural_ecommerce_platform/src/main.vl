@@ -26,11 +26,19 @@ let health_resp = api_dispatch_request(global_db, "GET", "/api/v1/health", map_n
 println("[Health] Status: " + to_string(map_get(health_resp, "status_code")) + " OK")
 
 println("[Router] API Routes Registered:")
+println("  * GET  / (Frontend Single Page Application)")
+println("  * GET  /style.css (Design System & Stylesheet)")
+println("  * GET  /app.js (Frontend Client)")
 println("  * GET  /api/v1/health")
 println("  * GET  /api/v1/categories")
 println("  * GET  /api/v1/products")
 println("  * POST /api/v1/orders/checkout")
 println("  * GET  /api/v1/admin/analytics")
 println("========================================================================")
-println("Nong San Viet Backend Ready to serve HTTP & Frontend SPA clients!")
+println("Nong San Viet Backend listening on http://0.0.0.0:9090")
 println("========================================================================")
+
+// 4. Start HTTP Server on 0.0.0.0:9090
+http_listen("0.0.0.0:9090", fn(req) {
+    return "OK"
+})
