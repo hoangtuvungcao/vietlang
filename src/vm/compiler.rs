@@ -117,6 +117,36 @@ impl Compiler {
                 self.chunk.code[jump_end_pos] = (end_target & 0xFF) as u8;
                 self.chunk.code[jump_end_pos + 1] = ((end_target >> 8) & 0xFF) as u8;
             }
+            Statement::Assignment { target, value, span } => {
+                self.compile_expression(value)?;
+                if let Expression::Identifier { name, .. } = target {
+                    let next_idx = self.globals.len();
+                    let idx = *self.globals.entry(name.clone()).or_insert(next_idx);
+                    self.chunk.write_opcode(OpCode::OpSetGlobal, span.line);
+                    self.chunk.write_byte((idx & 0xFF) as u8, span.line);
+                    self.chunk.write_byte(((idx >> 8) & 0xFF) as u8, span.line);
+                }
+            }
+            Statement::While { condition, body, span } => {
+                let loop_start = self.chunk.code.len();
+                self.compile_expression(condition)?;
+                self.chunk.write_opcode(OpCode::OpJumpIfFalse, span.line);
+                let jump_false_pos = self.chunk.code.len();
+                self.chunk.write_byte(0, span.line);
+                self.chunk.write_byte(0, span.line);
+
+                for s in body {
+                    self.compile_statement(s)?;
+                }
+
+                self.chunk.write_opcode(OpCode::OpJump, span.line);
+                self.chunk.write_byte((loop_start & 0xFF) as u8, span.line);
+                self.chunk.write_byte(((loop_start >> 8) & 0xFF) as u8, span.line);
+
+                let exit_target = self.chunk.code.len();
+                self.chunk.code[jump_false_pos] = (exit_target & 0xFF) as u8;
+                self.chunk.code[jump_false_pos + 1] = ((exit_target >> 8) & 0xFF) as u8;
+            }
             _ => {
                 // Fallback for other statements in VM
             }

@@ -129,9 +129,11 @@ impl Interpreter {
             ("index_of", Some(2)),
             ("flat", Some(1)),
 
-            // Error handling
+            // Error handling & Reflection
             ("throw", None),
             ("is_error", Some(1)),
+            ("typeof", Some(1)),
+            ("type_of", Some(1)),
 
             // System & Timers
             ("get_args", Some(0)),
@@ -1052,7 +1054,7 @@ impl Interpreter {
                     )),
                 }
             }
-            "type_of" => {
+            "type_of" | "typeof" => {
                 if args.len() != 1 {
                     return Err(VietError::runtime_error("type_of() takes exactly 1 argument".to_string(), span.line, span.column));
                 }
@@ -1254,7 +1256,7 @@ impl Interpreter {
             "index_of" => crate::stdlib::builtin_array_index_of(args, span.line, span.column),
             "flat" => crate::stdlib::builtin_array_flat(args, span.line, span.column),
 
-            // Error handling
+            // Error handling & Reflection
             "throw" => crate::stdlib::builtin_throw(args, span.line, span.column),
             "is_error" => crate::stdlib::builtin_is_error(args, span.line, span.column),
 

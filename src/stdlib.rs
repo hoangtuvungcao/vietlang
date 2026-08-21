@@ -924,9 +924,6 @@ pub fn builtin_db_table(args: &[Value], line: usize, col: usize) -> VietResult<V
 // Concurrency — spawn, channel, mutex
 // ============================================================
 
-use std::sync::{Arc, Mutex};
-use std::thread;
-
 pub fn builtin_spawn(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.is_empty() {
         return Err(VietError::runtime_error("spawn() takes a function argument".into(), line, col));
@@ -1012,6 +1009,7 @@ pub fn builtin_exit(args: &[Value], _line: usize, _col: usize) -> VietResult<Val
     std::process::exit(code);
 }
 
+#[allow(dead_code)]
 pub fn builtin_typeof(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.len() != 1 {
         return Err(VietError::runtime_error("type_of() takes 1 argument".into(), line, col));

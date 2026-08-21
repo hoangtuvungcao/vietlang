@@ -1,0 +1,18 @@
+// ===================================================
+// Phase 8: Bytecode VM Execution Demo (vietlang --vm)
+// Testing VM OpCodes, Stack Operations, Globals & Loops
+// ===================================================
+
+let mut sum = 0
+let mut i = 1
+
+while i <= 10 {
+    sum += i
+    i += 1
+}
+
+// 1 + 2 + ... + 10 = 55
+let factor = 2
+let result = sum * factor
+
+return result

@@ -120,6 +120,36 @@ impl VM {
                         _ => self.stack.push(Value::Bool(false)),
                     }
                 }
+                OpCode::OpGreaterEqual => {
+                    let b = self.stack.pop().unwrap_or(Value::None);
+                    let a = self.stack.pop().unwrap_or(Value::None);
+                    match (a, b) {
+                        (Value::Int(x), Value::Int(y)) => self.stack.push(Value::Bool(x >= y)),
+                        (Value::Float(x), Value::Float(y)) => self.stack.push(Value::Bool(x >= y)),
+                        _ => self.stack.push(Value::Bool(false)),
+                    }
+                }
+                OpCode::OpLessEqual => {
+                    let b = self.stack.pop().unwrap_or(Value::None);
+                    let a = self.stack.pop().unwrap_or(Value::None);
+                    match (a, b) {
+                        (Value::Int(x), Value::Int(y)) => self.stack.push(Value::Bool(x <= y)),
+                        (Value::Float(x), Value::Float(y)) => self.stack.push(Value::Bool(x <= y)),
+                        _ => self.stack.push(Value::Bool(false)),
+                    }
+                }
+                OpCode::OpNot => {
+                    let a = self.stack.pop().unwrap_or(Value::None);
+                    self.stack.push(Value::Bool(!a.is_truthy()));
+                }
+                OpCode::OpNeg => {
+                    let a = self.stack.pop().unwrap_or(Value::None);
+                    match a {
+                        Value::Int(x) => self.stack.push(Value::Int(-x)),
+                        Value::Float(x) => self.stack.push(Value::Float(-x)),
+                        _ => return Err(VietError::type_error("Cannot negate non-number in VM".into(), 0, 0)),
+                    }
+                }
                 OpCode::OpSetGlobal => {
                     let idx = self.read_u16();
                     let val = self.stack.pop().unwrap_or(Value::None);
@@ -136,7 +166,7 @@ impl VM {
                 }
                 OpCode::OpJumpIfFalse => {
                     let target = self.read_u16();
-                    let top = self.stack.last().cloned().unwrap_or(Value::None);
+                    let top = self.stack.pop().unwrap_or(Value::None);
                     if !top.is_truthy() {
                         self.ip = target;
                     }

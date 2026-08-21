@@ -2,6 +2,7 @@
 /// Defines all token types recognized by the lexer.
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum TokenKind {
     // === Literals ===
     IntLiteral(i64),

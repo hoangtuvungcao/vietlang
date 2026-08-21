@@ -1,17 +1,20 @@
 # VietLang
 
-<div align="center">
+```text
+ ╔════════════════════════════════════════════════════════════╗
+ ║       __      ___      _   _                               ║
+ ║       \ \    / (_)    | | | |                              ║
+ ║        \ \  / / _  ___| |_| |     __ _ _ __   __ _         ║
+ ║         \ \/ / | |/ _ \ __| |    / _` | '_ \ / _` |        ║
+ ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
+ ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
+ ║                                               __/ |        ║
+ ║              Backend-First Language v0.1.0    |___/        ║
+ ║              Type 'help' for usage, 'exit' to quit         ║
+ ╚════════════════════════════════════════════════════════════╝
+```
 
-```
- __      ___      _   _
- \ \    / (_)    | | | |
-  \ \  / / _  ___| |_| |     __ _ _ __   __ _
-   \ \/ / | |/ _ \ __| |    / _` | '_ \ / _` |
-    \  /  | |  __/ |_| |___| (_| | | | | (_| |
-     \/   |_|\___|\__|______\__,_|_| |_|\__, |
-                                         __/ |
-                                        |___/
-```
+<div align="center">
 
 **A Backend-First Programming Language**
 
@@ -19,7 +22,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
 
-[Getting Started](docs/getting-started.md) • [Language Reference](docs/language-reference.md) • [Stdlib Reference](docs/stdlib-reference.md) • [Contributing](CONTRIBUTING.md)
+[Getting Started](docs/getting-started.md) | [Language Reference](docs/language-reference.md) | [Stdlib Reference](docs/stdlib-reference.md) | [Contributing](CONTRIBUTING.md)
 
 </div>
 
