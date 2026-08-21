@@ -249,8 +249,9 @@ vietlang install redis@1.2.0
 vietlang install auth@3.0.0
 
 # Interactive Documentation & API Inspector
-vietlang doc                       # Browse all 49 standard library modules
-vietlang doc std.pagination        # Inspect signatures, types, and comments for a module
+vietlang doc                       # Browse all 54 standard library modules
+vietlang doc std.vietqr            # Inspect signatures, types, and comments for VietQR
+vietlang doc std.vnpay             # Inspect VNPay gateway docs
 vietlang doc my_package            # Inspect custom or community package docs
 vietlang doc --all                 # Generate complete Markdown docs into docs/api/
 
@@ -265,6 +266,64 @@ vietlang remove redis
 
 # Publish module to Central Community Registry
 vietlang publish
+```
+
+## Standalone AOT Binary Compilation (`vietlang build`)
+
+Compile any VietLang source file into an independent, self-contained native executable binary with zero external dependencies:
+
+```bash
+# 🐧 Build standalone Linux binary (ELF)
+vietlang build src/main.vl -o my_service
+./my_service
+
+# 🪟 Build standalone Windows binary (.exe)
+vietlang build src/main.vl -o my_service.exe --target windows
+
+# 🍎 Build standalone macOS binary
+vietlang build src/main.vl -o my_service_macos --target macos
+```
+
+## Native Concurrency & Channels (CSP Model)
+
+```rust
+import std.concurrency
+
+// 1. Thread-safe Channels & Green Threads (spawn)
+let ch = channel_new(10)
+
+spawn(fn() {
+    println("[Worker] Processing task...")
+    channel_send(ch, "Task Done")
+})
+
+let result = channel_recv(ch)
+println("[Main] Got: " + to_string(result))
+
+// 2. High-Level Parallel Map across Worker Pool
+let numbers = [10, 20, 30, 40, 50]
+let squared = parallel_map(numbers, fn(n) { return n * n })
+// [100, 400, 900, 1600, 2500] (executed in parallel across threads)
+```
+
+## Vietnamese Fintech & Cloud Integrations
+
+```rust
+import std.vietqr
+import std.vnpay
+import std.momo
+import std.zalo
+
+// 1. VietQR (50+ Vietnamese Commercial Banks)
+let qr = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan #101")
+
+// 2. VNPay 2.1.0 Gateway URL + HMAC-SHA512
+let vnp = vnpay_client("TMN_CODE", "HASH_SECRET", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+let url = vnpay_create_payment_url(vnp, 1001, 500000, "Nap vi", "https://mysite.vn/return", "127.0.0.1")
+
+// 3. MoMo E-Wallet Gateway Payload + HMAC-SHA256
+let momo = momo_client("PARTNER_CODE", "ACCESS_KEY", "SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
+let payload = momo_create_payment_payload(momo, 1002, 150000, "Don hang", "https://site.vn/return", "https://site.vn/ipn", "")
 ```
 
 ## Self-Hosting Bootstrap & Bytecode Virtual Machine (VM)
@@ -291,17 +350,23 @@ vietlang --vm examples/bytecode_vm_demo.vl
 ```
 vietlang/
 ├── src/
-│   ├── main.rs              # CLI, REPL, and Subcommand Dispatcher
+│   ├── main.rs              # CLI, REPL, Compiler & Subcommand Dispatcher
 │   ├── pm.rs                # Package Manager, Central Registry & DocGen
 │   ├── error.rs             # Error types & control flow signals
-│   ├── stdlib.rs            # Built-in native standard library
+│   ├── stdlib.rs            # Built-in native standard library & CSP channels
 │   ├── lexer/               # Lexer & Token definitions
 │   ├── parser/              # Parser & AST definitions
 │   ├── interpreter/         # Tree-walking interpreter & environment
 │   └── vm/                  # Bytecode VM & compiler (OpCode stack machine)
 ├── registry/                # Central Community Package Registry
+│   ├── shards/              # GitOps decentralized shard catalog
 │   └── index.json           # Unified Community Package Catalog
-├── std/                     # 49 Pure VietLang Standard Libraries (Zero-Cost Modularity)
+├── std/                     # 54 Pure VietLang Standard Libraries (Zero-Cost Modularity)
+│   ├── vietqr.vl            # Napas 247 VietQR standard for 50+ banks
+│   ├── vnpay.vl             # VNPay 2.1.0 gateway with HMAC-SHA512
+│   ├── momo.vl              # MoMo E-Wallet with HMAC-SHA256 signature
+│   ├── zalo.vl              # Zalo OA & ZNS customer notification service
+│   ├── concurrency.vl       # WorkerPool and parallel_map execution
 │   ├── pagination.vl        # REST API pagination & query slicing
 │   ├── email.vl             # Generic transactional email builder
 │   ├── otp.vl               # 6-digit OTP generation & 2FA verification
@@ -322,16 +387,18 @@ vietlang/
 │   ├── http_pipeline.vl     # Onion middleware & security headers
 │   ├── jwt.vl               # JWT signing & RBAC verification
 │   ├── http_router.vl       # Web router & framework
-│   └── ...                  # 49 modules total
+│   └── ...                  # 54 modules total
 ├── bootstrap/               # Self-Hosting Compiler in VietLang
 │   ├── lexer.vl             # Self-hosted lexer
 │   └── parser.vl            # Self-hosted parser
 ├── examples/                # Real-World Enterprise Backend Demos
 │   ├── agricultural_ecommerce_platform/ # Nông Sản Việt (Clean Architecture, Multi-Page, ACID)
+│   ├── fintech_and_concurrency_test.vl  # VietQR, VNPay, MoMo, Zalo & Parallel Map Test
+│   ├── native_concurrency_demo.vl       # Channel Streaming & Goroutines Test
 │   ├── enterprise_ecosystem_demo.vl     # 14 Framework Integration Tests
 │   └── multi_database_demo.vl           # SQLite, MySQL, Postgres Relational Tests
 ├── docs/                    # Complete documentation
-│   ├── api/                 # Auto-generated API docs for all 49 modules
+│   ├── api/                 # Auto-generated API docs for all 54 modules
 │   ├── standard-library-ecosystem.md
 │   ├── getting-started.md
 │   ├── language-reference.md
@@ -359,13 +426,15 @@ make demo
 ## Roadmap
 
 - [x] Phase 1: Core Language (Lexer, Parser, AST, Tree-walking Interpreter)
-- [x] Phase 2: Memory & Concurrency (Channels, Spawn, Mutex, Control Flow Signals)
+- [x] Phase 2: Memory & Concurrency (CSP Channels, Spawn, Mutex, Control Flow Signals)
 - [x] Phase 3: Standard Library (HTTP, DB, JSON, File I/O, Crypto, Logging, Env, Time, Collections)
 - [x] Phase 4: Extended Syntax (Compound Assignment += -= *= /= %=, Short-circuit && ||, Try/Catch)
-- [x] Phase 5: Community Standard Library in VietLang (30 pure modules in `std.*`)
+- [x] Phase 5: Community Standard Library in VietLang (54 pure modules in `std.*`)
 - [x] Phase 6: Central Package Manager & Community Registry (`vietlang install`, `publish`, `search`)
-- [x] Phase 7: Self-Hosting Bootstrap (Stage 1: `bootstrap/lexer.vl`, Stage 2: `bootstrap/parser.vl`)
-- [x] Phase 8: Bytecode VM / Native Stack-based Execution (`vietlang --vm`)
+- [x] Phase 7: Standalone AOT Binary Compiler (`vietlang build` for Linux ELF & Windows `.exe`)
+- [x] Phase 8: Vietnamese Fintech Ecosystem (`std.vietqr`, `std.vnpay`, `std.momo`, `std.zalo`)
+- [x] Phase 9: Self-Hosting Bootstrap (Stage 1: `bootstrap/lexer.vl`, Stage 2: `bootstrap/parser.vl`)
+- [x] Phase 10: Bytecode VM / Native Stack-based Execution (`vietlang --vm`)
 
 ## License
 

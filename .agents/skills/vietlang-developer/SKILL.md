@@ -1,24 +1,24 @@
 ---
 name: vietlang-developer
-description: Comprehensive expert syntax guide, standard library manual, and full-stack backend programming reference for AI agents and developers building with VietLang.
+description: Comprehensive expert syntax guide, project architecture manual, standard library catalog, and backend programming reference for AI agents and developers building with VietLang.
 ---
 
-# VietLang — Master Language Syntax, Standard Library & Backend Programming Manual
+# VietLang — Master Language Syntax, Project Architecture & Full-Stack Backend Manual
 
-VietLang is a **backend-first, statically-analyzed, high-throughput programming language** designed specifically for production REST APIs, microservices, real-time WebSocket systems, and transactional ACID databases.
+VietLang is a **backend-first, statically-analyzed, high-throughput programming language** designed specifically for production REST APIs, microservices, real-time WebSocket systems, transactional ACID databases, and native multi-threading concurrency.
 
 GitHub Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
 ---
 
-## 1. Multi-Platform Installation (1-Line Quick Install)
+## 1. Quick Installation & Multi-Platform Setup
 
-### 🐧 Linux & 🍎 macOS (Apple Silicon M1-M4 & Intel x64)
+### 🐧 Linux & 🍎 macOS (Apple Silicon M1-M4 & Intel x64) & 📱 Android (Termux)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
 ```
 - **Auto-Configures PATH** in `~/.bashrc`, `~/.zshrc`, and `~/.profile`.
-- **Pre-installs all 49 Standard Library Modules** into `~/.vietlang/std`.
+- **Pre-installs all 54 Standard Library Modules** into `~/.vietlang/std`.
 - **Zero sudo required**: Binary installed directly to `~/.vietlang/bin/vietlang`.
 
 ### 🪟 Windows (PowerShell)
@@ -27,11 +27,46 @@ iex (irm https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.
 ```
 - Installs to `$HOME\.vietlang\bin\vietlang.exe` and sets user environment `PATH`.
 
+### 🍺 Homebrew for macOS
+```bash
+brew tap hoangtuvungcao/vietlang
+brew install vietlang
+```
+
 ---
 
-## 2. Core Language Syntax Reference
+## 2. Master Project Architecture & Directory Layout
 
-### 2.1 Variables & Mutability
+When creating a production-grade VietLang service, AI agents and developers **MUST** follow this clean, modular architecture:
+
+```text
+my_enterprise_app/
+├── vpm.json                      # Project manifest (dependencies, version, author)
+├── README.md                     # Documentation & API endpoints
+├── data/                         # Persistent database files (SQLite)
+│   └── app.sqlite
+├── public/                       # Static frontend assets
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
+└── src/
+    ├── config/
+    │   └── database.vl           # DB Connection pool & standardized HTTP response helpers
+    ├── models/
+    │   └── schema.vl             # Struct models, DTOs & Table auto-migrations
+    ├── services/
+    │   ├── auth_service.vl       # Authentication, JWT tokens, bcrypt/HMAC hashing
+    │   └── payment_service.vl    # VietQR, VNPay, MoMo, ZaloPay transaction workflows
+    ├── routes/
+    │   └── router.vl             # REST API routing, query/body parser & WebSocket handlers
+    └── main.vl                   # Application entrypoint (server config, HTTP/2 & HTTP/3 listeners)
+```
+
+---
+
+## 3. Core Language Syntax Reference
+
+### 3.1 Variables & Mutability
 ```rust
 // Immutable variable (default)
 let port = 8080
@@ -57,11 +92,11 @@ let title: String = "Nông Sản Việt"
 let is_verified: Bool = true
 ```
 
-> **CRITICAL NAMING CONVENTION**: Always use `snake_case` or lowercase names for variables and functions (e.g. `let order_list = []`, `let user_data = map_new()`). Avoid all-uppercase variable names in expressions as they can be interpreted as Struct constructors.
+> ⚠️ **RULE**: Always use `snake_case` or lowercase names for variables and functions (e.g. `let order_list = []`, `let user_data = map_new()`). Avoid all-uppercase variable names in expressions as they can be interpreted as Struct constructors.
 
 ---
 
-### 2.2 Control Flow & Pattern Matching
+### 3.2 Control Flow & Pattern Matching
 
 #### A. Conditional `if / else`
 `if` is a statement block. To conditionally mutate a variable, declare it with `let mut` beforehand:
@@ -84,7 +119,7 @@ if user != none && map_get(user, "role") == "ADMIN" {
 ```
 
 #### C. Pattern Matching (`match`)
-`match` is a first-class expression that returns a value:
+`match` is a first-class expression that returns a value. Each pattern arm is written as `pattern => value`:
 ```rust
 let http_status_text = match status_code {
     200 => "OK",
@@ -124,10 +159,10 @@ while i < 10 {
 
 ---
 
-### 2.3 Functions, Closures & Higher-Order Lambdas
+### 3.3 Functions, Closures & Higher-Order Lambdas
 
 ```rust
-// 1. Standard Function with typed params and return type
+// 1. Standard Function with typed params and default values
 fn calculate_fee(amount: Int, rate: Float = 0.05) -> Int {
     let fee = to_int(amount * rate)
     return fee
@@ -146,7 +181,7 @@ let evens = numbers.filter(fn(x) { return x % 2 == 0 })
 
 ---
 
-### 2.4 Data Structures: Arrays, Maps, and JSON
+### 3.4 Data Structures: Arrays, Maps, and JSON
 
 #### A. Arrays
 ```rust
@@ -165,6 +200,8 @@ user = map_set(user, "role", "ADMIN")
 
 let name = map_get(user, "name")     // "Nguyễn Văn A"
 let has_phone = map_has(user, "phone")// false
+let keys = map_keys(user)            // ["id", "name", "role"]
+let values = map_values(user)        // [101, "Nguyễn Văn A", "ADMIN"]
 ```
 
 #### C. JSON Serialization & Parsing
@@ -184,195 +221,198 @@ let json_pretty = json_stringify(payload, true)
 
 ---
 
-### 2.5 String Manipulation Utilities
+### 3.5 String Manipulation Utilities
 ```rust
-let text = "Nông Sản Sạch Việt Nam"
-let length = text.len()                      // Length of string
-let has_clean = text.contains("Sạch")        // true
-let replaced = text.replace("Sạch", "Hữu Cơ")
-let parts = text.split(" ")                  // ["Nông", "Sản", "Sạch", "Việt", "Nam"]
-let sub = substring(text, 0, 8)              // "Nông Sản"
-let str_val = to_string(12345)               // "12345"
-let int_val = to_int("12345")                // 12345
+let text = "  Nông Sản Sạch Việt Nam  "
+let clean = trim(text)                       // "Nông Sản Sạch Việt Nam"
+let upper = to_uppercase(clean)              // "NÔNG SẢN SẠCH VIỆT NAM"
+let lower = to_lowercase(clean)              // "nông sản sạch việt nam"
+let has_clean = contains(clean, "Sạch")      // true
+let is_nong = starts_with(clean, "Nông")     // true
+let is_nam = ends_with(clean, "Nam")         // true
+let sub = substring(clean, 0, 8)             // "Nông Sản"
+let length = len(clean)                      // Length of string
 ```
 
 ---
 
-### 2.6 Error Handling: `try / catch` & `throw`
+### 3.6 Native Concurrency & Channels (CSP Model)
+
+VietLang integrates native multithreading with Goroutines (`spawn`) and Thread-Safe Channels (`channel_new`):
+
 ```rust
-try {
-    let raw = file_read("config.json")
-    let cfg = json_parse(raw)
-} catch err {
-    println("Config load error: " + to_string(err))
+// 1. Thread-Safe Communication via Channels
+let ch = channel_new(10) // Bounded channel with capacity 10 (0 for unbounded)
+
+// 2. Spawn Background Green Thread
+spawn(fn() {
+    println("[Worker] Background task running...")
+    channel_send(ch, "Order #99281 Processed")
+})
+
+// 3. Receive message in Main Thread (blocking)
+let result = channel_recv(ch)
+println("[Main] Received: " + to_string(result))
+
+// 4. Non-blocking Receive check
+let try_res = channel_try_recv(ch)
+if map_get(try_res, "ok") == true {
+    println("Got item: " + to_string(map_get(try_res, "value")))
 }
+```
 
-// Throw custom runtime exception
-if stock_count <= 0 {
-    throw("Sản phẩm đã hết hàng trong CSDL")
-}
+#### High-Level Worker Pool & Parallel Map (`std.concurrency`)
+```rust
+import std.concurrency
+
+let numbers = [10, 20, 30, 40, 50]
+let squared = parallel_map(numbers, fn(n) {
+    return n * n
+})
+// squared = [100, 400, 900, 1600, 2500] (executed across Worker Threads in parallel)
 ```
 
 ---
 
-## 3. Built-In Functions Quick Reference
+### 3.7 Vietnam Fintech Modules Reference
 
-| Built-In Function | Signature | Description |
-| :--- | :--- | :--- |
-| `println(msg)` | `(Any) -> None` | Print line to stdout |
-| `to_string(val)` | `(Any) -> String` | Convert value to string |
-| `to_int(val)` | `(Any) -> Int` | Convert float/string to integer |
-| `len(arr_or_str)` | `(Array/String) -> Int` | Return length |
-| `push(arr, item)` | `(Array, Any) -> Array` | Append item and return new array |
-| `map_new()` | `() -> Map` | Create new empty dictionary |
-| `map_set(m, k, v)` | `(Map, String, Any) -> Map` | Set key-value pair |
-| `map_get(m, k)` | `(Map, String) -> Any` | Get value by key |
-| `map_has(m, k)` | `(Map, String) -> Bool` | Check key existence |
-| `json_parse(str)` | `(String) -> Map/Array` | Parse JSON string |
-| `json_stringify(v, pretty)` | `(Any, Bool) -> String` | Serialize to JSON |
-| `time_now()` | `() -> Int` | Current UNIX timestamp (seconds) |
-| `time_now_us()` | `() -> Int` | Current UNIX timestamp (microseconds) |
-| `uuid()` | `() -> String` | Generate UUID v4 |
-| `sha256(str)` | `(String) -> String` | SHA256 hex digest |
-| `file_read(path)` | `(String) -> String` | Read file contents as string |
-| `file_write(path, data)` | `(String, String) -> Bool` | Write string to file |
-| `http_listen(cfg, handler)` | `(Map, Closure) -> None` | Start high-performance HTTP server |
-| `http_serve_static(req, dir, fallback)` | `(Map, String, String) -> String` | High-speed static file server |
+#### A. VietQR Generation (`std.vietqr`)
+```rust
+import std.vietqr
+
+// Generate Napas 247 Instant Transfer VietQR
+let qr_res = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan don hang #101")
+let qr_image_url = map_get(qr_res, "qr_url")
+```
+
+#### B. VNPay Payment Gateway 2.1.0 (`std.vnpay`)
+```rust
+import std.vnpay
+
+let client = vnpay_client("TMN_CODE", "HASH_SECRET", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+let pay_url = vnpay_create_payment_url(client, 1001, 500000, "Thanh toan", "https://site.vn/return", "127.0.0.1")
+```
+
+#### C. MoMo E-Wallet Gateway (`std.momo`)
+```rust
+import std.momo
+
+let momo = momo_client("PARTNER_CODE", "ACCESS_KEY", "SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
+let payload = momo_create_payment_payload(momo, 1002, 150000, "Don hang", "https://site.vn/return", "https://site.vn/ipn", "")
+```
+
+#### D. Zalo OA & ZNS Notifications (`std.zalo`)
+```rust
+import std.zalo
+
+let normalized_phone = zalo_normalize_phone("0901234567") // "84901234567"
+let zns_data = zalo_create_zns_payload(normalized_phone, "TEMPLATE_ID_101", map_new(), "TRACK_99")
+```
 
 ---
 
-## 4. Standard Library Catalog (49 Pure Modules)
+## 4. Standalone AOT Binary Compilation (`vietlang build`)
 
-VietLang enforces **Zero-Cost Modularity (100% Opt-In)**:
+Compile any VietLang source file into a **self-contained standalone executable binary** with zero external dependencies:
 
-| Category | Standard Modules | Usage Code Example |
-| :--- | :--- | :--- |
-| **Routing & REST** | `std.http_router`, `std.openapi`, `std.validator` | `import std.http_router` |
-| **Databases (ACID)** | `std.db_sqlite`, `std.db_mysql`, `std.db_postgres` | `let db = db_sqlite_connect("app.sqlite")` |
-| **Real-Time Stream** | `std.ws`, `std.sse` | `ws_init("/ws")`, `ws_emit("EVENT", data)` |
-| **Caching & Redis** | `std.redis`, `std.cache_lru` | `let r = redis_connect("127.0.0.1", 6379)` |
-| **Security & Auth** | `std.security`, `std.jwt`, `std.session`, `std.otp` | `let token = jwt_sign(claims, secret)` |
-| **Traffic Control** | `std.rate_limiter`, `std.circuit_breaker` | `let rl = rate_limiter_new(100, 60)` |
-| **Data & Files** | `std.pagination`, `std.csv`, `std.file_storage` | `let p = pagination_slice(items, 1, 10)` |
-| **Notifications** | `std.email`, `std.queue` | `let mail = email_new("from", "to", "subject")` |
-| **Observability** | `std.logger`, `std.metrics`, `std.telemetry` | `logger_info(log, "Order processed")` |
+```bash
+# 🐧 Build standalone Linux binary (ELF)
+vietlang build src/main.vl -o my_service
+./my_service
+
+# 🪟 Build standalone Windows binary (.exe)
+vietlang build src/main.vl -o my_service.exe --target windows
+
+# 🍎 Build standalone macOS binary
+vietlang build src/main.vl -o my_service_macos --target macos
+```
 
 ---
 
-## 5. Standard Backend Architecture Blueprint
+## 5. Complete Production REST API Blueprint
 
-A production-grade VietLang backend project follows **Clean Architecture**:
+Here is a full, working reference of a production REST API service in VietLang:
 
-```
-my_backend_service/
-├── src/
-│   ├── main.vl                      # Server entrypoint & routing loop
-│   ├── config/                      # Database & environment configuration
-│   ├── controllers/                 # HTTP request handlers & validation
-│   ├── services/                    # Business domain & ACID transactions
-│   ├── repositories/                # Database SQL queries (SQLite, MySQL, Postgres)
-│   └── routes/
-│       └── api_router.vl            # Clean URL API router
-├── tests/
-│   └── full_system_test.vl          # End-to-End System Tests
-├── vietlang.json                    # Package manifest & dependencies
-└── README.md                        # Project documentation
-```
-
-### Complete Working Backend Server Example:
 ```rust
 import std.http_router
-import std.http2
 import std.db_sqlite
-import std.security
+import std.json
 import std.jwt
-import std.rate_limiter
-import std.ws
 
-// 1. Opt-in Rate Limiting & WebSocket
-let mut limiter = rate_limiter_new(100, 60)
-ws_init("/ws")
+// 1. Initialize Relational Database
+let db = sqlite_open("data/app.sqlite")
+sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, created_at INTEGER)")
 
-// 2. Connect to Relational Database
-let db = db_sqlite_connect("data/app.sqlite")
-db_sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);")
+// 2. Standardized HTTP Response Helper
+fn json_response(status_code: Int, data) {
+    let mut payload = map_new()
+    payload = map_set(payload, "status", status_code)
+    payload = map_set(payload, "data", data)
+    payload = map_set(payload, "timestamp", time_now())
+    
+    let mut res = map_new()
+    res = map_set(res, "status_code", status_code)
+    res = map_set(res, "content_type", "application/json; charset=utf-8")
+    res = map_set(res, "body", json_stringify(payload, false))
+    return res
+}
 
-// 3. Configure HTTP Server
-let server_cfg = http2_server_config(port: 9090, max_connections: 500)
-println("VietLang Backend listening on http://0.0.0.0:9090")
+// 3. HTTP Server Config (HTTP/1.1, HTTP/2, HTTP/3 ALPN Ready)
+let server_config = map_new()
+server_config = map_set(server_config, "port", 8080)
+server_config = map_set(server_config, "workers", 100)
 
-http_listen(server_cfg, fn(req) {
+println("Server running on http://localhost:8080")
+
+http_listen(server_config, fn(req) {
     let method = to_string(map_get(req, "method"))
     let path = to_string(map_get(req, "path"))
+    let body = to_string(map_get(req, "body"))
 
-    // Static Asset Serving
-    if method == "GET" && (path == "/" || path.contains(".")) {
-        return http_serve_static(req, "public", "index.html")
+    // Route: GET /api/health
+    if method == "GET" && path == "/api/health" {
+        let mut health = map_new()
+        health = map_set(health, "status", "UP")
+        health = map_set(health, "uptime_s", time_now())
+        return json_response(200, health)
     }
 
-    // REST API Routes
-    if method == "GET" && path == "/api/v1/health" {
-        return "{\"status\":200,\"service\":\"active\"}"
+    // Route: GET /api/users
+    if method == "GET" && path == "/api/users" {
+        let users = sqlite_query(db, "SELECT id, name, email, created_at FROM users ORDER BY id DESC")
+        return json_response(200, users)
     }
 
-    if method == "GET" && path == "/api/v1/users" {
-        let rows = db_sqlite_query(db, "SELECT * FROM users;")
-        return api_response(200, rows, "Lay danh sach thanh cong")
+    // Route: POST /api/users
+    if method == "POST" && path == "/api/users" {
+        let parsed = json_parse(body)
+        let name = to_string(map_get(parsed, "name"))
+        let email = to_string(map_get(parsed, "email"))
+        
+        let query = "INSERT INTO users (name, email, created_at) VALUES ('" + name + "', '" + email + "', " + to_string(time_now()) + ")"
+        sqlite_exec(db, query)
+        
+        let mut created = map_new()
+        created = map_set(created, "message", "User created successfully")
+        return json_response(201, created)
     }
 
-    return api_error(404, "Endpoint Not Found")
+    // 404 Not Found
+    return json_response(404, "Endpoint not found: " + path)
 })
 ```
 
 ---
 
-## 6. Developer Toolchain & Package Manager CLI
+## 6. Top 10 Golden Rules for AI Agents Writing VietLang
 
-```bash
-# 1. Initialize a new project or library
-vietlang init my_service api         # templates: lib | api | microservice
-
-# 2. Interactive documentation & API browser
-vietlang doc                         # Browse all 49 standard modules
-vietlang doc std.pagination          # View signatures, parameter docs, and types
-vietlang doc my_custom_package       # View docs for community package
-vietlang doc --all                   # Generate Markdown docs into docs/api/
-
-# 3. Package installation & updates
-vietlang search redis
-vietlang install redis@1.2.0
-vietlang update redis
-vietlang remove redis
-
-# 4. Testing & Verification
-vietlang verify
-vietlang test tests/full_system_test.vl
-
-# 5. Publish to Central Community Registry
-vietlang publish
-```
-
----
-
-### 🍎 macOS Installation Options (Apple Silicon M1-M4 & Intel)
-
-#### Option 1: Official 1-Line Installer (Recommended)
-```bash
-curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
-```
-
-#### Option 2: Homebrew
-```bash
-brew tap hoangtuvungcao/vietlang
-brew install vietlang
-```
-
----
-
-## 7. Learning Documentation Index
-
-- 📘 **[Getting Started 10-Minute Tutorial](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/getting-started.md)**
-- 📕 **[Complete Language Syntax Reference](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/language-reference.md)**
-- 📗 **[Standard Library Ecosystem (49 Modules)](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/standard-library-ecosystem.md)**
-- 📙 **[Backend Cookbook & Real-World Recipes](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/backend-cookbook.md)**
-- 🚀 **[Multi-Platform Installation & VS Code Guide](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/installation-and-vscode-marketplace.md)**
+1. **Mutability**: Always declare variables that will be reassigned with `let mut`.
+2. **Naming**: Use lowercase / `snake_case` for all variable and function names. Capitalized identifiers (e.g. `User`, `WorkerPool`) are reserved for Struct definitions.
+3. **Dictionaries (Maps)**: Always manipulate dictionaries with `map_new()`, `map_set(m, k, v)`, `map_get(m, k)`, `map_has(m, k)`.
+4. **Arrays**: Append to arrays using `list = push(list, item)` and measure length with `len(list)`.
+5. **Pattern Matching**: Write single-pattern arms in `match`: `"GET" => 1, "POST" => 2, _ => 0`.
+6. **No Inline `if` Expressions**: In VietLang, `if` is a statement block. Initialize `let mut val = default; if cond { val = new_val; }`.
+7. **Concurrency**: Use `spawn(fn() { ... })` for background tasks, and communicate via `channel_new()`, `channel_send()`, and `channel_recv()`.
+8. **String Utilities**: Use built-in `trim()`, `to_uppercase()`, `to_lowercase()`, `starts_with()`, `ends_with()`, `contains()`, `substring()`.
+9. **Zero-Cost Modularity**: Only `import std.module_name` when you actually call functions in that module.
+10. **Single Binary Deployment**: Use `vietlang build <file.vl> -o <binary_name>` to compile into a production standalone binary.
