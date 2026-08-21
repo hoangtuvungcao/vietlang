@@ -1,0 +1,38 @@
+import std.json
+import src.services.user_service
+
+fn dispatch_api(db, method: String, path: String, body_raw: String) {
+    // GET /api/health - System Health Probe
+    if method == "GET" && path == "/api/health" {
+        let mut h = map_new()
+        h = map_set(h, "status", "HEALTHY")
+        h = map_set(h, "uptime_s", time_now())
+        h = map_set(h, "engine", "VietLang Pure Backend Engine")
+        return json_response(200, h)
+    }
+
+    // GET /api/users - List all users
+    if method == "GET" && path == "/api/users" {
+        let users = service_list_users(db)
+        return json_response(200, users)
+    }
+
+    // POST /api/users - Create a new user
+    if method == "POST" && path == "/api/users" {
+        let parsed = json_parse(body_raw)
+        if parsed == none {
+            return json_response(400, "Invalid JSON payload")
+        }
+        let user_name = to_string(map_get(parsed, "name"))
+        let user_email = to_string(map_get(parsed, "email"))
+        let mut role = "USER"
+        if map_has(parsed, "role") {
+            role = to_string(map_get(parsed, "role"))
+        }
+
+        let created = service_create_user(db, user_name, user_email, role)
+        return json_response(201, created)
+    }
+
+    return json_response(404, "Endpoint not found: " + path)
+}

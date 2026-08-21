@@ -240,8 +240,8 @@ test_summary()
 VietLang provides a **native package manager built directly into the runtime binary** with a unified **Central Community Registry** and npm-style script execution:
 
 ```bash
-# 1-Command Project Scaffolding (Clean Architecture, SQLite, Static UI & Scripts)
-vietlang new my_enterprise_app
+# 1-Command Backend Project Scaffolding (Clean Architecture, SQLite, Services & REST Routes)
+vietlang new my_backend_service
 
 # Run npm-style scripts from vietlang.json
 vietlang dev                       # Run development server (http://localhost:8080)

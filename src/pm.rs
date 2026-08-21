@@ -624,14 +624,13 @@ fn publish_package() {
     println!("  Submit your shard file ({}) to https://github.com/hoangtuvungcao/vietlang/pulls", shard_rel);
 }
 
-fn init_project(name: &str, template_type: &str) {
+fn init_project(name: &str, _template_type: &str) {
     let _ = fs::create_dir_all(name);
     let _ = fs::create_dir_all(format!("{}/src/config", name));
     let _ = fs::create_dir_all(format!("{}/src/models", name));
     let _ = fs::create_dir_all(format!("{}/src/services", name));
     let _ = fs::create_dir_all(format!("{}/src/routes", name));
     let _ = fs::create_dir_all(format!("{}/data", name));
-    let _ = fs::create_dir_all(format!("{}/public", name));
     let _ = fs::create_dir_all(format!("{}/tests", name));
     let _ = fs::create_dir_all(format!("{}/modules", name));
 
@@ -642,14 +641,14 @@ fn init_project(name: &str, template_type: &str) {
   "version": "1.0.0",
   "author": "developer",
   "repository": "https://github.com/developer/{}.git",
-  "type": "{}",
-  "description": "Production Backend & Full-Stack Web Application built with VietLang",
+  "type": "backend_api",
+  "description": "Production Backend REST API & High-Performance Microservice in VietLang",
   "main": "src/main.vl",
   "scripts": {{
     "start": "vietlang run src/main.vl",
     "dev": "PORT=8080 vietlang run src/main.vl",
-    "build": "vietlang build src/main.vl -o {}_app",
-    "build:win": "vietlang build src/main.vl -o {}_app.exe --target windows",
+    "build": "vietlang build src/main.vl -o {}_service",
+    "build:win": "vietlang build src/main.vl -o {}_service.exe --target windows",
     "test": "vietlang test tests"
   }},
   "dependencies": {{
@@ -661,7 +660,7 @@ fn init_project(name: &str, template_type: &str) {
   "license": "MIT"
 }}
 "#,
-        name, name, template_type, name, name
+        name, name, name, name
     );
     let _ = fs::write(format!("{}/vietlang.json", name), manifest);
 
@@ -669,17 +668,15 @@ fn init_project(name: &str, template_type: &str) {
     let config_json = r#"{
   "port": 8080,
   "workers": 200,
-  "db_path": "data/app.sqlite",
-  "public_dir": "public"
+  "db_path": "data/app.sqlite"
 }
 "#;
     let _ = fs::write(format!("{}/config.json", name), config_json);
 
-    let env_example = r#"# VietLang Application Environment Configuration
+    let env_example = r#"# VietLang Backend Service Environment Configuration
 PORT=8080
 WORKERS=200
 DATABASE_PATH=data/app.sqlite
-PUBLIC_DIR=public
 "#;
     let _ = fs::write(format!("{}/.env.example", name), env_example);
 
@@ -689,7 +686,7 @@ import std.json
 
 fn db_connect(db_path: String) {
     let db = sqlite_open(db_path)
-    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, created_at INTEGER)")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, role TEXT, created_at INTEGER)")
     return db
 }
 
@@ -708,35 +705,61 @@ fn json_response(status_code: Int, data) {
 "#;
     let _ = fs::write(format!("{}/src/config/database.vl", name), db_code);
 
-    // 4. src/routes/router.vl
+    // 4. src/services/user_service.vl
+    let service_code = r#"import std.json
+
+fn service_list_users(db) {
+    return sqlite_query(db, "SELECT id, name, email, role, created_at FROM users ORDER BY id DESC")
+}
+
+fn service_create_user(db, name: String, email: String, role: String) {
+    let query = "INSERT INTO users (name, email, role, created_at) VALUES ('" + name + "', '" + email + "', '" + role + "', " + to_string(time_now()) + ")"
+    sqlite_exec(db, query)
+    
+    let mut result = map_new()
+    result = map_set(result, "name", name)
+    result = map_set(result, "email", email)
+    result = map_set(result, "role", role)
+    return result
+}
+"#;
+    let _ = fs::write(format!("{}/src/services/user_service.vl", name), service_code);
+
+    // 5. src/routes/router.vl
     let router_code = r#"import std.json
+import src.services.user_service
 
 fn dispatch_api(db, method: String, path: String, body_raw: String) {
-    // Health probe endpoint
+    // GET /api/health - System Health Probe
     if method == "GET" && path == "/api/health" {
         let mut h = map_new()
         h = map_set(h, "status", "HEALTHY")
-        h = map_set(h, "engine", "VietLang Native Server")
+        h = map_set(h, "uptime_s", time_now())
+        h = map_set(h, "engine", "VietLang Pure Backend Engine")
         return json_response(200, h)
     }
 
-    // List users
+    // GET /api/users - List all users
     if method == "GET" && path == "/api/users" {
-        let rows = sqlite_query(db, "SELECT id, name, email, created_at FROM users ORDER BY id DESC")
-        return json_response(200, rows)
+        let users = service_list_users(db)
+        return json_response(200, users)
     }
 
-    // Create new user
+    // POST /api/users - Create a new user
     if method == "POST" && path == "/api/users" {
         let parsed = json_parse(body_raw)
+        if parsed == none {
+            return json_response(400, "Invalid JSON payload")
+        }
         let user_name = to_string(map_get(parsed, "name"))
         let user_email = to_string(map_get(parsed, "email"))
-        let query = "INSERT INTO users (name, email, created_at) VALUES ('" + user_name + "', '" + user_email + "', " + to_string(time_now()) + ")"
-        sqlite_exec(db, query)
+        let mut role = "USER"
+        if map_has(parsed, "role") {
+            role = to_string(map_get(parsed, "role"))
+        }
 
-        let mut msg = map_new()
-        msg = map_set(msg, "message", "User created successfully")
-        return json_response(201, msg)
+        let created = service_create_user(db, user_name, user_email, role)
+        return json_response(201, created)
     }
 
     return json_response(404, "Endpoint not found: " + path)
@@ -744,7 +767,7 @@ fn dispatch_api(db, method: String, path: String, body_raw: String) {
 "#;
     let _ = fs::write(format!("{}/src/routes/router.vl", name), router_code);
 
-    // 5. src/main.vl
+    // 6. src/main.vl
     let main_code = r#"import std.http_router
 import std.http2
 import std.middleware
@@ -756,14 +779,12 @@ import src.routes.router
 // ------------------------------------------------------------------------
 let mut port = 8080
 let mut db_path = "data/app.sqlite"
-let mut public_dir = "public"
 
 try {
     if file_exists("config.json") {
         let cfg = json_parse(file_read("config.json"))
         if map_has(cfg, "port") { port = to_int(map_get(cfg, "port")) }
         if map_has(cfg, "db_path") { db_path = to_string(map_get(cfg, "db_path")) }
-        if map_has(cfg, "public_dir") { public_dir = to_string(map_get(cfg, "public_dir")) }
     }
 } catch err {}
 
@@ -774,7 +795,7 @@ if env_p != "" && env_p != none && env_p != "none" {
 
 let db = db_connect(db_path)
 println("========================================================================")
-println("VietLang Enterprise Application listening on http://0.0.0.0:" + to_string(port))
+println("VietLang Pure Backend Service listening on http://0.0.0.0:" + to_string(port))
 println("========================================================================")
 
 let server_cfg = http2_server_config(port, 200)
@@ -783,92 +804,16 @@ http_listen(server_cfg, fn(req) {
     let path = to_string(map_get(req, "path"))
     let body = to_string(map_get(req, "body"))
 
-    // 1. Serve Static Frontend Files
-    if method == "GET" || method == "HEAD" {
-        let static_res = http_serve_static(public_dir, path)
-        if static_res != none {
-            return static_res
-        }
-    }
-
-    // 2. Dispatch Dynamic REST API Routes
     return dispatch_api(db, method, path, body)
 })
 "#;
     let _ = fs::write(format!("{}/src/main.vl", name), main_code);
 
-    // 6. public/ (index.html, style.css, app.js)
-    let html_code = format!(
-        r#"<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{} — VietLang App</title>
-  <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-  <div class="container">
-    <header class="hero">
-      <h1>Chào mừng đến với <span class="accent">{}</span></h1>
-      <p class="tagline">Ứng dụng Full-Stack hiệu năng cao được xây dựng bằng <b>VietLang</b></p>
-    </header>
-    <main>
-      <div class="card">
-        <h2>Trạng Thái Máy Chủ</h2>
-        <p id="server-status">Đang kết nối đến máy chủ...</p>
-      </div>
-    </main>
-  </div>
-  <script src="/app.js"></script>
-</body>
-</html>
-"#,
-        name, name
-    );
-    let _ = fs::write(format!("{}/public/index.html", name), html_code);
-
-    let css_code = r#":root {
-  --primary: #0284c7;
-  --accent: #10b981;
-  --bg: #0f172a;
-  --card: #1e293b;
-  --text: #f8fafc;
-}
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-.container { width: 90%; max-width: 700px; text-align: center; }
-.accent { color: var(--accent); }
-.card { background: var(--card); border-radius: 12px; padding: 24px; margin-top: 24px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-"#;
-    let _ = fs::write(format!("{}/public/style.css", name), css_code);
-
-    let js_code = r#"document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const res = await fetch('/api/health');
-    const data = await res.json();
-    document.getElementById('server-status').innerHTML = 
-      `<span style="color:#10b981; font-weight:bold;">🟢 Hệ Thống Hoạt Động</span> — Engine: <b>${data.data.engine}</b>`;
-  } catch (e) {
-    document.getElementById('server-status').innerHTML = '<span style="color:#ef4444;">🔴 Không thể kết nối đến máy chủ</span>';
-  }
-});
-"#;
-    let _ = fs::write(format!("{}/public/app.js", name), js_code);
-
     // 7. tests/main_test.vl
     let test_code = format!(
         r#"import std.test
 
-suite("{} Unit Tests")
+suite("{} Pure Backend Test Suite")
 
 test("Sanity test", fn() {{
     assert_eq(1 + 1, 2, "Sanity check failure")
@@ -884,27 +829,27 @@ test_summary()
     let readme_content = format!(
         r#"# {}
 
-Ứng dụng Enterprise Full-Stack được xây dựng bằng **VietLang**.
+High-Performance Pure Backend REST API & Microservice built with **VietLang**.
 
-## 🚀 Hướng Dẫn Chạy Dự Án
+## 🚀 Commands
 
-### 1. Khởi động Máy Chủ Phát Triển (Dev Server):
+### 1. Start Development Server:
 ```bash
 vietlang dev
 ```
-Mở trình duyệt tại: [http://localhost:8080](http://localhost:8080)
+Health Check Endpoint: `http://localhost:8080/api/health`
 
-### 2. Biên dịch Thành File Nhị Phân Độc Lập (Standalone Binary):
+### 2. Compile to Standalone Native Binary:
 ```bash
-# Biên dịch cho Linux
+# Build for Linux
 vietlang run build
-./{}_app
+./{}_service
 
-# Biên dịch cho Windows (.exe)
+# Build for Windows (.exe)
 vietlang run build:win
 ```
 
-### 3. Chạy Kiểm Thử (Unit Tests):
+### 3. Run Automated Tests:
 ```bash
 vietlang test
 ```
@@ -913,16 +858,16 @@ vietlang test
     );
     let _ = fs::write(format!("{}/README.md", name), readme_content);
 
-    println!("\x1b[32;1m[SUCCESS] Created new VietLang project '{}' successfully!\x1b[0m", name);
+    println!("\x1b[32;1m[SUCCESS] Created new VietLang backend service '{}' successfully!\x1b[0m", name);
     println!("Project Structure Generated:");
-    println!("  ├── \x1b[36mvietlang.json\x1b[0m       (Project manifest & scripts)");
+    println!("  ├── \x1b[36mvietlang.json\x1b[0m       (Service manifest & scripts)");
     println!("  ├── \x1b[36mconfig.json\x1b[0m         (Dynamic runtime configuration)");
     println!("  ├── \x1b[36m.env.example\x1b[0m        (Environment variables template)");
-    println!("  ├── \x1b[33msrc/\x1b[0m                (Modular Clean Architecture)");
-    println!("  │   ├── \x1b[32mconfig/database.vl\x1b[0m");
-    println!("  │   ├── \x1b[32mroutes/router.vl\x1b[0m");
-    println!("  │   └── \x1b[32mmain.vl\x1b[0m");
-    println!("  ├── \x1b[33mpublic/\x1b[0m             (Frontend Web SPA: index.html, style.css, app.js)");
+    println!("  ├── \x1b[33msrc/\x1b[0m                (Pure Backend Modular Architecture)");
+    println!("  │   ├── \x1b[32mconfig/database.vl\x1b[0m (Database pool & JSON responses)");
+    println!("  │   ├── \x1b[32mservices/user_service.vl\x1b[0m (Business logic & Queries)");
+    println!("  │   ├── \x1b[32mroutes/router.vl\x1b[0m   (REST API Routing)");
+    println!("  │   └── \x1b[32mmain.vl\x1b[0m            (HTTP/2 Server entrypoint)");
     println!("  ├── \x1b[33mdata/\x1b[0m               (SQLite Database directory)");
     println!("  └── \x1b[33mtests/\x1b[0m              (Automated test suites)");
     println!();

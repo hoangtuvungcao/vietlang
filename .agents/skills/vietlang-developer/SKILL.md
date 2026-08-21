@@ -35,43 +35,40 @@ brew install vietlang
 
 ---
 
-## 2. Master Project Architecture & 1-Command Scaffolding
+## 2. Master Project Architecture & 1-Command Backend Scaffolding
 
-To instantly generate a complete, production-ready full-stack enterprise service with Clean Architecture, SQLite database, static Web UI, and automated scripts, run:
+To instantly generate a complete, production-ready **Pure Backend REST API & Microservice** with Clean Architecture, SQLite ACID database, REST router, and automated scripts, run:
 
 ```bash
-# 🚀 1-Command Project Scaffolding (aliases: 'new', 'init', 'create')
-vietlang new my_enterprise_app
+# 🚀 1-Command Backend Project Scaffolding (aliases: 'new', 'init', 'create')
+vietlang new my_backend_service
 
-cd my_enterprise_app
+cd my_backend_service
 vietlang dev                 # Start development server on http://localhost:8080
 vietlang run build           # Compile to standalone native executable binary
 ```
 
-### 2.1 Generated Project Directory Layout
+### 2.1 Pure Backend Project Directory Layout
 
 ```text
-my_enterprise_app/
-├── vietlang.json                 # Project manifest (scripts, main, dependencies, metadata)
-├── config.json (or .env)         # Runtime dynamic configuration
-├── README.md                     # Documentation & API endpoints
+my_backend_service/
+├── vietlang.json                 # Service manifest (scripts, main, dependencies, metadata)
+├── config.json (or .env)         # Runtime dynamic configuration (port, workers, db_path)
+├── README.md                     # API Documentation & Endpoints
 ├── data/                         # Persistent database files (SQLite)
 │   └── app.sqlite
-├── public/                       # Static frontend assets
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
 └── src/
     ├── config/
-    │   └── database.vl           # DB Connection pool & standardized HTTP response helpers
+    │   └── database.vl           # DB Connection pool & standardized JSON response helpers
     ├── models/
     │   └── schema.vl             # Struct models, DTOs & Table auto-migrations
     ├── services/
+    │   ├── user_service.vl       # Business logic & Database queries
     │   ├── auth_service.vl       # Authentication, JWT tokens, bcrypt/HMAC hashing
     │   └── payment_service.vl    # VietQR, VNPay, MoMo, ZaloPay transaction workflows
     ├── routes/
-    │   └── router.vl             # REST API routing, query/body parser & WebSocket handlers
-    └── main.vl                   # Application entrypoint (server config, HTTP/2 & HTTP/3 listeners)
+    │   └── router.vl             # REST API routing & Middleware dispatch
+    └── main.vl                   # HTTP/2 REST Server entrypoint
 ```
 
 ### 2.1 Project Manifest & npm-style Scripts (`vietlang.json`)
