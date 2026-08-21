@@ -1073,3 +1073,58 @@ pub fn builtin_arch(_args: &[Value], _line: usize, _col: usize) -> VietResult<Va
     Ok(Value::String(std::env::consts::ARCH.to_string()))
 }
 
+pub fn builtin_sleep_ms(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("sleep_ms() takes 1 argument (milliseconds)".into(), line, col));
+    }
+    let ms = match &args[0] {
+        Value::Int(n) => *n as u64,
+        _ => return Err(VietError::type_error("sleep_ms() expects Int".into(), line, col)),
+    };
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+    Ok(Value::None)
+}
+
+pub fn builtin_time_now_us(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_micros() as i64;
+    Ok(Value::Int(now))
+}
+
+pub fn builtin_tcp_ping(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 || args.len() > 3 {
+        return Err(VietError::runtime_error("tcp_ping() takes 2-3 arguments (host, port, [timeout_ms])".into(), line, col));
+    }
+    let host = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("tcp_ping() host must be String".into(), line, col)) };
+    let port = match &args[1] { Value::Int(n) => *n as u16, _ => return Err(VietError::type_error("tcp_ping() port must be Int".into(), line, col)) };
+    let timeout_ms = if args.len() == 3 {
+        match &args[2] { Value::Int(n) => *n as u64, _ => 1000 }
+    } else {
+        1000
+    };
+
+    let addr = format!("{}:{}", host, port);
+    let timeout = std::time::Duration::from_millis(timeout_ms);
+    use std::net::ToSocketAddrs;
+    if let Ok(mut addrs) = addr.to_socket_addrs() {
+        if let Some(sock_addr) = addrs.next() {
+            match std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
+                Ok(_) => return Ok(Value::Bool(true)),
+                Err(_) => return Ok(Value::Bool(false)),
+            }
+        }
+    }
+    Ok(Value::Bool(false))
+}
+
+pub fn builtin_str_split_lines(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("str_split_lines() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("str_split_lines() expects String".into(), line, col)) };
+    let lines: Vec<Value> = s.lines().map(|l| Value::String(l.to_string())).collect();
+    Ok(Value::Array(lines))
+}
+

@@ -50,11 +50,13 @@ demo: build
 	./target/release/vietlang examples/new_features_test.vl
 	@echo "\n--- community_modules_demo.vl ---"
 	./target/release/vietlang examples/community_modules_demo.vl
+	@echo "\n--- enterprise_microservice.vl ---"
+	./target/release/vietlang examples/enterprise_microservice.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"
 	./target/release/vietlang bootstrap/lexer.vl
-	@echo "\nAll demos and bootstrap tests completed successfully!"
+	@echo "\nAll demos, enterprise suites, and bootstrap tests completed successfully!"
 
 # Install
 install: build

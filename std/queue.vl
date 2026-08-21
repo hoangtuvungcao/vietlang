@@ -1,0 +1,63 @@
+// ===================================================
+// VietLang Background Job Queue (std.queue)
+// Task scheduling with retries and dead-letter handling
+// ===================================================
+
+fn queue_new() {
+    let q = map_new()
+    let q = map_set(q, "tasks", [])
+    let q = map_set(q, "dead_letter", [])
+    return q
+}
+
+fn queue_push(q, task_type: String, payload, max_retries: Int = 3) {
+    let task = map_new()
+    let task = map_set(task, "id", uuid())
+    let task = map_set(task, "type", task_type)
+    let task = map_set(task, "payload", payload)
+    let task = map_set(task, "retries", 0)
+    let task = map_set(task, "max_retries", max_retries)
+    let task = map_set(task, "created_at", time_now())
+
+    let current = map_get(q, "tasks")
+    let new_tasks = push(current, task)
+    return map_set(q, "tasks", new_tasks)
+}
+
+fn queue_pop(q) {
+    let tasks = map_get(q, "tasks")
+    if tasks.len() == 0 {
+        let res = map_new()
+        let res = map_set(res, "has_task", false)
+        let res = map_set(res, "task", none)
+        let res = map_set(res, "queue", q)
+        return res
+    }
+
+    let next_task = tasks[0]
+    let remaining = slice(tasks, 1)
+    let updated_q = map_set(q, "tasks", remaining)
+
+    let res = map_new()
+    let res = map_set(res, "has_task", true)
+    let res = map_set(res, "task", next_task)
+    let res = map_set(res, "queue", updated_q)
+    return res
+}
+
+fn queue_retry_or_fail(q, task) {
+    let retries = map_get(task, "retries") + 1
+    let max_r = map_get(task, "max_retries")
+
+    if retries <= max_r {
+        let updated_task = map_set(task, "retries", retries)
+        let current_tasks = map_get(q, "tasks")
+        let new_tasks = push(current_tasks, updated_task)
+        return map_set(q, "tasks", new_tasks)
+    } else {
+        // Move to dead letter queue
+        let dead = map_get(q, "dead_letter")
+        let new_dead = push(dead, task)
+        return map_set(q, "dead_letter", new_dead)
+    }
+}

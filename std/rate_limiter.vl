@@ -1,0 +1,54 @@
+// ===================================================
+// VietLang Rate Limiter (std.rate_limiter)
+// Token Bucket & Sliding Window Rate Limiting Engine
+// ===================================================
+
+fn rate_limiter_new(max_tokens: Int, refill_rate_per_sec: Int) {
+    let rl = map_new()
+    let rl = map_set(rl, "max_tokens", max_tokens)
+    let rl = map_set(rl, "refill_rate", refill_rate_per_sec)
+    let rl = map_set(rl, "buckets", map_new())
+    return rl
+}
+
+fn rate_limit_allow(rl, client_key: String) {
+    let max_t = map_get(rl, "max_tokens")
+    let rate = map_get(rl, "refill_rate")
+    let buckets = map_get(rl, "buckets")
+    let now = time_now()
+
+    let mut tokens = max_t
+    let mut last_refill = now
+
+    if map_has(buckets, client_key) {
+        let b = map_get(buckets, client_key)
+        let old_tokens = map_get(b, "tokens")
+        last_refill = map_get(b, "last_refill")
+
+        let elapsed = now - last_refill
+        let added = elapsed * rate
+        tokens = old_tokens + added
+        if tokens > max_t {
+            tokens = max_t
+        }
+    }
+
+    if tokens >= 1 {
+        tokens -= 1
+        let updated_bucket = map_set(map_set(map_new(), "tokens", tokens), "last_refill", now)
+        let new_buckets = map_set(buckets, client_key, updated_bucket)
+        let updated_rl = map_set(rl, "buckets", new_buckets)
+
+        let res = map_new()
+        let res = map_set(res, "allowed", true)
+        let res = map_set(res, "remaining", tokens)
+        let res = map_set(res, "limiter", updated_rl)
+        return res
+    } else {
+        let res = map_new()
+        let res = map_set(res, "allowed", false)
+        let res = map_set(res, "remaining", 0)
+        let res = map_set(res, "limiter", rl)
+        return res
+    }
+}

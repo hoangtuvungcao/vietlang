@@ -1,0 +1,52 @@
+// ===================================================
+// VietLang Circuit Breaker (std.circuit_breaker)
+// Fault-tolerance pattern for microservice dependencies
+// States: CLOSED (Normal), OPEN (Failing), HALF_OPEN (Probing)
+// ===================================================
+
+fn circuit_breaker_new(max_failures: Int = 5, timeout_seconds: Int = 30) {
+    let cb = map_new()
+    let cb = map_set(cb, "state", "CLOSED")
+    let cb = map_set(cb, "failure_count", 0)
+    let cb = map_set(cb, "max_failures", max_failures)
+    let cb = map_set(cb, "timeout_seconds", timeout_seconds)
+    let cb = map_set(cb, "last_failure_time", 0)
+    return cb
+}
+
+fn cb_can_execute(cb) -> Bool {
+    let state = map_get(cb, "state")
+    if state == "CLOSED" {
+        return true
+    }
+    if state == "OPEN" {
+        let now = time_now()
+        let last_f = map_get(cb, "last_failure_time")
+        let timeout = map_get(cb, "timeout_seconds")
+        if now - last_f >= timeout {
+            return true
+        }
+        return false
+    }
+    return true
+}
+
+fn cb_record_success(cb) {
+    let cb2 = map_set(cb, "state", "CLOSED")
+    return map_set(cb2, "failure_count", 0)
+}
+
+fn cb_record_failure(cb) {
+    let failures = map_get(cb, "failure_count") + 1
+    let max_f = map_get(cb, "max_failures")
+    let now = time_now()
+
+    let mut new_state = map_get(cb, "state")
+    if failures >= max_f {
+        new_state = "OPEN"
+    }
+
+    let cb2 = map_set(cb, "failure_count", failures)
+    let cb3 = map_set(cb2, "last_failure_time", now)
+    return map_set(cb3, "state", new_state)
+}

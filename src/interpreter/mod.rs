@@ -131,10 +131,14 @@ impl Interpreter {
             ("throw", None),
             ("is_error", Some(1)),
 
-            // System
+            // System & Timers
             ("get_args", Some(0)),
             ("platform", Some(0)),
             ("arch", Some(0)),
+            ("sleep_ms", Some(1)),
+            ("time_now_us", Some(0)),
+            ("tcp_ping", None),
+            ("str_split_lines", Some(1)),
         ];
 
         for (name, arity) in builtins {
@@ -1241,10 +1245,14 @@ impl Interpreter {
             "throw" => crate::stdlib::builtin_throw(args, span.line, span.column),
             "is_error" => crate::stdlib::builtin_is_error(args, span.line, span.column),
 
-            // System
+            // System & Timers
             "get_args" => crate::stdlib::builtin_args(args, span.line, span.column),
             "platform" => crate::stdlib::builtin_platform(args, span.line, span.column),
             "arch" => crate::stdlib::builtin_arch(args, span.line, span.column),
+            "sleep_ms" => crate::stdlib::builtin_sleep_ms(args, span.line, span.column),
+            "time_now_us" => crate::stdlib::builtin_time_now_us(args, span.line, span.column),
+            "tcp_ping" => crate::stdlib::builtin_tcp_ping(args, span.line, span.column),
+            "str_split_lines" => crate::stdlib::builtin_str_split_lines(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

@@ -1,0 +1,45 @@
+// ===================================================
+// VietLang Microservice RPC Framework (std.rpc)
+// Service-to-service communication protocol
+// ===================================================
+
+fn rpc_server_new() {
+    let s = map_new()
+    let s = map_set(s, "handlers", map_new())
+    return s
+}
+
+fn rpc_register(server, procedure_name: String, handler_fn_name: String) {
+    let handlers = map_get(server, "handlers")
+    let new_handlers = map_set(handlers, procedure_name, handler_fn_name)
+    return map_set(server, "handlers", new_handlers)
+}
+
+fn rpc_create_request(procedure: String, params) -> String {
+    let req = map_new()
+    let req = map_set(req, "jsonrpc", "2.0")
+    let req = map_set(req, "id", uuid())
+    let req = map_set(req, "method", procedure)
+    let req = map_set(req, "params", params)
+    return json_stringify(req)
+}
+
+fn rpc_create_response(req_id: String, result) -> String {
+    let resp = map_new()
+    let resp = map_set(resp, "jsonrpc", "2.0")
+    let resp = map_set(resp, "id", req_id)
+    let resp = map_set(resp, "result", result)
+    return json_stringify(resp)
+}
+
+fn rpc_create_error(req_id: String, code: Int, message: String) -> String {
+    let err_obj = map_new()
+    let err_obj = map_set(err_obj, "code", code)
+    let err_obj = map_set(err_obj, "message", message)
+
+    let resp = map_new()
+    let resp = map_set(resp, "jsonrpc", "2.0")
+    let resp = map_set(resp, "id", req_id)
+    let resp = map_set(resp, "error", err_obj)
+    return json_stringify(resp)
+}

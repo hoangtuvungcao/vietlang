@@ -1,0 +1,62 @@
+// ===================================================
+// VietLang Configuration Loader (std.config)
+// Environment and .env file configuration parser
+// ===================================================
+
+fn config_load(env_file_path: String = ".env") {
+    let mut cfg = map_new()
+
+    if file_exists(env_file_path) {
+        let content = file_read(env_file_path)
+        let lines = str_split_lines(content)
+
+        for line in lines {
+            let trimmed = line.trim()
+            if trimmed.len() > 0 && !trimmed.starts_with("#") && trimmed.contains("=") {
+                let parts = trimmed.split("=")
+                let key = parts[0].trim()
+                let mut val = parts[1].trim()
+
+                if val.starts_with("\"") && val.ends_with("\"") && val.len() >= 2 {
+                    val = substring(val, 1, val.len() - 1)
+                }
+
+                cfg = map_set(cfg, key, val)
+            }
+        }
+    }
+
+    return cfg
+}
+
+fn config_get(cfg, key: String, default_val = none) {
+    if map_has(cfg, key) {
+        return map_get(cfg, key)
+    }
+    let env_val = env_get(key)
+    if env_val != none {
+        return env_val
+    }
+    return default_val
+}
+
+fn config_get_int(cfg, key: String, default_val: Int = 0) -> Int {
+    let raw = config_get(cfg, key)
+    if raw == none {
+        return default_val
+    }
+    let parsed = parse_int(to_string(raw))
+    if parsed == none {
+        return default_val
+    }
+    return parsed
+}
+
+fn config_get_bool(cfg, key: String, default_val: Bool = false) -> Bool {
+    let raw = config_get(cfg, key)
+    if raw == none {
+        return default_val
+    }
+    let s = to_string(raw).to_lower()
+    return s == "true" || s == "1" || s == "yes"
+}
