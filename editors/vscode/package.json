@@ -1,0 +1,42 @@
+{
+  "name": "vietlang",
+  "displayName": "VietLang Language Support",
+  "description": "Rich language support for VietLang - The Backend-First Programming Language",
+  "version": "0.1.0",
+  "publisher": "hoangtuvungcao",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "vietlang",
+        "aliases": [
+          "VietLang",
+          "vietlang"
+        ],
+        "extensions": [
+          ".vl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "vietlang",
+        "scopeName": "source.vietlang",
+        "path": "./syntaxes/vietlang.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "vietlang",
+        "path": "./snippets/vietlang.json"
+      }
+    ]
+  }
+}

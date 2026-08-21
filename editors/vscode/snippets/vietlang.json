@@ -1,0 +1,60 @@
+{
+  "Function Definition": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2:params}) -> ${3:ReturnType} {",
+      "    ${0:// implementation}",
+      "}"
+    ],
+    "description": "Define a function in VietLang"
+  },
+  "Struct Definition": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name} {",
+      "    ${2:field}: ${3:Type},",
+      "}"
+    ],
+    "description": "Define a struct in VietLang"
+  },
+  "HTTP Route Handler": {
+    "prefix": "route",
+    "body": [
+      "fn handle_${1:resource}(req: Request) -> Response {",
+      "    let data = map_new()",
+      "    return response_json(200, data)",
+      "}"
+    ],
+    "description": "Define an HTTP route handler"
+  },
+  "Unit Test Case": {
+    "prefix": "test",
+    "body": [
+      "test(\"${1:description}\", fn() {",
+      "    assert_eq(${2:actual}, ${3:expected})",
+      "})"
+    ],
+    "description": "Define a unit test case with std.test"
+  },
+  "Try Catch Block": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "    ${1:// dangerous code}",
+      "} catch err {",
+      "    log_error(\"Error: \" + err)",
+      "}"
+    ],
+    "description": "Try-catch error handling block"
+  },
+  "Pattern Match": {
+    "prefix": "match",
+    "body": [
+      "match ${1:target} {",
+      "    ${2:pattern} => ${3:action},",
+      "    _ => ${4:default}",
+      "}"
+    ],
+    "description": "Pattern matching expression"
+  }
+}

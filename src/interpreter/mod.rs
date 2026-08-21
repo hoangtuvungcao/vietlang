@@ -4,7 +4,7 @@
 pub mod value;
 pub mod environment;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::error::{VietError, VietResult, ErrorKind};
 use crate::lexer::token::Span;
 use crate::parser::ast::*;
@@ -17,6 +17,8 @@ pub struct Interpreter {
     struct_defs: HashMap<String, Vec<StructField>>,
     /// Enum definitions
     enum_defs: HashMap<String, Vec<EnumVariant>>,
+    /// Track loaded module paths to prevent circular / duplicate execution
+    loaded_modules: HashSet<String>,
 }
 
 impl Interpreter {
@@ -25,6 +27,7 @@ impl Interpreter {
             env: Environment::new(),
             struct_defs: HashMap::new(),
             enum_defs: HashMap::new(),
+            loaded_modules: HashSet::new(),
         };
         interp.register_builtins();
         interp
@@ -378,21 +381,48 @@ impl Interpreter {
             }
 
             Statement::Import { path, span, .. } => {
-                // Import .vl files: `import utils` => loads `utils.vl`
-                // `import lib.math` => loads `lib/math.vl`
-                let file_path = format!("{}.vl", path.join("/"));
-                if std::path::Path::new(&file_path).exists() {
-                    let source = std::fs::read_to_string(&file_path).map_err(|e|
-                        VietError::runtime_error(format!("Cannot import '{}': {}", file_path, e), span.line, span.column)
-                    )?;
-                    let mut lexer = crate::lexer::Lexer::new(&source);
-                    let tokens = lexer.tokenize()?;
-                    let mut parser = crate::parser::Parser::new(tokens);
-                    let program = parser.parse()?;
-                    self.execute(&program)?;
+                let joined = path.join("/");
+                let search_paths = vec![
+                    format!("{}.vl", joined),
+                    format!("std/{}.vl", joined),
+                    format!("modules/{}.vl", joined),
+                    format!("modules/{}/src/main.vl", joined),
+                    format!("modules/{}/src/lib.vl", joined),
+                    format!("modules/{}/mod.vl", joined),
+                    if path.len() > 1 && path[0] == "std" {
+                        format!("std/{}.vl", path[1..].join("/"))
+                    } else {
+                        String::new()
+                    },
+                ];
+
+                let mut found_path = None;
+                for sp in search_paths {
+                    if !sp.is_empty() && std::path::Path::new(&sp).exists() {
+                        found_path = Some(sp);
+                        break;
+                    }
+                }
+
+                if let Some(resolved_path) = found_path {
+                    let canonical = std::fs::canonicalize(&resolved_path)
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_else(|_| resolved_path.clone());
+
+                    if !self.loaded_modules.contains(&canonical) {
+                        self.loaded_modules.insert(canonical);
+                        let source = std::fs::read_to_string(&resolved_path).map_err(|e|
+                            VietError::runtime_error(format!("Cannot import '{}': {}", resolved_path, e), span.line, span.column)
+                        )?;
+                        let mut lexer = crate::lexer::Lexer::new(&source);
+                        let tokens = lexer.tokenize()?;
+                        let mut parser = crate::parser::Parser::new(tokens);
+                        let program = parser.parse()?;
+                        self.execute(&program)?;
+                    }
                     Ok(Value::None)
                 } else {
-                    // Built-in module, just acknowledge
+                    // Built-in virtual module
                     Ok(Value::None)
                 }
             }

@@ -7,6 +7,9 @@ import std.test
 import std.strings
 import std.jwt
 import std.http_router
+import std.validator
+import std.cache
+import std.orm
 
 suite("VietLang Community Library Suite")
 
@@ -62,6 +65,46 @@ test("HTTP Router construction", fn() {
 
     let json_resp = response_json(200, map_set(map_new(), "id", 1))
     assert_true(json_resp.contains("200"), "JSON response should contain status code")
+})
+
+test("Validator schema validation", fn() {
+    let v = validator_new()
+    let v = validator_add_rule(v, "email", "required")
+    let v = validator_add_rule(v, "email", "email")
+    let v = validator_add_rule(v, "age", "min_val", 18)
+
+    let valid_data = map_set(map_set(map_new(), "email", "admin@vietlang.dev"), "age", 25)
+    let res1 = validate(v, valid_data)
+    assert_true(map_get(res1, "is_valid"), "Valid data should pass validation")
+
+    let invalid_data = map_set(map_set(map_new(), "email", "not-an-email"), "age", 15)
+    let res2 = validate(v, invalid_data)
+    assert_false(map_get(res2, "is_valid"), "Invalid data should fail validation")
+})
+
+test("Cache TTL and Storage", fn() {
+    let c = cache_new()
+    let c = cache_set(c, "session_123", "user_admin_data", 3600)
+    assert_true(cache_has(c, "session_123"), "Cache key should exist")
+    assert_eq(cache_get(c, "session_123"), "user_admin_data", "Cache value should match")
+
+    let c = cache_delete(c, "session_123")
+    assert_false(cache_has(c, "session_123"), "Deleted cache key should not exist")
+})
+
+test("ORM Query Builder", fn() {
+    let q = query_builder_new("users")
+    let q = qb_select(q, ["id", "name", "email"])
+    let q = qb_where(q, "active", "=", true)
+    let q = qb_where(q, "role", "=", "admin")
+    let q = qb_order_by(q, "id", "DESC")
+    let q = qb_limit(q, 10)
+
+    let sql = qb_to_sql(q)
+    println("    Generated SQL: " + sql)
+    assert_true(sql.contains("SELECT id, name, email FROM users"), "SQL select clause mismatch")
+    assert_true(sql.contains("WHERE active = true AND role = 'admin'"), "SQL where clause mismatch")
+    assert_true(sql.contains("ORDER BY id DESC LIMIT 10"), "SQL order/limit clause mismatch")
 })
 
 test_summary()

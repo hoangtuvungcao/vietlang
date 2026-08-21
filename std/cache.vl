@@ -1,0 +1,70 @@
+// ===================================================
+// VietLang In-Memory & TTL Cache (std.cache)
+// Written in pure VietLang
+// ===================================================
+
+fn cache_new() {
+    let c = map_new()
+    let c = map_set(c, "data", map_new())
+    let c = map_set(c, "expires", map_new())
+    return c
+}
+
+fn cache_set(c, key: String, val, ttl_seconds: Int = 0) {
+    let data = map_get(c, "data")
+    let expires = map_get(c, "expires")
+
+    let new_data = map_set(data, key, val)
+    let mut expire_time = 0
+    if ttl_seconds > 0 {
+        expire_time = time_now() + ttl_seconds
+    }
+    let new_expires = map_set(expires, key, expire_time)
+
+    let updated = map_set(c, "data", new_data)
+    return map_set(updated, "expires", new_expires)
+}
+
+fn cache_get(c, key: String, default_val = none) {
+    let data = map_get(c, "data")
+    let expires = map_get(c, "expires")
+
+    if !map_has(data, key) {
+        return default_val
+    }
+
+    let exp = map_get(expires, key)
+    if exp > 0 && time_now() >= exp {
+        // Expired
+        return default_val
+    }
+
+    return map_get(data, key)
+}
+
+fn cache_has(c, key: String) -> Bool {
+    let data = map_get(c, "data")
+    let expires = map_get(c, "expires")
+
+    if !map_has(data, key) {
+        return false
+    }
+
+    let exp = map_get(expires, key)
+    if exp > 0 && time_now() >= exp {
+        return false
+    }
+
+    return true
+}
+
+fn cache_delete(c, key: String) {
+    let data = map_get(c, "data")
+    let expires = map_get(c, "expires")
+
+    let new_data = map_remove(data, key)
+    let new_expires = map_remove(expires, key)
+
+    let updated = map_set(c, "data", new_data)
+    return map_set(updated, "expires", new_expires)
+}

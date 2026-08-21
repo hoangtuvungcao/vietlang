@@ -15,7 +15,11 @@
 
 **A Backend-First Programming Language**
 
-[Getting Started](docs/getting-started.md) | [Language Reference](docs/language-reference.md) | [Stdlib Reference](docs/stdlib-reference.md) | [Contributing](CONTRIBUTING.md)
+[![Build](https://github.com/hoangtuvungcao/vietlang/actions/workflows/build.yml/badge.svg)](https://github.com/hoangtuvungcao/vietlang/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
+
+[Getting Started](docs/getting-started.md) • [Language Reference](docs/language-reference.md) • [Stdlib Reference](docs/stdlib-reference.md) • [Contributing](CONTRIBUTING.md)
 
 </div>
 

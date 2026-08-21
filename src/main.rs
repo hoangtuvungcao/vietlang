@@ -10,6 +10,7 @@ mod lexer;
 mod parser;
 mod interpreter;
 mod stdlib;
+pub mod vm;
 
 use std::env;
 use std::fs;
@@ -18,6 +19,8 @@ use std::io::{self, Write};
 use lexer::Lexer;
 use parser::Parser;
 use interpreter::Interpreter;
+use vm::compiler::Compiler;
+use vm::VM;
 
 const VERSION: &str = "0.1.0";
 
@@ -57,6 +60,13 @@ fn main() {
                     std::process::exit(1);
                 }
                 show_ast(&args[2]);
+            }
+            "--vm" => {
+                if args.len() < 3 {
+                    eprintln!("Usage: vietlang --vm <file.vl>");
+                    std::process::exit(1);
+                }
+                run_vm(&args[2]);
             }
             file => run_file(file),
         }
@@ -115,6 +125,56 @@ fn run_file(path: &str) {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }
+        }
+    }
+}
+
+fn run_vm(path: &str) {
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot read file '{}': {}", path, e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut parser = Parser::new(tokens);
+    let program = match parser.parse() {
+        Ok(program) => program,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut compiler = Compiler::new();
+    let chunk = match compiler.compile(&program) {
+        Ok(chunk) => chunk,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut vm = VM::new(chunk);
+    match vm.run() {
+        Ok(result) => {
+            if result != crate::interpreter::value::Value::None {
+                println!("Result: {}", result);
+            }
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
         }
     }
 }

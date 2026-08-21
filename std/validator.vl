@@ -1,0 +1,89 @@
+// ===================================================
+// VietLang Request & Schema Validator (std.validator)
+// Written in pure VietLang for backend services
+// ===================================================
+
+fn validator_new() {
+    let v = map_new()
+    let v = map_set(v, "rules", map_new())
+    let v = map_set(v, "errors", map_new())
+    return v
+}
+
+fn validator_add_rule(v, field: String, rule_name: String, param = none) {
+    let rules = map_get(v, "rules")
+    let mut field_rules = []
+    if map_has(rules, field) {
+        field_rules = map_get(rules, field)
+    }
+    
+    let rule_obj = map_new()
+    let rule_obj = map_set(rule_obj, "name", rule_name)
+    let rule_obj = map_set(rule_obj, "param", param)
+    
+    let new_field_rules = push(field_rules, rule_obj)
+    let new_rules = map_set(rules, field, new_field_rules)
+    return map_set(v, "rules", new_rules)
+}
+
+fn is_valid_email(email_str: String) -> Bool {
+    if !email_str.contains("@") || !email_str.contains(".") {
+        return false
+    }
+    let at_parts = email_str.split("@")
+    if at_parts.len() != 2 {
+        return false
+    }
+    let username = at_parts[0]
+    let domain = at_parts[1]
+    return username.len() > 0 && domain.contains(".") && domain.len() > 3
+}
+
+fn validate(v, data_map) {
+    let rules = map_get(v, "rules")
+    let fields = map_keys(rules)
+    let mut errors = map_new()
+    let mut is_valid = true
+
+    for field in fields {
+        let field_rules = map_get(rules, field)
+        let val = map_get(data_map, field)
+
+        for rule in field_rules {
+            let rule_name = map_get(rule, "name")
+            let param = map_get(rule, "param")
+
+            if rule_name == "required" {
+                if val == none || (type_of(val) == "String" && val == "") {
+                    errors = map_set(errors, field, "Field '" + field + "' is required")
+                    is_valid = false
+                }
+            } else if rule_name == "email" && val != none {
+                if type_of(val) != "String" || !is_valid_email(val) {
+                    errors = map_set(errors, field, "Field '" + field + "' must be a valid email address")
+                    is_valid = false
+                }
+            } else if rule_name == "min_len" && val != none {
+                if type_of(val) == "String" && val.len() < param {
+                    errors = map_set(errors, field, "Field '" + field + "' must be at least " + to_string(param) + " characters")
+                    is_valid = false
+                }
+            } else if rule_name == "max_len" && val != none {
+                if type_of(val) == "String" && val.len() > param {
+                    errors = map_set(errors, field, "Field '" + field + "' must be at most " + to_string(param) + " characters")
+                    is_valid = false
+                }
+            } else if rule_name == "min_val" && val != none {
+                if (type_of(val) == "Int" || type_of(val) == "Float") && val < param {
+                    errors = map_set(errors, field, "Field '" + field + "' must be at least " + to_string(param))
+                    is_valid = false
+                }
+            }
+        }
+    }
+
+    let result = map_new()
+    let result = map_set(result, "is_valid", is_valid)
+    let result = map_set(result, "errors", errors)
+    return result
+}

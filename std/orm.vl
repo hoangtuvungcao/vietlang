@@ -1,0 +1,88 @@
+// ===================================================
+// VietLang Database Query Builder & ORM (std.orm)
+// Written in pure VietLang
+// ===================================================
+
+fn query_builder_new(table_name: String) {
+    let q = map_new()
+    let q = map_set(q, "table", table_name)
+    let q = map_set(q, "select_cols", ["*"])
+    let q = map_set(q, "where_clauses", [])
+    let q = map_set(q, "order_col", "")
+    let q = map_set(q, "order_dir", "ASC")
+    let q = map_set(q, "limit_count", -1)
+    let q = map_set(q, "offset_count", 0)
+    return q
+}
+
+fn qb_select(q, cols) {
+    return map_set(q, "select_cols", cols)
+}
+
+fn qb_where(q, field: String, op: String, val) {
+    let clauses = map_get(q, "where_clauses")
+    let clause = map_new()
+    let clause = map_set(clause, "field", field)
+    let clause = map_set(clause, "op", op)
+    let clause = map_set(clause, "val", val)
+    let new_clauses = push(clauses, clause)
+    return map_set(q, "where_clauses", new_clauses)
+}
+
+fn qb_order_by(q, field: String, dir: String = "ASC") {
+    let q2 = map_set(q, "order_col", field)
+    return map_set(q2, "order_dir", dir)
+}
+
+fn qb_limit(q, n: Int) {
+    return map_set(q, "limit_count", n)
+}
+
+fn qb_to_sql(q) -> String {
+    let cols = map_get(q, "select_cols")
+    let cols_str = cols.join(", ")
+    let mut sql = "SELECT " + cols_str + " FROM " + map_get(q, "table")
+
+    let clauses = map_get(q, "where_clauses")
+    if clauses.len() > 0 {
+        let mut where_parts = []
+        for c in clauses {
+            let field = map_get(c, "field")
+            let op = map_get(c, "op")
+            let val = map_get(c, "val")
+            let mut val_str = to_string(val)
+            if type_of(val) == "String" {
+                val_str = "'" + val + "'"
+            }
+            where_parts = push(where_parts, field + " " + op + " " + val_str)
+        }
+        sql += " WHERE " + where_parts.join(" AND ")
+    }
+
+    let order_col = map_get(q, "order_col")
+    if order_col != "" {
+        sql += " ORDER BY " + order_col + " " + map_get(q, "order_dir")
+    }
+
+    let limit_n = map_get(q, "limit_count")
+    if limit_n > 0 {
+        sql += " LIMIT " + to_string(limit_n)
+    }
+
+    return sql
+}
+
+fn qb_insert_sql(table_name: String, data_map) -> String {
+    let keys = map_keys(data_map)
+    let cols_str = keys.join(", ")
+    let mut val_parts = []
+    for k in keys {
+        let val = map_get(data_map, k)
+        let mut val_str = to_string(val)
+        if type_of(val) == "String" {
+            val_str = "'" + val + "'"
+        }
+        val_parts = push(val_parts, val_str)
+    }
+    return "INSERT INTO " + table_name + " (" + cols_str + ") VALUES (" + val_parts.join(", ") + ")"
+}
