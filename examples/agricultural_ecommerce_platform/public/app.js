@@ -196,6 +196,16 @@ if (loginForm) {
       closeAuthModal();
       showToast(`Chào mừng [${u.name}] (Vai trò: ${u.role}) đăng nhập thành công!`);
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect');
+      if (redirectUrl) {
+        setTimeout(() => { window.location.href = redirectUrl; }, 600);
+      } else if (u.role === 'ADMIN' && window.location.pathname.includes('/auth')) {
+        setTimeout(() => { window.location.href = '/admin'; }, 600);
+      } else if (window.location.pathname.includes('/auth')) {
+        setTimeout(() => { window.location.href = '/'; }, 600);
+      }
+
     } catch (err) {
       showToast('Lỗi kết nối tới máy chủ: ' + err.message, 'error');
     }
@@ -226,14 +236,10 @@ if (registerForm) {
         return;
       }
 
-      const u = result.data.user;
-      u.token = result.data.token;
-      state.currentUser = u;
-      localStorage.setItem('nsv_user', JSON.stringify(u));
-
-      renderUserAuthUI();
-      closeAuthModal();
-      showToast(`Tạo tài khoản thành công! Quyền hạn: ${u.role}`);
+      showToast(`Đăng ký thành công tài khoản [${email}]! Vui lòng đăng nhập.`);
+      switchAuthTab('login');
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = '';
 
     } catch (err) {
       showToast('Lỗi kết nối: ' + err.message, 'error');
@@ -241,12 +247,19 @@ if (registerForm) {
   });
 }
 
+window.logout = function() {
+  state.currentUser = null;
+  localStorage.removeItem('nsv_user');
+  renderUserAuthUI();
+  showToast('Đã đăng xuất tài khoản thành công!');
+  if (window.location.pathname.includes('/admin')) {
+    setTimeout(() => { window.location.href = '/auth'; }, 600);
+  }
+};
+
 if (logoutBtn) {
   logoutBtn.addEventListener('click', () => {
-    state.currentUser = null;
-    localStorage.removeItem('nsv_user');
-    renderUserAuthUI();
-    showToast('Đã đăng xuất khỏi hệ thống!');
+    window.logout();
   });
 }
 
@@ -497,11 +510,15 @@ function initFlashSaleTimer() {
 // 4. Cart Mechanics
 // ========================================================================
 window.toggleCart = function() {
-  cartDrawer.classList.toggle('open');
-  cartBackdrop.classList.toggle('open');
+  if (cartDrawer) cartDrawer.classList.toggle('open');
+  if (cartBackdrop) cartBackdrop.classList.toggle('open');
 };
-cartToggleBtn.addEventListener('click', toggleCart);
-cartBackdrop.addEventListener('click', toggleCart);
+if (cartToggleBtn) {
+  cartToggleBtn.addEventListener('click', toggleCart);
+}
+if (cartBackdrop) {
+  cartBackdrop.addEventListener('click', toggleCart);
+}
 
 window.addToCart = function(productId) {
   const prod = state.products.find(p => p.id === productId);
@@ -717,35 +734,40 @@ window.closeProductDetail = function() {
 // ========================================================================
 // 5. Checkout Transaction (POST /api/v1/orders/checkout)
 // ========================================================================
-openCheckoutBtn.addEventListener('click', () => {
-  const { total } = calculateCartTotals();
-  if (total <= 0) {
-    showToast('Giỏ hàng trống!', 'error');
-    return;
-  }
+if (openCheckoutBtn) {
+  openCheckoutBtn.addEventListener('click', () => {
+    const { total } = calculateCartTotals();
+    if (total <= 0) {
+      showToast('Giỏ hàng trống!', 'error');
+      return;
+    }
 
-  // Pre-fill user profile if logged in
-  if (state.currentUser) {
-    document.getElementById('custName').value = state.currentUser.name || '';
-    document.getElementById('custPhone').value = state.currentUser.phone || '';
-  }
+    // Pre-fill user profile if logged in
+    if (state.currentUser) {
+      const nameEl = document.getElementById('custName');
+      const phoneEl = document.getElementById('custPhone');
+      if (nameEl) nameEl.value = state.currentUser.name || '';
+      if (phoneEl) phoneEl.value = state.currentUser.phone || '';
+    }
 
-  toggleCart();
-  checkoutModal.classList.add('open');
-});
+    toggleCart();
+    if (checkoutModal) checkoutModal.classList.add('open');
+  });
+}
 
 window.closeCheckoutModal = function() {
-  checkoutModal.classList.remove('open');
+  if (checkoutModal) checkoutModal.classList.remove('open');
 };
 
-checkoutForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
+if (checkoutForm) {
+  checkoutForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  const customer_name = document.getElementById('custName').value.trim();
-  const phone = document.getElementById('custPhone').value.trim();
-  const address = document.getElementById('custAddress').value.trim();
-  const city = document.getElementById('custCity')?.value || 'TP. Hồ Chí Minh';
-  const payment_method = document.getElementById('paymentMethod').value;
+    const customer_name = document.getElementById('custName')?.value?.trim() || '';
+    const phone = document.getElementById('custPhone')?.value?.trim() || '';
+    const address = document.getElementById('custAddress')?.value?.trim() || '';
+    const city = document.getElementById('custCity')?.value || 'TP. Hồ Chí Minh';
+    const payment_method = document.getElementById('paymentMethod')?.value || 'COD';
 
   const checkoutPayload = {
     user_id: state.currentUser ? state.currentUser.id : 2,
