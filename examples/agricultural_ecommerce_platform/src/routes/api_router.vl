@@ -213,6 +213,9 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         if map_has(body_map, "user_id") {
             user_id = map_get(body_map, "user_id")
         }
+        if user_id <= 0 {
+            return api_error(401, "Yeu cau dang nhap tai khoan de dat hang va bao toan du lieu CSDL!")
+        }
         let customer_name = to_string(map_get(body_map, "customer_name"))
         let phone = to_string(map_get(body_map, "phone"))
         let address = to_string(map_get(body_map, "address"))

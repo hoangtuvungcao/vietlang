@@ -205,17 +205,27 @@
           return;
         }
 
-        localStorage.setItem('vl_auth_token', json.token);
-        localStorage.setItem('vl_user_profile', JSON.stringify(json.user));
-        showToast(`Đăng nhập thành công! Xin chào ${json.user.full_name} (${json.user.role})`, 'success');
+        const u = (json.data && json.data.user) ? json.data.user : (json.user || {});
+        const token = (json.data && json.data.token) ? json.data.token : (json.token || '');
+        const userName = u.name || u.full_name || 'Thành Viên';
+        u.token = token;
+
+        localStorage.setItem('nsv_user', JSON.stringify(u));
+        localStorage.setItem('vl_auth_token', token);
+        showToast(`Đăng nhập thành công! Xin chào ${userName} (${u.role})`, 'success');
         
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect');
+
         setTimeout(() => {
-          if (json.user.role === 'ADMIN') {
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else if (u.role === 'ADMIN') {
             window.location.href = '/admin';
           } else {
             window.location.href = '/';
           }
-        }, 1000);
+        }, 800);
       } catch (err) {
         showToast('Lỗi kết nối: ' + err.message, 'error');
       }
@@ -223,7 +233,7 @@
 
     async function handleAuthRegister(e) {
       e.preventDefault();
-      const full_name = document.getElementById('regFullName').value.trim();
+      const name = document.getElementById('regFullName').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
       const role = document.getElementById('regRole').value;
@@ -234,7 +244,7 @@
         const res = await fetch('/api/v1/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ full_name, email, phone, role, password })
+          body: JSON.stringify({ name, email, phone, role, password })
         });
         const json = await res.json();
         if (!res.ok || json.status_code >= 400) {
@@ -242,13 +252,10 @@
           return;
         }
 
-        localStorage.setItem('vl_auth_token', json.token);
-        localStorage.setItem('vl_user_profile', JSON.stringify(json.user));
-        showToast(`Đăng ký thành công! Chào mừng ${full_name}`, 'success');
-        
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        showToast(`Đăng ký thành công tài khoản [${email}]! Vui lòng đăng nhập.`);
+        switchAuthTab('login');
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = '';
       } catch (err) {
         showToast('Lỗi kết nối: ' + err.message, 'error');
       }

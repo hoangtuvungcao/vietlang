@@ -758,13 +758,23 @@ if (openCheckoutBtn) {
       return;
     }
 
-    // Pre-fill user profile if logged in
-    if (state.currentUser) {
-      const nameEl = document.getElementById('custName');
-      const phoneEl = document.getElementById('custPhone');
-      if (nameEl) nameEl.value = state.currentUser.name || '';
-      if (phoneEl) phoneEl.value = state.currentUser.phone || '';
+    // Strict Authentication Guard: User must login before ordering!
+    if (!state.currentUser) {
+      showToast('⚠️ Vui lòng đăng nhập tài khoản để tiến hành đặt hàng!', 'error');
+      toggleCart();
+      if (authModal) {
+        authModal.classList.add('open');
+      } else {
+        window.location.href = '/auth?redirect=/';
+      }
+      return;
     }
+
+    // Pre-fill user profile if logged in
+    const nameEl = document.getElementById('custName');
+    const phoneEl = document.getElementById('custPhone');
+    if (nameEl) nameEl.value = state.currentUser.name || '';
+    if (phoneEl) phoneEl.value = state.currentUser.phone || '';
 
     toggleCart();
     if (checkoutModal) checkoutModal.classList.add('open');
@@ -779,22 +789,34 @@ if (checkoutForm) {
   checkoutForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const customer_name = document.getElementById('custName')?.value?.trim() || '';
-    const phone = document.getElementById('custPhone')?.value?.trim() || '';
+    if (!state.currentUser) {
+      showToast('⚠️ Bạn chưa đăng nhập. Vui lòng đăng nhập trước khi thanh toán!', 'error');
+      closeCheckoutModal();
+      if (authModal) authModal.classList.add('open');
+      return;
+    }
+
+    const customer_name = document.getElementById('custName')?.value?.trim() || state.currentUser.name;
+    const phone = document.getElementById('custPhone')?.value?.trim() || state.currentUser.phone || '';
     const address = document.getElementById('custAddress')?.value?.trim() || '';
     const city = document.getElementById('custCity')?.value || 'TP. Hồ Chí Minh';
     const payment_method = document.getElementById('paymentMethod')?.value || 'COD';
 
-  const checkoutPayload = {
-    user_id: state.currentUser ? state.currentUser.id : 2,
-    customer_name,
-    phone,
-    address,
-    city,
-    payment_method,
-    items: state.cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-    voucher: state.voucher || ""
-  };
+    if (!customer_name || !phone || !address) {
+      showToast('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng!', 'error');
+      return;
+    }
+
+    const checkoutPayload = {
+      user_id: state.currentUser.id,
+      customer_name,
+      phone,
+      address,
+      city,
+      payment_method,
+      items: state.cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+      voucher: state.voucher || ""
+    };
 
   showToast('Đang gửi giao dịch ACID tới máy chủ VietLang...', 'info');
 
