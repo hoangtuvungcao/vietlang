@@ -23,9 +23,7 @@ jobs:
       - name: Run VietLang Integration Tests
         run: |
           cargo build --release
-          ./target/release/vietlang test examples/enterprise_ecosystem_demo.vl
-          ./target/release/vietlang test examples/agricultural_ecommerce_platform/tests/full_system_test.vl
-          ./target/release/vietlang test examples/multi_database_demo.vl
+          make demo
 
   build-vsix:
     name: Package VS Code Extension
