@@ -1,6 +1,10 @@
 # VietLang Central Package Registry Specification & Sharded Index Architecture
 
-The formal specification of the VietLang Community Registry: A Git-backed, sharded prefix-tree package indexing system designed for infinite scalability, zero-server cost, and open community participation.
+Draft design for the experimental VietLang community registry. The current CLI
+clones Git repositories and does not yet provide a secure, reproducible package
+installation path. Do not treat registry metadata as trusted or use community
+packages in production until checksum enforcement, immutable revisions,
+lockfiles, signatures, and dependency resolution are implemented.
 
 Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
@@ -12,9 +16,9 @@ Traditional package managers suffer from two common pitfalls:
 1. **Centralized Proprietary Silos**: Requires high-maintenance backend server infrastructure with API rate limits and vendor lock-in.
 2. **Monolithic Index Bloat**: Storing all package metadata in a single flat file causes severe performance degradation when scaling to 100,000+ packages.
 
-### The VietLang Solution:
+### Intended design:
 - **Decentralized Source Hosting**: Package code is hosted directly on the author's own GitHub, GitLab, Gitea, or self-hosted Git server.
-- **Git-Backed Sharded Prefix Index**: Metadata is sharded into deterministic prefix paths (similar to Cargo and Crates.io), ensuring $O(1)$ package lookups with tiny network payloads (<1KB per package).
+- **Git-Backed Sharded Prefix Index**: Metadata uses deterministic prefix paths.
 - **Open Contribution for Any Developer**: Any developer with a GitHub account can publish without requiring admin permissions through automated Pull Request workflows or personal access tokens.
 
 ---
@@ -33,7 +37,7 @@ Package metadata files are stored in a deterministic shard hierarchy based on th
 | **4+ chars** | `registry/shards/{c1c2}/{c3c4}/{name}.json` | `vietpay` | `registry/shards/vi/et/vietpay.json` |
 
 ### Benefits:
-- **Zero Monolithic Bloat**: Installing `redis` only downloads a 300-byte file (`registry/shards/re/di/redis.json`), never the entire catalog.
+- **Small index lookups**: A client can fetch a package shard rather than a full catalog once remote shard fetching is implemented.
 - **Filesystem Scalability**: Prevents directories from exceeding filesystem inode thresholds even with 500,000+ packages.
 - **Fast In-Memory Search**: Search indexing scans sharded leaves in parallel with microsecond latency.
 
@@ -50,7 +54,7 @@ When authoring a package on your own GitHub account:
   "author": "your_github_username",
   "repository": "https://github.com/your_github_username/vietpay.git",
   "type": "lib",
-  "description": "High-throughput payment gateway SDK for VietLang",
+  "description": "Example community library for VietLang",
   "keywords": ["payment", "fintech", "vietpay", "billing"],
   "license": "MIT",
   "dependencies": {
@@ -86,7 +90,7 @@ vietlang publish
 
 *What `vietlang publish` does automatically:*
 1. Auto-detects your repository URL from `git remote get-url origin`.
-2. Computes the release checksum (`vlt_<sha256>`).
+2. Computes `sha256:<hex>` over `vietlang.json` and the complete `src/` tree.
 3. Generates the deterministic shard file (e.g. `registry/shards/my/pa/my_package.json`).
 4. Updates local index and outputs automated 1-click registration to the official registry.
 
@@ -101,9 +105,13 @@ vietlang search payment
 # Install from Central Registry (by short name)
 vietlang install vietpay
 
-# Install with explicit version lock
+# Request an explicit version (this is not yet an immutable lock)
 vietlang install vietpay@1.0.0
 
 # Update to latest version
 vietlang update vietpay
 ```
+
+Current security limitation: the installer does not yet enforce the published
+checksum after clone and does not write an immutable lockfile. These are P3
+release blockers, not optional enhancements.

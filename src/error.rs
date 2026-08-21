@@ -1,8 +1,8 @@
 //! VietLang Error Types
 //! Unified error handling for the compiler/interpreter.
 
-use std::fmt;
 use crate::interpreter::value::Value;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
@@ -26,7 +26,12 @@ pub struct VietError {
 
 impl VietError {
     pub fn new(kind: ErrorKind, message: String, line: usize, column: usize) -> Self {
-        VietError { kind, message, line, column }
+        VietError {
+            kind,
+            message,
+            line,
+            column,
+        }
     }
 
     pub fn lexer_error(message: String, line: usize, column: usize) -> Self {

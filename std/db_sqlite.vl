@@ -1,5 +1,5 @@
 // ========================================================================
-// VietLang Production-Grade SQLite Driver & Storage Engine (std.db_sqlite)
+// VietLang Experimental SQLite Adapter (std.db_sqlite)
 // Real Binary File-Backed ACID Relational Database with WAL Mode
 // ========================================================================
 

@@ -1,6 +1,6 @@
 // ========================================================================
 // Nong San Viet (VietCleanAgri) Enterprise Backend Platform
-// Main Application Bootstrap & HTTP/2 REST Server
+// Main Application Bootstrap & bounded HTTP/1.1 + HTTP/2 REST Server
 // Dynamic Runtime Configuration via .env & config.json
 // ========================================================================
 
@@ -151,7 +151,7 @@ println("  * POST /api/v1/orders/checkout")
 println("  * GET  /api/v1/orders/track")
 println("  * GET  /api/v1/admin/analytics")
 println("========================================================================")
-println("Nong San Viet Backend listening on http://0.0.0.0:" + to_string(port) + " [HTTP/1.1, HTTP/2, HTTP/3 Alt-Svc]")
+println("Nong San Viet Backend listening on http://0.0.0.0:" + to_string(port) + " [HTTP/1.1 + HTTP/2]")
 println("========================================================================")
 
 // 5. Multi-Protocol High-Throughput Server Configuration

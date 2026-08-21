@@ -1,9 +1,10 @@
 //! VietLang Runtime Values
 //! Defines all value types that can exist at runtime.
 
+use super::environment::CapturedEnvironment;
+use crate::parser::ast::{Parameter, Statement};
 use std::collections::HashMap;
 use std::fmt;
-use crate::parser::ast::{Statement, Parameter};
 
 /// Runtime value types
 #[derive(Debug, Clone)]
@@ -23,15 +24,20 @@ pub enum Value {
         variant: String,
         fields: Vec<Value>,
     },
+    EnumConstructor {
+        type_name: String,
+        variant: String,
+        arity: usize,
+    },
     Function {
         name: String,
         params: Vec<Parameter>,
         body: Vec<Statement>,
-        closure_env: Option<usize>,  // Index into environment stack for closure
+        closure_env: CapturedEnvironment,
     },
     BuiltinFunction {
         name: String,
-        arity: Option<usize>,  // None = variadic
+        arity: Option<usize>, // None = variadic
     },
     /// Represents a range (start..end)
     Range {
@@ -51,6 +57,7 @@ impl Value {
             Value::Array(_) => "Array",
             Value::Struct { type_name, .. } => type_name,
             Value::EnumVariant { type_name, .. } => type_name,
+            Value::EnumConstructor { .. } => "EnumConstructor",
             Value::Function { .. } => "Function",
             Value::BuiltinFunction { .. } => "BuiltinFunction",
             Value::Range { .. } => "Range",
@@ -103,7 +110,9 @@ impl fmt::Display for Value {
             Value::Array(elements) => {
                 write!(f, "[")?;
                 for (i, elem) in elements.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", elem)?;
                 }
                 write!(f, "]")
@@ -111,22 +120,33 @@ impl fmt::Display for Value {
             Value::Struct { type_name, fields } => {
                 write!(f, "{} {{ ", type_name)?;
                 for (i, (key, val)) in fields.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}: {}", key, val)?;
                 }
                 write!(f, " }}")
             }
-            Value::EnumVariant { variant, fields, .. } => {
+            Value::EnumVariant {
+                variant, fields, ..
+            } => {
                 if fields.is_empty() {
                     write!(f, "{}", variant)
                 } else {
                     write!(f, "{}(", variant)?;
                     for (i, field) in fields.iter().enumerate() {
-                        if i > 0 { write!(f, ", ")?; }
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
                         write!(f, "{}", field)?;
                     }
                     write!(f, ")")
                 }
+            }
+            Value::EnumConstructor {
+                type_name, variant, ..
+            } => {
+                write!(f, "<enum constructor {}.{}>", type_name, variant)
             }
             Value::Function { name, .. } => write!(f, "<fn {}>", name),
             Value::BuiltinFunction { name, .. } => write!(f, "<builtin {}>", name),
@@ -146,8 +166,18 @@ impl PartialEq for Value {
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::None, Value::None) => true,
             (Value::Array(a), Value::Array(b)) => a == b,
-            (Value::EnumVariant { variant: v1, fields: f1, .. },
-             Value::EnumVariant { variant: v2, fields: f2, .. }) => v1 == v2 && f1 == f2,
+            (
+                Value::EnumVariant {
+                    type_name: t1,
+                    variant: v1,
+                    fields: f1,
+                },
+                Value::EnumVariant {
+                    type_name: t2,
+                    variant: v2,
+                    fields: f2,
+                },
+            ) => t1 == t2 && v1 == v2 && f1 == f2,
             _ => false,
         }
     }

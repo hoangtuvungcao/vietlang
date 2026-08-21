@@ -27,6 +27,7 @@ debug:
 # Test
 test:
 	cargo test --all
+	cargo run -- tests/p0_security.vl
 	@echo "\nAll Rust unit tests passed!"
 
 # Run Curated Examples & Suites
@@ -40,17 +41,13 @@ demo: build
 	./target/release/vietlang examples/basics/file_and_json.vl
 	@echo "\n--- backend/sqlite_database.vl ---"
 	./target/release/vietlang examples/backend/sqlite_database.vl
-	@echo "\n--- fintech/vietnam_fintech.vl ---"
-	./target/release/vietlang examples/fintech/vietnam_fintech.vl
 	@echo "\n--- fintech/concurrency_csp.vl ---"
 	./target/release/vietlang examples/fintech/concurrency_csp.vl
-	@echo "\n--- full_apps/agricultural_ecommerce/tests/full_system_test.vl ---"
-	./target/release/vietlang examples/full_apps/agricultural_ecommerce/tests/full_system_test.vl
 	@echo "\n--- bootstrap/lexer.vl ---"
 	./target/release/vietlang bootstrap/lexer.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
-	@echo "\nAll curated examples, fintech suites, and bootstrap tests completed successfully!"
+	@echo "\nAll curated core examples and bootstrap tests completed successfully!"
 
 # Install
 install: build

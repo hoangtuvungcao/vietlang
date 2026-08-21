@@ -1,16 +1,19 @@
 // ========================================================================
-// VietLang HTTP/2 & High-Performance Transport Layer (std.http2)
-// Multiplexed Streams, Binary Framing, and Server Push Abstraction
+// HTTP/2 server configuration helpers (std.http2).
+// The native http_listen runtime provides HTTP/1.1 + HTTP/2 via Hyper/Axum.
+// Use tls_cert_file/tls_key_file directly in a config Map for HTTPS + ALPN.
 // ========================================================================
 
 fn http2_server_config(port: Int = 9090, max_concurrent_streams: Int = 250) {
     let mut cfg = map_new()
     cfg = map_set(cfg, "addr", "0.0.0.0:" + to_string(port))
     cfg = map_set(cfg, "port", port)
-    cfg = map_set(cfg, "protocol", "HTTP/2, HTTP/3 (ALPN Ready)")
-    cfg = map_set(cfg, "max_concurrent_streams", max_concurrent_streams)
-    cfg = map_set(cfg, "initial_window_size", 65535)
-    cfg = map_set(cfg, "enable_push", true)
+    cfg = map_set(cfg, "protocol", "HTTP/1.1 + HTTP/2")
+    cfg = map_set(cfg, "max_concurrency", max_concurrent_streams)
+    cfg = map_set(cfg, "max_body_bytes", 1048576)
+    cfg = map_set(cfg, "max_header_bytes", 65536)
+    cfg = map_set(cfg, "max_response_bytes", 8388608)
+    cfg = map_set(cfg, "request_timeout_ms", 30000)
     return cfg
 }
 

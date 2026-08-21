@@ -1,6 +1,10 @@
-# Module `std.db_mysql`
+# Module `std.db_mysql` — disabled compatibility API
 
-VietLang MySQL Enterprise Driver (std.db_mysql)
+Native MySQL operations are disabled in VietLang 0.2.0-alpha.2. The previous
+synchronous driver depended on a RustSec-unsound cache release. Every connection,
+query, transaction, and close operation now fails explicitly; no fake pool or
+successful result is returned. Use SQLite or a separately reviewed adapter until
+the async core migration is complete.
 
 ## Quickstart
 
@@ -66,4 +70,3 @@ Function provided by module
 #### `fn mysql_close(pool)`
 
 Function provided by module
-

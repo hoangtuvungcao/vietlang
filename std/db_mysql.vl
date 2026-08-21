@@ -1,6 +1,8 @@
 // ========================================================================
-// VietLang MySQL Enterprise Driver (std.db_mysql)
-// Real Binary MySQL 8.x / MariaDB Connection Pool, Transactions & Prepared SQL
+// VietLang MySQL compatibility API (disabled in 0.2.0-alpha.2)
+// The previous synchronous native driver has been removed because its dependency
+// graph contains a RustSec-unsound cache crate. These calls fail explicitly until
+// a reviewed async pool implementation replaces it.
 // ========================================================================
 
 fn mysql_parse_dsn(dsn: String) {
@@ -31,81 +33,38 @@ fn mysql_parse_dsn(dsn: String) {
 }
 
 fn mysql_connect_pool(dsn: String) {
-    let cfg = mysql_parse_dsn(dsn)
-    let mut pool = map_new()
-    pool = map_set(pool, "driver", "mysql")
-    pool = map_set(pool, "config", cfg)
-    pool = map_set(pool, "active_conns", 1)
-    pool = map_set(pool, "idle_conns", 4)
-    pool = map_set(pool, "status", "CONNECTED")
-    pool = map_set(pool, "queries_executed", 0)
-    pool = map_set(pool, "in_transaction", false)
-
-    try {
-        let raw_conn = builtin_mysql_connect(dsn)
-        if raw_conn != none && type_of(raw_conn) == "Struct" {
-            return raw_conn
-        }
-    } catch err {
-        // Fallback to configured pool
-    }
-
-    return pool
+    return builtin_mysql_connect(dsn)
 }
 
 fn mysql_exec(pool, sql_query: String) {
-    if map_has(pool, "id") {
-        return builtin_mysql_exec(pool, sql_query)
-    }
-    let count = map_get(pool, "queries_executed") + 1
-    return map_set(pool, "queries_executed", count)
+    return builtin_mysql_exec(pool, sql_query)
 }
 
 fn mysql_execute(pool, sql_query: String, params = []) {
-    if map_has(pool, "id") {
-        return builtin_mysql_execute(pool, sql_query, params)
-    }
-    let count = map_get(pool, "queries_executed") + 1
-    let updated = map_set(pool, "queries_executed", count)
-    return 1
+    return builtin_mysql_execute(pool, sql_query, params)
 }
 
 fn mysql_query(pool, sql_query: String, params = []) {
-    if map_has(pool, "id") {
-        return builtin_mysql_query(pool, sql_query, params)
-    }
-    let count = map_get(pool, "queries_executed") + 1
-    return []
+    return builtin_mysql_query(pool, sql_query, params)
 }
 
 fn mysql_begin_transaction(pool) {
-    if map_has(pool, "id") {
-        builtin_mysql_exec(pool, "START TRANSACTION;")
-    }
-    return map_set(pool, "in_transaction", true)
+    return builtin_mysql_exec(pool, "START TRANSACTION;")
 }
 
 fn mysql_commit(pool) {
-    if map_has(pool, "id") {
-        builtin_mysql_exec(pool, "COMMIT;")
-    }
-    return map_set(pool, "in_transaction", false)
+    return builtin_mysql_exec(pool, "COMMIT;")
 }
 
 fn mysql_rollback(pool) {
-    if map_has(pool, "id") {
-        builtin_mysql_exec(pool, "ROLLBACK;")
-    }
-    return map_set(pool, "in_transaction", false)
+    return builtin_mysql_exec(pool, "ROLLBACK;")
 }
 
 fn mysql_ping(pool) -> Bool {
-    return map_get(pool, "status") == "CONNECTED" || map_has(pool, "id")
+    builtin_mysql_query(pool, "SELECT 1", [])
+    return true
 }
 
 fn mysql_close(pool) {
-    if map_has(pool, "id") {
-        builtin_mysql_close(pool)
-    }
-    return map_set(pool, "status", "CLOSED")
+    return builtin_mysql_close(pool)
 }

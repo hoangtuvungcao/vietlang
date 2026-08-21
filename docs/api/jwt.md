@@ -1,6 +1,10 @@
 # Module `std.jwt`
 
-VietLang JWT Library (std.jwt)
+Legacy compatibility module, disabled by default. Signature checking alone is
+not sufficient authentication: claim decoding and validation (`exp`, `nbf`,
+`iss`, `aud`), algorithm policy, and key rotation are incomplete. Do not use
+this module for new or production authentication. Install a reviewed community
+package or implement an application-specific identity boundary.
 
 ## Quickstart
 
@@ -31,4 +35,3 @@ Function provided by module
 #### `fn jwt_verify(token: String, secret: String)`
 
 Function provided by module
-

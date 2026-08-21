@@ -1,6 +1,8 @@
 # Module `std.momo`
 
-Module: std.momo
+Legacy compatibility module, disabled by default. It is excluded from core
+security conformance and must not be used for new or live payment code. Build or
+install a versioned community package matching the provider contract instead.
 
 ## Quickstart
 
@@ -31,4 +33,3 @@ Create MoMo Payment Payload with HMAC-SHA256 Signature
 #### `fn momo_verify_ipn(client, raw_sig_string, incoming_signature)`
 
 Verify MoMo Webhook IPN Signature
-

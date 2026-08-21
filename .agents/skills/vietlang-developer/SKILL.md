@@ -5,7 +5,30 @@ description: Comprehensive expert syntax guide, project architecture manual, sta
 
 # VietLang — Master Language Syntax, Project Architecture & Full-Stack Backend Manual
 
-VietLang is a **backend-first, statically-analyzed, high-throughput programming language** designed specifically for production REST APIs, microservices, real-time WebSocket systems, transactional ACID databases, and native multi-threading concurrency.
+VietLang 0.2.0-alpha.2 is an **experimental, backend-oriented language/runtime prototype**.
+Its gradual semantic analyzer enforces locally provable annotations, function
+arity and returns, struct fields, method signatures, mutability, and Bool/enum
+match exhaustiveness. Imported/native values without signatures remain
+`Unknown`, so this is not yet a sound whole-program static type guarantee. Use
+it for learning, local demos, and non-sensitive experiments—not production
+authentication, payments, or public services.
+
+Security boundary for generated code: do not use the disabled legacy
+`std.jwt`, `std.momo`, or `std.vnpay` modules in new applications. Use core
+cryptographic/HTTP primitives only where their documented contract fits, and
+select reviewed, versioned community packages for provider protocols. The
+current package installer is not reproducible or integrity-enforcing, so agents
+must not describe community dependencies as supply-chain safe.
+
+Native MySQL is disabled in 0.2.0-alpha.2 because the available synchronous
+driver depends on a RustSec-unsound cache crate. Agents must not generate code
+that assumes `std.db_mysql` can connect; use SQLite or an explicitly reviewed
+application adapter until the async core migration is complete.
+
+For semantic edge cases, consult `docs/language-specification.md`. It is a
+descriptive 0.2.0-alpha.2 draft; do not infer static type safety from annotations or
+claim whole-program type safety or interpreter/VM equivalence beyond covered
+conformance tests.
 
 GitHub Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
@@ -18,7 +41,7 @@ GitHub Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.c
 curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
 ```
 - **Auto-Configures PATH** in `~/.bashrc`, `~/.zshrc`, and `~/.profile`.
-- **Pre-installs all 54 Standard Library Modules** into `~/.vietlang/std`.
+- **Pre-installs all 55 Standard Library Modules** into `~/.vietlang/std`.
 - **Zero sudo required**: Binary installed directly to `~/.vietlang/bin/vietlang`.
 
 ### 🪟 Windows (PowerShell)
@@ -37,7 +60,8 @@ brew install vietlang
 
 ## 2. Master Project Architecture & 1-Command Backend Scaffolding
 
-To instantly generate a complete, production-ready **Pure Backend REST API & Microservice** with Clean Architecture, SQLite ACID database, REST router, and automated scripts, run:
+To generate an experimental **backend REST API prototype** with a layered layout,
+SQLite adapter, router helpers, and automation scripts, run:
 
 ```bash
 # 🚀 1-Command Backend Project Scaffolding (aliases: 'new', 'init', 'create')
@@ -45,10 +69,10 @@ vietlang new my_backend_service
 
 cd my_backend_service
 vietlang dev                 # Start development server on http://localhost:8080
-vietlang run build           # Compile to standalone native executable binary
+vietlang run build           # Bundle source with the interpreter runtime
 ```
 
-### 2.1 Pure Backend Project Directory Layout
+### 2.1 Layered Backend Project Directory Layout
 
 ```text
 my_backend_service/
@@ -64,11 +88,11 @@ my_backend_service/
     │   └── schema.vl             # Struct models, DTOs & Table auto-migrations
     ├── services/
     │   ├── user_service.vl       # Business logic & Database queries
-    │   ├── auth_service.vl       # Authentication, JWT tokens, bcrypt/HMAC hashing
-    │   └── payment_service.vl    # VietQR, VNPay, MoMo, ZaloPay transaction workflows
+    │   ├── auth_service.vl       # Application authentication boundary
+    │   └── integration_service.vl # Application-owned, reviewed external integrations
     ├── routes/
     │   └── router.vl             # REST API routing & Middleware dispatch
-    └── main.vl                   # HTTP/2 REST Server entrypoint
+    └── main.vl                   # Bounded HTTP/1.1 + HTTP/2 entrypoint
 ```
 
 ### 2.1 Project Manifest & npm-style Scripts (`vietlang.json`)
@@ -90,7 +114,6 @@ Just like `package.json` in Node.js, `vietlang.json` defines your project's entr
   "dependencies": {
     "sqlite": "1.0.0",
     "http_router": "1.0.0",
-    "jwt": "1.0.0",
     "validator": "1.0.0"
   },
   "license": "MIT"
@@ -293,7 +316,7 @@ VietLang integrates native multithreading with Goroutines (`spawn`) and Thread-S
 // 1. Thread-Safe Communication via Channels
 let ch = channel_new(10) // Bounded channel with capacity 10 (0 for unbounded)
 
-// 2. Spawn Background Green Thread
+// 2. Spawn Background OS Thread
 spawn(fn() {
     println("[Worker] Background task running...")
     channel_send(ch, "Order #99281 Processed")
@@ -309,6 +332,12 @@ if map_get(try_res, "ok") == true {
     println("Got item: " + to_string(map_get(try_res, "value")))
 }
 ```
+
+Closures capture lexical bindings, remain usable after the declaring scope
+returns, and share captured mutable cells with sibling closures. Use explicit
+channels or mutex-backed services for multi-step state transitions across
+`spawn`; synchronization of an individual binding does not make `x += 1` an
+atomic cross-thread transaction.
 
 #### High-Level Worker Pool & Parallel Map (`std.concurrency`)
 ```rust
@@ -334,23 +363,11 @@ let qr_res = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan don h
 let qr_image_url = map_get(qr_res, "qr_url")
 ```
 
-#### B. VNPay Payment Gateway 2.1.0 (`std.vnpay`)
-```rust
-import std.vnpay
+Provider-specific payment integrations such as MoMo and VNPay are application
+or community-package responsibilities. Agents must not generate imports of the
+disabled legacy `std.momo` or `std.vnpay` modules for new code.
 
-let client = vnpay_client("TMN_CODE", "HASH_SECRET", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
-let pay_url = vnpay_create_payment_url(client, 1001, 500000, "Thanh toan", "https://site.vn/return", "127.0.0.1")
-```
-
-#### C. MoMo E-Wallet Gateway (`std.momo`)
-```rust
-import std.momo
-
-let momo = momo_client("PARTNER_CODE", "ACCESS_KEY", "SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
-let payload = momo_create_payment_payload(momo, 1002, 150000, "Don hang", "https://site.vn/return", "https://site.vn/ipn", "")
-```
-
-#### D. Zalo OA & ZNS Notifications (`std.zalo`)
+#### B. Zalo OA & ZNS Notifications (`std.zalo`)
 ```rust
 import std.zalo
 
@@ -360,9 +377,11 @@ let zns_data = zalo_create_zns_payload(normalized_phone, "TEMPLATE_ID_101", map_
 
 ---
 
-## 4. Standalone AOT Binary Compilation (`vietlang build`)
+## 4. Standalone Source Bundling (`vietlang build`)
 
-Compile any VietLang source file into a **self-contained standalone executable binary** with zero external dependencies:
+Bundle VietLang source with its interpreter runtime into a **self-contained
+standalone executable**. The embedded source is parsed at startup; this is not
+native AOT compilation of VietLang code.
 
 ```bash
 # 🐧 Build standalone Linux binary (ELF)
@@ -378,15 +397,14 @@ vietlang build src/main.vl -o my_service_macos --target macos
 
 ---
 
-## 5. Complete Production REST API Blueprint
+## 5. Experimental REST API Blueprint
 
-Here is a full, working reference of a production REST API service in VietLang:
+Here is a reference for a local experimental REST API service in VietLang:
 
 ```rust
 import std.http_router
 import std.db_sqlite
 import std.json
-import std.jwt
 
 // 1. Initialize Relational Database
 let db = sqlite_open("data/app.sqlite")
@@ -406,10 +424,15 @@ fn json_response(status_code: Int, data) {
     return res
 }
 
-// 3. HTTP Server Config (HTTP/1.1, HTTP/2, HTTP/3 ALPN Ready)
-let server_config = map_new()
+// 3. Bounded HTTP/1.1 + HTTP/2 Server Config
+let mut server_config = map_new()
 server_config = map_set(server_config, "port", 8080)
-server_config = map_set(server_config, "workers", 100)
+server_config = map_set(server_config, "workers", 4)
+server_config = map_set(server_config, "max_concurrency", 256)
+server_config = map_set(server_config, "max_body_bytes", 1048576)
+server_config = map_set(server_config, "max_header_bytes", 65536)
+server_config = map_set(server_config, "max_response_bytes", 8388608)
+server_config = map_set(server_config, "request_timeout_ms", 30000)
 
 println("Server running on http://localhost:8080")
 
@@ -438,8 +461,11 @@ http_listen(server_config, fn(req) {
         let name = to_string(map_get(parsed, "name"))
         let email = to_string(map_get(parsed, "email"))
         
-        let query = "INSERT INTO users (name, email, created_at) VALUES ('" + name + "', '" + email + "', " + to_string(time_now()) + ")"
-        sqlite_exec(db, query)
+        sqlite_execute(
+            db,
+            "INSERT INTO users (name, email, created_at) VALUES (?, ?, ?)",
+            [name, email, time_now()]
+        )
         
         let mut created = map_new()
         created = map_set(created, "message", "User created successfully")
@@ -450,6 +476,24 @@ http_listen(server_config, fn(req) {
     return json_response(404, "Endpoint not found: " + path)
 })
 ```
+
+### HTTP transport contract
+
+- `http_listen(config, handler)` serves HTTP/1.1 and HTTP/2 using the native
+  Hyper/Axum runtime. Set both `tls_cert_file` and `tls_key_file` for HTTPS and
+  HTTP/2 ALPN; setting only one is an error.
+- Set `http3` to `true` (and optionally `http3_port`) only with TLS configured.
+  This starts an HTTP/3 QUIC listener and adds `Alt-Svc`. The h3 transport is
+  experimental and must not be represented as production-certified.
+- Every request has `method`, `path`, `query`, `protocol`, `client_ip`,
+  `request_id`, `headers`, UTF-8-lossy `body`, and lossless `body_base64`.
+- Default limits are 256 concurrent handlers, 1 MiB request body, 64 KiB
+  headers, 8 MiB response, 30-second request timeout, and 10-second shutdown.
+- `cors_allow_origin` is absent by default. Never add wildcard CORS unless the
+  application explicitly requires a public cross-origin API.
+- `http_fetch` accepts HTTP and HTTPS, negotiates HTTP/1.1 or HTTP/2, does not
+  follow redirects, and supports an options map with `timeout_ms` and
+  `max_response_bytes`. It does not currently implement an HTTP/3 client.
 
 ---
 
@@ -464,4 +508,4 @@ http_listen(server_config, fn(req) {
 7. **Concurrency**: Use `spawn(fn() { ... })` for background tasks, and communicate via `channel_new()`, `channel_send()`, and `channel_recv()`.
 8. **String Utilities**: Use built-in `trim()`, `to_uppercase()`, `to_lowercase()`, `starts_with()`, `ends_with()`, `contains()`, `substring()`.
 9. **Zero-Cost Modularity**: Only `import std.module_name` when you actually call functions in that module.
-10. **Single Binary Deployment**: Use `vietlang build <file.vl> -o <binary_name>` to compile into a production standalone binary.
+10. **Standalone Bundling**: Use `vietlang build <file.vl> -o <binary_name>` to bundle source with the interpreter for experimental deployment.

@@ -9,24 +9,27 @@
 #![allow(clippy::all)]
 
 mod error;
+mod http_runtime;
+mod interpreter;
 mod lexer;
 mod parser;
-mod interpreter;
+mod pm;
+mod semantic;
 mod stdlib;
 pub mod vm;
-mod pm;
 
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 
+use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser;
-use interpreter::Interpreter;
+use semantic::SemanticAnalyzer;
 use vm::compiler::Compiler;
 use vm::VM;
 
-const VERSION: &str = "0.1.1";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const BANNER: &str = r#"
  ╔════════════════════════════════════════════════════════════╗
@@ -37,7 +40,7 @@ const BANNER: &str = r#"
  ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
  ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
  ║                                               __/ |        ║
- ║              Backend-First Language v0.1.1    |___/        ║
+ ║           Backend-First Language v0.2.0-alpha.2 |___/      ║
  ║              Type 'help' for usage, 'exit' to quit         ║
  ╚════════════════════════════════════════════════════════════╝
 "#;
@@ -45,7 +48,7 @@ const BANNER: &str = r#"
 const STANDALONE_MAGIC_FOOTER: &[u8; 16] = b"__VIETLANG_BIN__";
 
 fn main() {
-    // 0. Check if current binary is a standalone compiled executable (O(1) footer check)
+    // 0. Check if current binary is a standalone source bundle (O(1) footer check)
     if let Ok(current_exe) = env::current_exe() {
         if let Ok(bytes) = fs::read(&current_exe) {
             let total_len = bytes.len();
@@ -55,7 +58,9 @@ fn main() {
                 let payload_len = u64::from_be_bytes(len_bytes) as usize;
                 if payload_len > 0 && payload_len <= total_len - 24 {
                     let start = total_len - 24 - payload_len;
-                    if let Ok(embedded_source) = std::str::from_utf8(&bytes[start..start + payload_len]) {
+                    if let Ok(embedded_source) =
+                        std::str::from_utf8(&bytes[start..start + payload_len])
+                    {
                         run_source(embedded_source, "<embedded>");
                         return;
                     }
@@ -81,7 +86,7 @@ fn main() {
                 }
                 let source_file = &args[2];
                 let mut output_file = source_file.trim_end_matches(".vl").to_string();
-                let mut target_os = "linux".to_string();
+                let mut target_os = env::consts::OS.to_string();
 
                 let mut i = 3;
                 while i < args.len() {
@@ -111,18 +116,19 @@ fn main() {
                 }
             }
             "doc" | "docs" => {
-                let target = if args.len() >= 3 {
-                    &args[2]
-                } else {
-                    ""
-                };
+                let target = if args.len() >= 3 { &args[2] } else { "" };
                 pm::show_docs(target);
             }
-            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "new" | "create" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
+            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "new"
+            | "create" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
             "start" => {
-                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                let extra_args: Vec<String> = if args.len() > 2 {
+                    args[2..].to_vec()
+                } else {
+                    Vec::new()
+                };
                 if !pm::run_script("start", &extra_args) {
                     if let Some(main_file) = pm::get_manifest_main() {
                         run_file(&main_file);
@@ -135,7 +141,11 @@ fn main() {
                 }
             }
             "dev" => {
-                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                let extra_args: Vec<String> = if args.len() > 2 {
+                    args[2..].to_vec()
+                } else {
+                    Vec::new()
+                };
                 if !pm::run_script("dev", &extra_args) {
                     if let Some(main_file) = pm::get_manifest_main() {
                         run_file(&main_file);
@@ -162,7 +172,11 @@ fn main() {
                     }
                 } else {
                     let target = &args[2];
-                    let extra_args: Vec<String> = if args.len() > 3 { args[3..].to_vec() } else { Vec::new() };
+                    let extra_args: Vec<String> = if args.len() > 3 {
+                        args[3..].to_vec()
+                    } else {
+                        Vec::new()
+                    };
                     if pm::run_script(target, &extra_args) {
                         // Successfully executed script from vietlang.json
                     } else if std::path::Path::new(target).exists() || target.ends_with(".vl") {
@@ -181,15 +195,15 @@ fn main() {
                 check_file(&args[2]);
             }
             "test" => {
-                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                let extra_args: Vec<String> = if args.len() > 2 {
+                    args[2..].to_vec()
+                } else {
+                    Vec::new()
+                };
                 if args.len() == 2 && pm::run_script("test", &extra_args) {
                     // Ran test script from manifest
                 } else {
-                    let target = if args.len() >= 3 {
-                        &args[2]
-                    } else {
-                        "tests"
-                    };
+                    let target = if args.len() >= 3 { &args[2] } else { "tests" };
                     run_tests(target);
                 }
             }
@@ -240,7 +254,11 @@ fn check_file(path: &str) {
     let mut parser = Parser::new(tokens);
     match parser.parse() {
         Ok(program) => {
-            println!("\x1b[32m[PASS]\x1b[0m Syntax and AST check passed for '{}' ({} statements)", path, program.statements.len());
+            if let Err(error) = SemanticAnalyzer::new().analyze(&program) {
+                eprintln!("{}", error);
+                std::process::exit(1);
+            }
+            println!("\x1b[32m[PASS]\x1b[0m Syntax, AST, and semantic checks passed for '{}' ({} statements)", path, program.statements.len());
         }
         Err(e) => {
             eprintln!("{}", e);
@@ -260,7 +278,10 @@ fn run_tests(target: &str) {
                 let p = entry.path();
                 if let Some(ext) = p.extension() {
                     if ext == "vl" {
-                        println!("\n\x1b[1;36m=== Running Test Suite: {} ===\x1b[0m", p.display());
+                        println!(
+                            "\n\x1b[1;36m=== Running Test Suite: {} ===\x1b[0m",
+                            p.display()
+                        );
                         run_file(p.to_str().unwrap_or_default());
                         count += 1;
                     }
@@ -277,7 +298,10 @@ fn run_tests(target: &str) {
 }
 
 fn print_help() {
-    println!("VietLang v{} - A Backend-First Programming Language", VERSION);
+    println!(
+        "VietLang v{} - A Backend-First Programming Language",
+        VERSION
+    );
     println!();
     println!("USAGE:");
     println!("  vietlang                          Start interactive REPL");
@@ -291,6 +315,7 @@ fn print_help() {
     println!("  vietlang list                     List installed dependencies");
     println!("  vietlang docs <module>            Inspect module exported functions");
     println!("  vietlang publish                  Validate & prepare release metadata");
+    println!("  vietlang check <file.vl>          Run syntax and semantic/type checks");
     println!("  vietlang --tokens <file>          Show tokenized output");
     println!("  vietlang --ast <file>             Show parsed AST");
     println!("  vietlang --version                Show version");
@@ -321,6 +346,11 @@ fn run_source(source: &str, name: &str) {
             std::process::exit(1);
         }
     };
+
+    if let Err(error) = SemanticAnalyzer::new().analyze(&program) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
 
     let mut interpreter = Interpreter::new();
     if name != "<repl>" && name != "<inline>" {
@@ -373,7 +403,10 @@ fn resolve_import_file(path_str: &str) -> Option<String> {
     None
 }
 
-fn bundle_source_recursive(file_path: &str, visited: &mut std::collections::HashSet<String>) -> Result<String, String> {
+fn bundle_source_recursive(
+    file_path: &str,
+    visited: &mut std::collections::HashSet<String>,
+) -> Result<String, String> {
     let canonical = std::fs::canonicalize(file_path)
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| file_path.to_string());
@@ -383,8 +416,8 @@ fn bundle_source_recursive(file_path: &str, visited: &mut std::collections::Hash
     }
     visited.insert(canonical);
 
-    let raw = fs::read_to_string(file_path)
-        .map_err(|e| format!("Cannot read '{}': {}", file_path, e))?;
+    let raw =
+        fs::read_to_string(file_path).map_err(|e| format!("Cannot read '{}': {}", file_path, e))?;
 
     let mut bundled_deps = String::new();
     let mut main_lines = Vec::new();
@@ -392,7 +425,11 @@ fn bundle_source_recursive(file_path: &str, visited: &mut std::collections::Hash
     for line in raw.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("import ") {
-            let mod_name = trimmed.trim_start_matches("import ").trim().trim_end_matches(';').trim();
+            let mod_name = trimmed
+                .trim_start_matches("import ")
+                .trim()
+                .trim_end_matches(';')
+                .trim();
             if mod_name.starts_with("std.") {
                 // Keep standard library import as is
                 main_lines.push(line.to_string());
@@ -412,14 +449,17 @@ fn bundle_source_recursive(file_path: &str, visited: &mut std::collections::Hash
 }
 
 fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str) {
-    println!("\x1b[36m[VietLang Compiler]\x1b[0m Compiling \x1b[33m{}\x1b[0m for target \x1b[35m[{}]\x1b[0m -> \x1b[32m{}\x1b[0m...", source_path, target_os, output_path);
-    
+    println!("\x1b[36m[VietLang Bundler]\x1b[0m Bundling \x1b[33m{}\x1b[0m with the \x1b[35m[{}]\x1b[0m runtime -> \x1b[32m{}\x1b[0m...", source_path, target_os, output_path);
+
     // 1. Recursively bundle source and local module dependencies
     let mut visited = std::collections::HashSet::new();
     let source = match bundle_source_recursive(source_path, &mut visited) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("\x1b[31mError:\x1b[0m Failed to bundle source '{}': {}", source_path, e);
+            eprintln!(
+                "\x1b[31mError:\x1b[0m Failed to bundle source '{}': {}",
+                source_path, e
+            );
             std::process::exit(1);
         }
     };
@@ -434,8 +474,15 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
     };
 
     let mut parser = Parser::new(tokens);
-    if let Err(e) = parser.parse() {
-        eprintln!("\x1b[31mParse Error:\x1b[0m {}", e);
+    let program = match parser.parse() {
+        Ok(program) => program,
+        Err(e) => {
+            eprintln!("\x1b[31mParse Error:\x1b[0m {}", e);
+            std::process::exit(1);
+        }
+    };
+    if let Err(error) = SemanticAnalyzer::new().analyze(&program) {
+        eprintln!("\x1b[31mSemantic Error:\x1b[0m {}", error);
         std::process::exit(1);
     }
 
@@ -451,11 +498,12 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
                         eprintln!("\x1b[31mError:\x1b[0m Cannot locate Windows base runtime binary (vietlang.exe): {}", e);
                         std::process::exit(1);
                     }
-                }
-            }
+                },
+            },
         }
-    } else {
-        let current_exe = env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("vietlang"));
+    } else if target_os == env::consts::OS {
+        let current_exe =
+            env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("vietlang"));
         match fs::read(&current_exe) {
             Ok(b) if b.len() > 100_000 => b,
             _ => match fs::read("target/release/vietlang") {
@@ -463,12 +511,22 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
                 Err(_) => match fs::read("/home/vantrong/.vietlang/bin/vietlang") {
                     Ok(b) => b,
                     Err(e) => {
-                        eprintln!("\x1b[31mError:\x1b[0m Cannot locate Linux base runtime binary: {}", e);
+                        eprintln!(
+                            "\x1b[31mError:\x1b[0m Cannot locate Linux base runtime binary: {}",
+                            e
+                        );
                         std::process::exit(1);
                     }
-                }
-            }
+                },
+            },
         }
+    } else {
+        eprintln!(
+            "\x1b[31mError:\x1b[0m No '{}' runtime is available on this '{}' host. Cross-target bundling requires a prebuilt runtime for the requested OS.",
+            target_os,
+            env::consts::OS,
+        );
+        std::process::exit(1);
     };
 
     // 3. Strip any preexisting footer from base_binary
@@ -497,7 +555,10 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
 
     // 4. Write output binary
     if let Err(e) = fs::write(output_path, &standalone_bin) {
-        eprintln!("\x1b[31mError:\x1b[0m Cannot write output binary '{}': {}", output_path, e);
+        eprintln!(
+            "\x1b[31mError:\x1b[0m Cannot write output binary '{}': {}",
+            output_path, e
+        );
         std::process::exit(1);
     }
 
@@ -514,9 +575,17 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
 
     println!("\x1b[32m[SUCCESS]\x1b[0m Standalone executable created: \x1b[32;1m{}\x1b[0m ({} bytes, target: {})", output_path, standalone_bin.len(), target_os);
     if target_os == "windows" || output_path.ends_with(".exe") {
-        println!("  -> Run on Windows with: \x1b[36m{}\x1b[0m (or 'wine {}')", output_path, output_path);
+        println!(
+            "  -> Run on Windows with: \x1b[36m{}\x1b[0m (or 'wine {}')",
+            output_path, output_path
+        );
     } else {
-        println!("  -> Run directly with: \x1b[36m./{}\x1b[0m", output_path);
+        let run_path = if std::path::Path::new(output_path).is_absolute() {
+            output_path.to_string()
+        } else {
+            format!("./{}", output_path)
+        };
+        println!("  -> Run directly with: \x1b[36m{}\x1b[0m", run_path);
     }
 }
 
@@ -558,6 +627,11 @@ fn run_vm(path: &str) {
         }
     };
 
+    if let Err(error) = SemanticAnalyzer::new().analyze(&program) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
+
     let mut compiler = Compiler::new();
     let chunk = match compiler.compile(&program) {
         Ok(chunk) => chunk,
@@ -585,6 +659,7 @@ fn run_repl() {
     println!("{}", BANNER);
 
     let mut interpreter = Interpreter::new();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
     let mut line_num = 1;
 
     loop {
@@ -593,7 +668,7 @@ fn run_repl() {
 
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
-            Ok(0) => break,  // EOF
+            Ok(0) => break, // EOF
             Ok(_) => {}
             Err(e) => {
                 eprintln!("Error reading input: {}", e);
@@ -665,14 +740,20 @@ fn run_repl() {
             }
         };
 
+        let mut candidate_analyzer = semantic_analyzer.clone();
+        if let Err(error) = candidate_analyzer.analyze(&program) {
+            eprintln!("  \x1b[31m{}\x1b[0m", error);
+            line_num += 1;
+            continue;
+        }
+        semantic_analyzer = candidate_analyzer;
+
         // Execute
         match interpreter.execute(&program) {
-            Ok(value) => {
-                match &value {
-                    interpreter::value::Value::None => {}
-                    _ => println!("  \x1b[32m= {}\x1b[0m", value),
-                }
-            }
+            Ok(value) => match &value {
+                interpreter::value::Value::None => {}
+                _ => println!("  \x1b[32m= {}\x1b[0m", value),
+            },
             Err(e) => {
                 if !e.message.starts_with("__") {
                     eprintln!("  \x1b[31m{}\x1b[0m", e);

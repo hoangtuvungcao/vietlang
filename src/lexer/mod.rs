@@ -4,7 +4,7 @@
 pub mod token;
 
 use crate::error::{VietError, VietResult};
-use token::{Token, TokenKind, Span};
+use token::{Span, Token, TokenKind};
 
 pub struct Lexer {
     source: Vec<char>,
@@ -226,8 +226,12 @@ impl Lexer {
                     'e' => value.push('\x1b'),
                     'x' => {
                         let mut hex = String::new();
-                        if !self.is_at_end() { hex.push(self.advance()); }
-                        if !self.is_at_end() { hex.push(self.advance()); }
+                        if !self.is_at_end() {
+                            hex.push(self.advance());
+                        }
+                        if !self.is_at_end() {
+                            hex.push(self.advance());
+                        }
                         if let Ok(byte) = u8::from_str_radix(&hex, 16) {
                             value.push(byte as char);
                         } else {
@@ -577,10 +581,7 @@ mod tests {
     fn test_number_underscore() {
         assert_eq!(
             token_kinds("1_000_000"),
-            vec![
-                TokenKind::IntLiteral(1000000),
-                TokenKind::Eof,
-            ]
+            vec![TokenKind::IntLiteral(1000000), TokenKind::Eof,]
         );
     }
 }

@@ -1,6 +1,9 @@
 # VietLang Standard Library — Zero-Cost Modular Architecture Reference
 
-VietLang enforces the **"Pay Only For What You Use" (Zero-Cost Modularity)** principle. The core runtime is an ultra-fast, un-opinionated HTTP/1.1 & HTTP/2 engine. Background services, databases, caching, and real-time protocols are **100% Opt-In** via explicit module imports:
+VietLang follows an explicit-import modularity model. The native server uses
+Tokio, Hyper, Axum, and Rustls for bounded HTTP/1.1, HTTP/2, HTTP, and HTTPS.
+HTTP/3 over QUIC is available as an opt-in experimental transport. Background
+services, databases, caching, and real-time modules remain opt-in:
 
 ---
 
@@ -9,10 +12,10 @@ VietLang enforces the **"Pay Only For What You Use" (Zero-Cost Modularity)** pri
 | Domain / Use Case | Standard Modules to Import | Primary Functions |
 | :--- | :--- | :--- |
 | **REST & API Gateway** | `std.http_router`, `std.openapi`, `std.validator` | `http_serve_static`, `openapi_spec_new`, `validator_validate` |
-| **Relational Database & ACID** | `std.db_sqlite`, `std.db_mysql`, `std.db_postgres` | `db_sqlite_connect`, `db_sqlite_exec`, `db_sqlite_query` |
+| **Relational Database & ACID** | `std.db_sqlite` (enabled); `std.db_mysql` (disabled); `std.db_postgres` (experimental) | `sqlite_open`, `sqlite_execute`, `sqlite_query` |
 | **Real-Time WebSocket** | `std.ws` | `ws_init("/ws")`, `ws_emit("event", data)`, `ws_send_text()` |
 | **Distributed Caching & Redis** | `std.redis`, `std.cache_lru` | `redis_connect()`, `redis_get()`, `redis_set()` |
-| **Enterprise Security & RBAC** | `std.security`, `std.jwt`, `std.session` | `security_hash_password()`, `jwt_sign()`, `session_create()` |
+| **Security primitives** | `std.security`, `std.session` | `security_hash_password()`, `session_create()` |
 | **API Traffic Management** | `std.rate_limiter`, `std.circuit_breaker` | `rate_limiter_new(100, 60)`, `rate_limiter_check()` |
 | **Async Tasks & Queues** | `std.queue`, `std.cron` | `queue_new()`, `queue_push()`, `queue_pop()` |
 | **Observability & Logging** | `std.logger`, `std.metrics`, `std.telemetry` | `logger_new()`, `logger_info()`, `metrics_inc_counter()` |
@@ -44,7 +47,6 @@ http_listen(server_config, fn(req) {
 ```vietlang
 import std.db_sqlite
 import std.security
-import std.jwt
 import std.rate_limiter
 import std.ws
 

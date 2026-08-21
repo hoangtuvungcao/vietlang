@@ -1,14 +1,33 @@
 [package]
 name = "vietlang"
-version = "0.1.1"
+version = "0.2.0-alpha.2"
 edition = "2021"
 description = "VietLang - A backend-first programming language"
 authors = ["VanTrong"]
 
 [dependencies]
+aes-gcm = "0.10"
+argon2 = "0.5"
+base64 = "0.22"
+axum = { version = "0.8", features = ["http1", "http2", "tokio"] }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
+bytes = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
-mysql = { version = "25.0", default-features = false }
+hmac = "0.12"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+http = "1"
+rand = "0.8"
+quinn = { version = "0.11.11", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "http2", "charset", "gzip", "brotli", "deflate"] }
+rustls = "0.23"
+sha2 = "0.10"
+subtle = "2.6"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
+
+[dev-dependencies]
+rcgen = "0.14"
 
 [[bin]]
 name = "vietlang"

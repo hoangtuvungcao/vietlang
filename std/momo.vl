@@ -1,7 +1,6 @@
 // ========================================================================
 // Module: std.momo
-// Official MoMo E-Wallet Payment Gateway Integration
-// Supports HMAC-SHA256 Signatures, QR Payment & Webhook IPN Verification
+// Disabled legacy MoMo compatibility prototype; not a core/official integration.
 // ========================================================================
 
 /// Create a new MoMo Client Configuration
@@ -16,6 +15,9 @@ fn momo_client(partner_code, access_key, secret_key, endpoint) {
 
 /// Create MoMo Payment Payload with HMAC-SHA256 Signature
 fn momo_create_payment_payload(client, order_id, amount, order_info, redirect_url, ipn_url, extra_data) {
+    if env_get("VIETLANG_ENABLE_EXPERIMENTAL_FINTECH", "") != "1" {
+        throw("Legacy MoMo adapter is disabled; use an application/community package matched to your provider contract")
+    }
     let partner_code = to_string(map_get(client, "partner_code"))
     let access_key = to_string(map_get(client, "access_key"))
     let secret_key = to_string(map_get(client, "secret_key"))
@@ -53,7 +55,10 @@ fn momo_create_payment_payload(client, order_id, amount, order_info, redirect_ur
 
 /// Verify MoMo Webhook IPN Signature
 fn momo_verify_ipn(client, raw_sig_string, incoming_signature) {
+    if env_get("VIETLANG_ENABLE_EXPERIMENTAL_FINTECH", "") != "1" {
+        throw("Legacy MoMo adapter is disabled")
+    }
     let secret_key = to_string(map_get(client, "secret_key"))
     let calculated = hmac_sha256(raw_sig_string, secret_key)
-    return calculated == incoming_signature
+    return secure_compare(to_lowercase(calculated), to_lowercase(incoming_signature))
 }

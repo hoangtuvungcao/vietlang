@@ -1,7 +1,6 @@
 // ========================================================================
 // Module: std.vnpay
-// Official VNPay Payment Gateway Standard (VNP_Pay 2.1.0)
-// Supports HMAC-SHA512 Secure Hash, URL Generation & IPN Verification
+// Disabled legacy VNPay compatibility prototype; not a core/official integration.
 // ========================================================================
 
 /// Create a new VNPay Client Configuration
@@ -22,6 +21,9 @@ fn vnpay_client(tmn_code, hash_secret, payment_url) {
 /// @param client_ip - Customer IP address
 /// @return Full VNPay Payment Redirection URL
 fn vnpay_create_payment_url(client, order_id, amount, order_info, return_url, client_ip) {
+    if env_get("VIETLANG_ENABLE_EXPERIMENTAL_FINTECH", "") != "1" {
+        throw("Legacy VNPay adapter is disabled; use an application/community package matched to your provider contract")
+    }
     let tmn_code = to_string(map_get(client, "tmn_code"))
     let hash_secret = to_string(map_get(client, "hash_secret"))
     let payment_url = to_string(map_get(client, "payment_url"))
@@ -53,7 +55,10 @@ fn vnpay_create_payment_url(client, order_id, amount, order_info, return_url, cl
 /// @param incoming_hash - The vnp_SecureHash received from VNPay
 /// @return Boolean true if valid
 fn vnpay_verify_checksum(client, raw_query_without_hash, incoming_hash) {
+    if env_get("VIETLANG_ENABLE_EXPERIMENTAL_FINTECH", "") != "1" {
+        throw("Legacy VNPay adapter is disabled")
+    }
     let hash_secret = to_string(map_get(client, "hash_secret"))
     let calculated = hmac_sha512(raw_query_without_hash, hash_secret)
-    return to_uppercase(calculated) == to_uppercase(incoming_hash)
+    return secure_compare(to_lowercase(calculated), to_lowercase(incoming_hash))
 }

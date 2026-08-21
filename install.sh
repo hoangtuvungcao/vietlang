@@ -6,7 +6,7 @@
 
 set -e
 
-VIETLANG_VERSION="0.1.1"
+VIETLANG_VERSION="0.2.0-alpha.2"
 REPO="hoangtuvungcao/vietlang"
 VIETLANG_HOME="${HOME}/.vietlang"
 BIN_DIR="${VIETLANG_HOME}/bin"
@@ -137,6 +137,6 @@ echo -e "  \033[36mvietlang\033[0m                  # Start interactive REPL"
 echo -e "  \033[36mvietlang doc\033[0m              # Browse all 55 standard modules"
 echo -e "  \033[36mvietlang new my_app\033[0m       # Scaffold a Clean Architecture backend service"
 echo -e "  \033[36mvietlang dev\033[0m              # Start development server"
-echo -e "  \033[36mvietlang build src/main.vl\033[0m# Compile to standalone native binary"
+echo -e "  \033[36mvietlang build src/main.vl\033[0m # Bundle source with the runtime"
 echo ""
 echo -e "\033[33mPlease restart your terminal or run: source ~/.bashrc (or ~/.zshrc)\033[0m"

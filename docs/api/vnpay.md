@@ -1,6 +1,8 @@
 # Module `std.vnpay`
 
-Module: std.vnpay
+Legacy compatibility module, disabled by default. It is excluded from core
+security conformance and must not be used for new or live payment code. Build or
+install a versioned community package matching the provider contract instead.
 
 ## Quickstart
 
@@ -31,4 +33,3 @@ Create VNPay Payment URL @param client - VNPay client struct @param order_id - M
 #### `fn vnpay_verify_checksum(client, raw_query_without_hash, incoming_hash)`
 
 Verify VNPay IPN or ReturnURL Query Checksum @param client - VNPay client struct @param raw_query_without_hash - Raw sorted query string without vnp_SecureHash @param incoming_hash - The vnp_SecureHash received from VNPay @return Boolean true if valid
-

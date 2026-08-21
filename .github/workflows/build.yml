@@ -18,8 +18,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Audit Rust Dependencies
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Clippy
+        run: cargo clippy --all-targets -- -D warnings
       - name: Run Core Cargo Tests
         run: cargo test --all
+      - name: Run P0 Security Conformance Smoke Test
+        run: cargo run -- tests/p0_security.vl
+      - name: Run HTTP/1.1 Runtime Smoke Test
+        run: |
+          cargo build
+          target/debug/vietlang tests/http_runtime_smoke.vl > /tmp/vietlang-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill -INT "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --http1.1 \
+              http://127.0.0.1:18080/health > /tmp/vietlang-response.json; then
+              break
+            fi
+            sleep 0.2
+          done
+          grep -Eq '"protocol"[[:space:]]*:[[:space:]]*"HTTP/1.1"' /tmp/vietlang-response.json
+          grep -qi '^x-content-type-options: nosniff' <(curl --silent --dump-header - --output /dev/null http://127.0.0.1:18080/health)
+          kill -INT "$server_pid"
+          wait "$server_pid"
       - name: Run VietLang Integration Tests
         run: |
           cargo build --release

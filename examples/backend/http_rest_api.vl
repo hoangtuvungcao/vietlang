@@ -1,6 +1,6 @@
 // ========================================================================
 // VietLang Example: 02_backend/http_rest_api.vl
-// High-Throughput HTTP/2 REST API Server with JSON Response & Middleware
+// Bounded HTTP/1.1 + HTTP/2 REST API server with JSON responses
 // ========================================================================
 
 import std.http_router
@@ -11,7 +11,7 @@ let port = 8080
 let server_cfg = http2_server_config(port, 200)
 
 println("========================================================================")
-println("VietLang Native HTTP/2 REST API Server")
+println("VietLang HTTP/1.1 + HTTP/2 REST API Server")
 println("Listening on: http://0.0.0.0:" + to_string(port))
 println("Endpoints:")
 println("  - GET  /api/health")
@@ -28,7 +28,7 @@ http_listen(server_cfg, fn(req) {
         let mut h = map_new()
         h = map_set(h, "status", "HEALTHY")
         h = map_set(h, "uptime_s", time_now())
-        h = map_set(h, "engine", "VietLang HTTP/2 Multi-threaded")
+        h = map_set(h, "engine", "VietLang Hyper/Axum HTTP runtime")
         
         let mut res = map_new()
         res = map_set(res, "status_code", 200)

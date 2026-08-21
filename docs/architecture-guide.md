@@ -1,6 +1,7 @@
-# VietLang Enterprise Architecture & Systems Design Guide
+# VietLang Experimental Architecture & Systems Design Guide
 
-Comprehensive blueprint for architecting mission-critical, high-concurrency backend services using VietLang.
+Conceptual patterns for experimenting with backend services using VietLang. This
+guide is not a production deployment recommendation.
 
 ---
 
@@ -9,20 +10,20 @@ Comprehensive blueprint for architecting mission-critical, high-concurrency back
 VietLang was designed to solve the common pain points of backend engineering:
 1. **Low Memory Footprint**: Minimal runtime overhead without heavy JVM or Node.js runtime layers.
 2. **Zero-Dependency Core**: HTTP, Database, JSON, Hashing, Concurrency, and File I/O are built directly into the language runtime.
-3. **Structured Concurrency**: Green threads and channels allow 100,000+ concurrent connections per machine.
+3. **Thread-based Concurrency**: `spawn` uses operating-system threads and channels use blocking synchronization. Capacity must be benchmarked per workload.
 4. **Predictable Performance**: Stack-based Bytecode VM execution and deterministic resource release.
 
 ---
 
 ## 2. Microservice Layering Pattern
 
-A production VietLang backend service is partitioned into 4 distinct layers:
+An experimental VietLang backend service can be partitioned into 4 layers:
 
 ```
 [ HTTP / RPC Transport Layer ] (std.http_router, std.rpc)
                |
                v
-[ Application & Security Layer ] (std.jwt, std.validator, std.rate_limiter)
+[ Application & Security Layer ] (reviewed auth package, std.validator, std.rate_limiter)
                |
                v
 [ Domain & Business Logic Layer ] (Services, Models, Workflow Engine)
@@ -95,7 +96,7 @@ fn get_cached_entity(id: String) {
 
 ## 5. Deployment & Observability
 
-- **Single Binary Artifact**: The compiler outputs a standalone executable with no runtime dependencies.
+- **Standalone Bundle**: The bundler appends source to a matching interpreter runtime; source is parsed at startup.
 - **Docker Multi-Stage Build**:
 ```dockerfile
 FROM rust:1.75 as builder

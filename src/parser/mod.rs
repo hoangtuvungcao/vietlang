@@ -4,7 +4,7 @@
 pub mod ast;
 
 use crate::error::{VietError, VietResult};
-use crate::lexer::token::{Token, TokenKind, Span};
+use crate::lexer::token::{Span, Token, TokenKind};
 use ast::*;
 
 pub struct Parser {
@@ -19,7 +19,10 @@ impl Parser {
             .into_iter()
             .filter(|t| !matches!(t.kind, TokenKind::Newline))
             .collect();
-        Parser { tokens: filtered, pos: 0 }
+        Parser {
+            tokens: filtered,
+            pos: 0,
+        }
     }
 
     /// Parse the entire token stream into a Program
@@ -83,7 +86,11 @@ impl Parser {
                 if self.check(&TokenKind::Assign) {
                     self.advance();
                     let value = self.parse_expression()?;
-                    Statement::Assignment { target: expr, value, span }
+                    Statement::Assignment {
+                        target: expr,
+                        value,
+                        span,
+                    }
                 } else if self.check(&TokenKind::PlusAssign)
                     || self.check(&TokenKind::MinusAssign)
                     || self.check(&TokenKind::StarAssign)
@@ -107,7 +114,11 @@ impl Parser {
                         right: Box::new(rhs),
                         span: span.clone(),
                     };
-                    Statement::Assignment { target: expr, value, span }
+                    Statement::Assignment {
+                        target: expr,
+                        value,
+                        span,
+                    }
                 } else {
                     Statement::Expression { expr, span }
                 }
@@ -146,7 +157,13 @@ impl Parser {
         self.expect(&TokenKind::Assign)?;
         let value = self.parse_expression()?;
 
-        Ok(Statement::Let { name, mutable, type_ann, value, span })
+        Ok(Statement::Let {
+            name,
+            mutable,
+            type_ann,
+            value,
+            span,
+        })
     }
 
     /// `fn name(params) [-> return_type] { body }`
@@ -171,7 +188,14 @@ impl Parser {
         let body = self.parse_block_body()?;
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::Function { name, params, return_type, body, is_pub, span })
+        Ok(Statement::Function {
+            name,
+            params,
+            return_type,
+            body,
+            is_pub,
+            span,
+        })
     }
 
     fn parse_params(&mut self) -> VietResult<Vec<Parameter>> {
@@ -194,7 +218,11 @@ impl Parser {
             } else {
                 None
             };
-            params.push(Parameter { name, type_ann, default });
+            params.push(Parameter {
+                name,
+                type_ann,
+                default,
+            });
 
             if !self.check(&TokenKind::Comma) {
                 break;
@@ -210,7 +238,10 @@ impl Parser {
         let span = self.current().span.clone();
         self.expect(&TokenKind::Return)?;
 
-        let value = if !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Semicolon) && !self.is_at_end() {
+        let value = if !self.check(&TokenKind::RBrace)
+            && !self.check(&TokenKind::Semicolon)
+            && !self.is_at_end()
+        {
             Some(self.parse_expression()?)
         } else {
             None
@@ -245,7 +276,12 @@ impl Parser {
             None
         };
 
-        Ok(Statement::If { condition, then_body, else_body, span })
+        Ok(Statement::If {
+            condition,
+            then_body,
+            else_body,
+            span,
+        })
     }
 
     /// `while cond { body }`
@@ -258,7 +294,11 @@ impl Parser {
         let body = self.parse_block_body()?;
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::While { condition, body, span })
+        Ok(Statement::While {
+            condition,
+            body,
+            span,
+        })
     }
 
     /// `for item in iterable { body }`
@@ -273,7 +313,12 @@ impl Parser {
         let body = self.parse_block_body()?;
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::For { variable, iterable, body, span })
+        Ok(Statement::For {
+            variable,
+            iterable,
+            body,
+            span,
+        })
     }
 
     /// `struct Name { fields }`
@@ -295,7 +340,11 @@ impl Parser {
             let field_name = self.expect_identifier()?;
             self.expect(&TokenKind::Colon)?;
             let type_ann = self.parse_type_annotation()?;
-            fields.push(StructField { name: field_name, type_ann, is_pub: field_pub });
+            fields.push(StructField {
+                name: field_name,
+                type_ann,
+                is_pub: field_pub,
+            });
 
             if !self.check(&TokenKind::Comma) {
                 break;
@@ -304,7 +353,12 @@ impl Parser {
         }
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::Struct { name, fields, is_pub, span })
+        Ok(Statement::Struct {
+            name,
+            fields,
+            is_pub,
+            span,
+        })
     }
 
     /// `enum Name { variants }`
@@ -333,7 +387,10 @@ impl Parser {
             } else {
                 Vec::new()
             };
-            variants.push(EnumVariant { name: variant_name, fields });
+            variants.push(EnumVariant {
+                name: variant_name,
+                fields,
+            });
 
             if !self.check(&TokenKind::Comma) {
                 break;
@@ -342,7 +399,12 @@ impl Parser {
         }
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::Enum { name, variants, is_pub, span })
+        Ok(Statement::Enum {
+            name,
+            variants,
+            is_pub,
+            span,
+        })
     }
 
     /// `impl TypeName { methods }`
@@ -365,7 +427,11 @@ impl Parser {
         }
         self.expect(&TokenKind::RBrace)?;
 
-        Ok(Statement::Impl { type_name, methods, span })
+        Ok(Statement::Impl {
+            type_name,
+            methods,
+            span,
+        })
     }
 
     /// `import path.to.module`
@@ -380,7 +446,11 @@ impl Parser {
             path.push(self.expect_identifier()?);
         }
 
-        Ok(Statement::Import { path, alias: None, span })
+        Ok(Statement::Import {
+            path,
+            alias: None,
+            span,
+        })
     }
 
     /// `try { body } catch err { handler }`
@@ -395,7 +465,12 @@ impl Parser {
         self.expect(&TokenKind::LBrace)?;
         let catch_body = self.parse_block_body()?;
         self.expect(&TokenKind::RBrace)?;
-        Ok(Statement::TryCatch { try_body, catch_var, catch_body, span })
+        Ok(Statement::TryCatch {
+            try_body,
+            catch_var,
+            catch_body,
+            span,
+        })
     }
 
     // ========================================
@@ -461,8 +536,10 @@ impl Parser {
 
     fn parse_comparison(&mut self) -> VietResult<Expression> {
         let mut left = self.parse_range()?;
-        while self.check(&TokenKind::Lt) || self.check(&TokenKind::Gt)
-            || self.check(&TokenKind::LtEq) || self.check(&TokenKind::GtEq)
+        while self.check(&TokenKind::Lt)
+            || self.check(&TokenKind::Gt)
+            || self.check(&TokenKind::LtEq)
+            || self.check(&TokenKind::GtEq)
         {
             let span = self.current().span.clone();
             let op = match &self.current().kind {
@@ -523,7 +600,8 @@ impl Parser {
 
     fn parse_multiplicative(&mut self) -> VietResult<Expression> {
         let mut left = self.parse_unary()?;
-        while self.check(&TokenKind::Star) || self.check(&TokenKind::Slash)
+        while self.check(&TokenKind::Star)
+            || self.check(&TokenKind::Slash)
             || self.check(&TokenKind::Percent)
         {
             let span = self.current().span.clone();
@@ -631,22 +709,34 @@ impl Parser {
             TokenKind::IntLiteral(v) => {
                 let value = *v;
                 self.advance();
-                Ok(Expression::IntLiteral { value, span: token.span })
+                Ok(Expression::IntLiteral {
+                    value,
+                    span: token.span,
+                })
             }
             TokenKind::FloatLiteral(v) => {
                 let value = *v;
                 self.advance();
-                Ok(Expression::FloatLiteral { value, span: token.span })
+                Ok(Expression::FloatLiteral {
+                    value,
+                    span: token.span,
+                })
             }
             TokenKind::StringLiteral(v) => {
                 let value = v.clone();
                 self.advance();
-                Ok(Expression::StringLiteral { value, span: token.span })
+                Ok(Expression::StringLiteral {
+                    value,
+                    span: token.span,
+                })
             }
             TokenKind::BoolLiteral(v) => {
                 let value = *v;
                 self.advance();
-                Ok(Expression::BoolLiteral { value, span: token.span })
+                Ok(Expression::BoolLiteral {
+                    value,
+                    span: token.span,
+                })
             }
             TokenKind::None => {
                 self.advance();
@@ -657,7 +747,12 @@ impl Parser {
                 self.advance();
 
                 // Check for struct literal: `Name { field: value }`
-                if self.check(&TokenKind::LBrace) && name.chars().next().map_or(false, |c: char| c.is_uppercase()) {
+                if self.check(&TokenKind::LBrace)
+                    && name
+                        .chars()
+                        .next()
+                        .map_or(false, |c: char| c.is_uppercase())
+                {
                     self.advance();
                     let fields = self.parse_struct_literal_fields()?;
                     self.expect(&TokenKind::RBrace)?;
@@ -667,8 +762,18 @@ impl Parser {
                         span: token.span,
                     })
                 } else {
-                    Ok(Expression::Identifier { name, span: token.span })
+                    Ok(Expression::Identifier {
+                        name,
+                        span: token.span,
+                    })
                 }
+            }
+            TokenKind::Self_ => {
+                self.advance();
+                Ok(Expression::Identifier {
+                    name: "self".to_string(),
+                    span: token.span,
+                })
             }
             TokenKind::LParen => {
                 self.advance();
@@ -687,7 +792,10 @@ impl Parser {
                     self.advance();
                 }
                 self.expect(&TokenKind::RBracket)?;
-                Ok(Expression::ArrayLiteral { elements, span: token.span })
+                Ok(Expression::ArrayLiteral {
+                    elements,
+                    span: token.span,
+                })
             }
             TokenKind::Match => {
                 self.advance();
@@ -699,10 +807,16 @@ impl Parser {
                 self.expect(&TokenKind::LParen)?;
                 let params = self.parse_params()?;
                 self.expect(&TokenKind::RParen)?;
+                let return_type = if self.check(&TokenKind::Arrow) {
+                    self.advance();
+                    Some(self.parse_type_annotation()?)
+                } else {
+                    None
+                };
                 self.expect(&TokenKind::LBrace)?;
                 let body_stmts = self.parse_block_body()?;
                 self.expect(&TokenKind::RBrace)?;
-                
+
                 // Convert block to expression
                 let body = Expression::Block {
                     statements: body_stmts,
@@ -711,6 +825,7 @@ impl Parser {
                 };
                 Ok(Expression::Lambda {
                     params,
+                    return_type,
                     body: Box::new(body),
                     span: token.span,
                 })
@@ -750,17 +865,26 @@ impl Parser {
             TokenKind::IntLiteral(v) => {
                 let value = *v;
                 self.advance();
-                Ok(Pattern::Literal(Expression::IntLiteral { value, span: token.span }))
+                Ok(Pattern::Literal(Expression::IntLiteral {
+                    value,
+                    span: token.span,
+                }))
             }
             TokenKind::StringLiteral(v) => {
                 let value = v.clone();
                 self.advance();
-                Ok(Pattern::Literal(Expression::StringLiteral { value, span: token.span }))
+                Ok(Pattern::Literal(Expression::StringLiteral {
+                    value,
+                    span: token.span,
+                }))
             }
             TokenKind::BoolLiteral(v) => {
                 let value = *v;
                 self.advance();
-                Ok(Pattern::Literal(Expression::BoolLiteral { value, span: token.span }))
+                Ok(Pattern::Literal(Expression::BoolLiteral {
+                    value,
+                    span: token.span,
+                }))
             }
             TokenKind::Identifier(name) if name == "_" => {
                 self.advance();
@@ -784,8 +908,15 @@ impl Parser {
                     Ok(Pattern::EnumVariant { name, fields })
                 } else {
                     // Could be a variable binding or a simple enum variant
-                    if name.chars().next().map_or(false, |c: char| c.is_uppercase()) {
-                        Ok(Pattern::EnumVariant { name, fields: Vec::new() })
+                    if name
+                        .chars()
+                        .next()
+                        .map_or(false, |c: char| c.is_uppercase())
+                    {
+                        Ok(Pattern::EnumVariant {
+                            name,
+                            fields: Vec::new(),
+                        })
                     } else {
                         Ok(Pattern::Variable(name))
                     }
@@ -956,11 +1087,7 @@ impl Parser {
         } else {
             self.tokens.last().unwrap()
         };
-        VietError::parse_error(
-            message.to_string(),
-            token.span.line,
-            token.span.column,
-        )
+        VietError::parse_error(message.to_string(), token.span.line, token.span.column)
     }
 }
 
@@ -981,7 +1108,12 @@ mod tests {
         let program = parse("let x = 42");
         assert_eq!(program.statements.len(), 1);
         match &program.statements[0] {
-            Statement::Let { name, mutable, value, .. } => {
+            Statement::Let {
+                name,
+                mutable,
+                value,
+                ..
+            } => {
                 assert_eq!(name, "x");
                 assert!(!mutable);
                 match value {
@@ -1046,14 +1178,12 @@ mod tests {
     fn test_binary_expression() {
         let program = parse("let x = 1 + 2 * 3");
         match &program.statements[0] {
-            Statement::Let { value, .. } => {
-                match value {
-                    Expression::BinaryOp { op, .. } => {
-                        assert_eq!(*op, BinaryOperator::Add);
-                    }
-                    _ => panic!("Expected BinaryOp"),
+            Statement::Let { value, .. } => match value {
+                Expression::BinaryOp { op, .. } => {
+                    assert_eq!(*op, BinaryOperator::Add);
                 }
-            }
+                _ => panic!("Expected BinaryOp"),
+            },
             _ => panic!("Expected Let"),
         }
     }
@@ -1062,14 +1192,12 @@ mod tests {
     fn test_array_literal() {
         let program = parse("let arr = [1, 2, 3]");
         match &program.statements[0] {
-            Statement::Let { value, .. } => {
-                match value {
-                    Expression::ArrayLiteral { elements, .. } => {
-                        assert_eq!(elements.len(), 3);
-                    }
-                    _ => panic!("Expected ArrayLiteral"),
+            Statement::Let { value, .. } => match value {
+                Expression::ArrayLiteral { elements, .. } => {
+                    assert_eq!(elements.len(), 3);
                 }
-            }
+                _ => panic!("Expected ArrayLiteral"),
+            },
             _ => panic!("Expected Let"),
         }
     }
@@ -1087,13 +1215,15 @@ mod tests {
 
     #[test]
     fn test_match_expression() {
-        let program = parse(r#"
+        let program = parse(
+            r#"
             let result = match x {
                 1 => "one",
                 2 => "two",
                 _ => "other"
             }
-        "#);
+        "#,
+        );
         assert_eq!(program.statements.len(), 1);
     }
 }

@@ -29,10 +29,7 @@ pub enum Statement {
     },
 
     /// Expression statement (expression used as statement)
-    Expression {
-        expr: Expression,
-        span: Span,
-    },
+    Expression { expr: Expression, span: Span },
 
     /// `fn name(params) [-> return_type] { body }`
     Function {
@@ -122,39 +119,22 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub enum Expression {
     /// Integer literal: `42`
-    IntLiteral {
-        value: i64,
-        span: Span,
-    },
+    IntLiteral { value: i64, span: Span },
 
     /// Float literal: `3.14`
-    FloatLiteral {
-        value: f64,
-        span: Span,
-    },
+    FloatLiteral { value: f64, span: Span },
 
     /// String literal: `"hello"`
-    StringLiteral {
-        value: String,
-        span: Span,
-    },
+    StringLiteral { value: String, span: Span },
 
     /// Boolean literal: `true` / `false`
-    BoolLiteral {
-        value: bool,
-        span: Span,
-    },
+    BoolLiteral { value: bool, span: Span },
 
     /// None literal
-    NoneLiteral {
-        span: Span,
-    },
+    NoneLiteral { span: Span },
 
     /// Variable reference: `x`
-    Identifier {
-        name: String,
-        span: Span,
-    },
+    Identifier { name: String, span: Span },
 
     /// Binary operation: `a + b`, `x == y`
     BinaryOp {
@@ -230,6 +210,7 @@ pub enum Expression {
     /// Lambda: `fn(x, y) { x + y }`  or  `|x, y| x + y`
     Lambda {
         params: Vec<Parameter>,
+        return_type: Option<TypeAnnotation>,
         body: Box<Expression>,
         span: Span,
     },
@@ -270,26 +251,26 @@ impl Expression {
 /// Binary operators
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOperator {
-    Add,       // +
-    Sub,       // -
-    Mul,       // *
-    Div,       // /
-    Mod,       // %
-    Eq,        // ==
-    NotEq,     // !=
-    Lt,        // <
-    Gt,        // >
-    LtEq,     // <=
-    GtEq,     // >=
-    And,       // &&
-    Or,        // ||
+    Add,   // +
+    Sub,   // -
+    Mul,   // *
+    Div,   // /
+    Mod,   // %
+    Eq,    // ==
+    NotEq, // !=
+    Lt,    // <
+    Gt,    // >
+    LtEq,  // <=
+    GtEq,  // >=
+    And,   // &&
+    Or,    // ||
 }
 
 /// Unary operators
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOperator {
-    Neg,   // -
-    Not,   // !
+    Neg, // -
+    Not, // !
 }
 
 /// Function parameter
@@ -312,7 +293,7 @@ pub struct StructField {
 #[derive(Debug, Clone)]
 pub struct EnumVariant {
     pub name: String,
-    pub fields: Vec<TypeAnnotation>,  // tuple variant fields
+    pub fields: Vec<TypeAnnotation>, // tuple variant fields
 }
 
 /// Match arm: `pattern => expression`
@@ -330,10 +311,7 @@ pub enum Pattern {
     /// Variable binding: `x`
     Variable(String),
     /// Enum variant: `Ok(value)`, `Err(e)`
-    EnumVariant {
-        name: String,
-        fields: Vec<Pattern>,
-    },
+    EnumVariant { name: String, fields: Vec<Pattern> },
     /// Wildcard: `_`
     Wildcard,
 }

@@ -1,6 +1,6 @@
-# VietLang Production Backend Cookbook
+# VietLang Experimental Backend Cookbook
 
-Production-ready blueprints, architectural patterns, and practical recipes for building high-throughput microservices and distributed systems with VietLang.
+Experimental blueprints and recipes for exploring backend services with VietLang. These examples are not production-ready and must not handle sensitive data.
 
 Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
@@ -8,8 +8,8 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 
 ## Table of Contents
 
-1. [REST API with Validation & JWT RBAC Auth](#recipe-1-rest-api-with-validation--jwt-rbac-auth)
-2. [Relational Databases (SQLite ACID, MySQL & PostgreSQL Pools)](#recipe-2-relational-databases-sqlite-mysql-postgres)
+1. [REST API authentication boundary](#recipe-1-rest-api-authentication-boundary)
+2. [Relational Databases](#recipe-2-relational-databases)
 3. [In-Memory KV Store & LRU Caching](#recipe-3-in-memory-kv-store--lru-caching)
 4. [Distributed SAGA Transactions & Compensating Rollback](#recipe-4-distributed-saga-transactions--compensating-rollback)
 5. [Partitioned Event Streaming & Kafka Pub/Sub](#recipe-5-partitioned-event-streaming--kafka-pubsub)
@@ -21,14 +21,16 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 
 ---
 
-## Recipe 1: REST API with Validation & JWT RBAC Auth
+## Recipe 1: REST API authentication boundary
+
+The bundled `std.jwt` module is disabled and incomplete. A backend must use a
+reviewed identity package or an external identity provider that validates token
+algorithm, signature, `exp`, `nbf`, `iss`, and `aud`, and supports key rotation.
+Do not copy the old signature-only recipe into an application.
 
 ```rust
 import std.http_router
 import std.validator
-import std.jwt
-
-let JWT_SECRET = "production-super-secret-key-32-chars"
 
 fn handle_login(request_body) {
     let v = validator_new()
@@ -40,42 +42,23 @@ fn handle_login(request_body) {
         return response_error(400, "Validation failed: username and password required")
     }
 
-    let user_id = 1001
-    let token_payload = map_set(map_set(map_new(), "uid", user_id), "role", "ADMIN")
-    let token = jwt_sign(token_payload, JWT_SECRET)
-
-    let resp_data = map_set(map_set(map_new(), "token", token), "user_id", user_id)
-    return response_json(200, resp_data, "Login successful")
-}
-
-fn handle_protected_profile(auth_header: String) {
-    if auth_header == "" {
-        return response_error(401, "Missing Authorization header")
-    }
-
-    let parts = auth_header.split(" ")
-    if parts.len() != 2 || parts[0] != "Bearer" {
-        return response_error(401, "Invalid Bearer token format")
-    }
-
-    let auth_res = jwt_verify(parts[1], JWT_SECRET)
-    if !map_get(auth_res, "valid") {
-        return response_error(403, "Invalid or expired token")
-    }
-
-    let payload = map_get(auth_res, "payload")
-    return response_json(200, payload, "Authorized")
+    // Delegate credential verification and session/token issuance to the
+    // reviewed identity package selected by the application.
+    return response_error(501, "Identity provider is not configured")
 }
 ```
 
 ---
 
-## Recipe 2: Relational Databases (SQLite, MySQL, Postgres)
+## Recipe 2: Relational Databases
+
+SQLite is the currently enabled native database path. Native MySQL is disabled
+in 0.2.0-alpha.2 because the available synchronous driver depends on a
+RustSec-unsound cache version; PostgreSQL remains experimental. Do not replace
+a failed connection with a fake in-memory “connected” object.
 
 ```rust
 import std.db_sqlite
-import std.db_mysql
-import std.db_postgres
 
 // SQLite in-memory with ACID transaction
 fn process_balance_transfer(from_id: Int, to_id: Int, amount: Int) {
@@ -95,14 +78,6 @@ fn process_balance_transfer(from_id: Int, to_id: Int, amount: Int) {
     return sqlite_query(db, "accounts")
 }
 
-// MySQL connection pool
-fn execute_mysql_order(user_id: Int, total_cents: Int) {
-    let pool = mysql_connect_pool("root:secret@tcp(127.0.0.1:3306)/orders_db")
-    if mysql_ping(pool) {
-        return mysql_exec(pool, "INSERT INTO orders (user_id, total) VALUES (?, ?)", [user_id, total_cents])
-    }
-    return none
-}
 ```
 
 ---

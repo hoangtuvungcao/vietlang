@@ -1,6 +1,6 @@
 // ========================================================================
 // VietLang Example: 03_fintech_and_concurrency/concurrency_csp.vl
-// CSP Concurrency: Green Threads, Safe Channels & Parallel Worker Pool
+// CSP-style Concurrency: OS Threads, Safe Channels & Parallel Worker Pool
 // ========================================================================
 
 import std.concurrency

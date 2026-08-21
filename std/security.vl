@@ -4,47 +4,21 @@
 // ===================================================
 
 fn security_hash_password(password: String, salt: String = "") -> String {
-    let mut actual_salt = salt
-    if actual_salt == "" {
-        actual_salt = substring(uuid(), 0, 16)
-    }
-    let combined = actual_salt + ":" + password
-    let hash = sha256(combined)
-    return actual_salt + "$" + hash
+    // Kept for API compatibility. Argon2id generates and embeds a secure salt.
+    return password_hash(password)
 }
 
 fn security_verify_password(password: String, stored_hash: String) -> Bool {
-    if !stored_hash.contains("$") {
-        return false
-    }
-    let parts = stored_hash.split("$")
-    let salt = parts[0]
-    let expected = parts[1]
-
-    let computed = sha256(salt + ":" + password)
-    return security_constant_time_compare(computed, expected)
+    return password_verify(password, stored_hash)
 }
 
 // Constant-time string comparison to prevent timing attacks
 fn security_constant_time_compare(a: String, b: String) -> Bool {
-    if a.len() != b.len() {
-        return false
-    }
-    let mut diff = 0
-    let mut i = 0
-    while i < a.len() {
-        let ca = char_code(char_at(a, i))
-        let cb = char_code(char_at(b, i))
-        if ca != cb {
-            diff += 1
-        }
-        i += 1
-    }
-    return diff == 0
+    return secure_compare(a, b)
 }
 
 fn security_generate_csrf_token() -> String {
-    return sha256(uuid() + ":" + to_string(time_now_us()))
+    return crypto_random_hex(32)
 }
 
 fn security_sanitize_html(input: String) -> String {
@@ -58,7 +32,5 @@ fn security_sanitize_html(input: String) -> String {
 }
 
 fn security_hmac_sha256(message: String, secret_key: String) -> String {
-    let inner = sha256(secret_key + ":" + message)
-    return sha256(secret_key + ":" + inner)
+    return hmac_sha256(message, secret_key)
 }
-

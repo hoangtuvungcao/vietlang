@@ -9,7 +9,7 @@
  ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
  ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
  ║                                               __/ |        ║
- ║              Backend-First Language v0.1.0    |___/        ║
+ ║           Backend-First Language v0.2.0-alpha.2 |___/      ║
  ║              Type 'help' for usage, 'exit' to quit         ║
  ╚════════════════════════════════════════════════════════════╝
 ```
@@ -20,13 +20,20 @@
 
 [![Build](https://github.com/hoangtuvungcao/vietlang/actions/workflows/build.yml/badge.svg)](https://github.com/hoangtuvungcao/vietlang/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0--alpha.2-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
 
-[Getting Started](docs/getting-started.md) | [Language Reference](docs/language-reference.md) | [Stdlib Reference](docs/stdlib-reference.md) | [Contributing](CONTRIBUTING.md)
+[Getting Started](docs/getting-started.md) | [Draft Specification](docs/language-specification.md) | [Stdlib Reference](docs/stdlib-reference.md) | [Contributing](CONTRIBUTING.md)
 
 </div>
 
 ---
+
+> [!WARNING]
+> **Experimental status:** VietLang 0.2.0-alpha.2 is a language/runtime prototype. It is
+> suitable for learning, local demos, and non-sensitive experiments, but it has
+> not completed a security audit, protocol conformance program, or production
+> hardening. Do not use it for real authentication, payments, secrets, or public
+> production services yet.
 
 ## Why VietLang?
 
@@ -38,11 +45,11 @@ VietLang is designed from the ground up for **backend development**. It combines
 | **Built-in Database Driver** | Yes | No | No | No | No |
 | **Built-in JSON** | Yes | Yes | No | Yes | Yes |
 | **Pattern Matching** | Yes | No | Yes | Partial | No |
-| **Null Safety** | Yes | No | Yes | No | No |
+| **Type Annotations** | Gradual/local checks | Yes | Yes | Dynamic | Dynamic |
 | **Result / Error Handling** | Yes | No | Yes | No | No |
-| **Green Threads & Channels** | Yes | Yes | No | No | No |
-| **Single Binary** | Yes | Yes | Yes | No | No |
-| **Self-Hosting Ready** | Yes | Yes | Yes | No | No |
+| **OS Threads & Channels** | Yes | Yes | Yes | Yes | Yes |
+| **Standalone Bundle** | Yes | Yes | Yes | No | No |
+| **Self-Hosting Bootstrap** | Partial | Yes | Yes | No | No |
 | **Learning Curve** | Low | Low | High | Low | Medium |
 
 ## Quick Start
@@ -107,9 +114,14 @@ fn greet(name: String) {
 }
 
 // Higher-order functions & Lambdas
-let doubled = [1, 2, 3].map(fn(x) { return x * 2 })
+let doubled = [1, 2, 3].map(fn(x: Int) -> Int { return x * 2 })
 let evens = [1, 2, 3, 4].filter(fn(x) { return x % 2 == 0 })
 ```
+
+Closures use lexical scope, survive after their declaring block returns, and
+sibling closures share captured mutable bindings. Named functions support
+recursion. Captured state moved to `spawn` is synchronized, but multi-step
+read/modify/write protocols still require an explicit mutex or channel.
 
 ### Error Handling with Try/Catch
 
@@ -154,11 +166,15 @@ fn http_status(code: Int) -> String {
 }
 ```
 
-### Built-in HTTP Server
+### Built-in HTTP/HTTPS Server
 
 ```rust
-// Zero-dependency HTTP server
-http_listen(8080, handler)
+// HTTP/1.1 + HTTP/2. Add tls_cert_file/tls_key_file for HTTPS.
+let mut config = map_new()
+config = map_set(config, "port", 8080)
+config = map_set(config, "max_concurrency", 256)
+config = map_set(config, "max_body_bytes", 1048576)
+http_listen(config, handler)
 ```
 
 ### Database Operations
@@ -205,7 +221,7 @@ let token = base64_encode("user:password")
 // Channels
 let ch = channel(100)
 
-// Spawn lightweight tasks
+// Spawn OS-thread-based tasks
 spawn(process_task)
 
 // Thread-safe state
@@ -218,26 +234,34 @@ VietLang includes standard modules written directly in VietLang:
 
 - `std.test`: Complete unit testing framework (`suite`, `test`, `assert_eq`, `assert_true`)
 - `std.strings`: String utilities (`pad_left`, `pad_right`, `snake_case`, `camel_case`, `slugify`)
-- `std.jwt`: Pure VietLang JWT token generator and validator (HMAC SHA-256)
+- `std.jwt`: disabled legacy compatibility module; do not use for new authentication
 - `std.http_router`: Router with middleware support and JSON response helpers
 
 ```rust
 import std.test
 import std.strings
-import std.jwt
 import std.http_router
 
 suite("API Test Suite")
-test("Token generation", fn() {
-    let token = jwt_sign(map_set(map_new(), "user_id", 1), "secret")
-    assert_true(token.len() > 0)
+test("Router prerequisite", fn() {
+    assert_true(true)
 })
 test_summary()
 ```
 
+`vietlang check file.vl` runs lexing, parsing, name resolution, and the gradual
+semantic/type checks. It currently validates locally known bindings, calls,
+returns, structs, methods, enum payloads, and Bool/enum match exhaustiveness.
+Imported and native APIs without machine-readable signatures remain `Unknown`;
+passing `check` is therefore not a whole-program safety proof.
+
 ## Package Manager & Central Registry
 
-VietLang provides a **native package manager built directly into the runtime binary** with a unified **Central Community Registry** and npm-style script execution:
+VietLang includes an experimental package-manager prototype and npm-style
+script execution. The current installer does not yet enforce immutable revisions
+or package checksums and must not be used as a production supply-chain boundary.
+Package names are constrained to a safe single path segment and failed Git
+operations stop installation instead of being reported as success:
 
 ```bash
 # 1-Command Backend Project Scaffolding (Clean Architecture, SQLite, Services & REST Routes)
@@ -246,19 +270,18 @@ vietlang new my_backend_service
 # Run npm-style scripts from vietlang.json
 vietlang dev                       # Run development server (http://localhost:8080)
 vietlang start                     # Run the 'start' script or 'main' entrypoint
-vietlang run build                 # Compile to standalone Linux binary (ELF)
-vietlang run build:win             # Compile to standalone Windows executable (.exe)
+vietlang run build                 # Bundle source + runtime for Linux (ELF)
+vietlang run build:win             # Bundle source + runtime for Windows (.exe)
 vietlang run <script_name>         # Run any custom defined script in vietlang.json
 
-# Search & install package from Central Registry (by name or explicit version lock)
+# Search & install a development package (version request is not yet a lockfile)
 vietlang search redis
 vietlang install redis@1.2.0
 vietlang install auth@3.0.0
 
 # Interactive Documentation & API Inspector
-vietlang doc                       # Browse all 54 standard library modules
+vietlang doc                       # Browse all 55 standard library modules
 vietlang doc std.vietqr            # Inspect signatures, types, and comments for VietQR
-vietlang doc std.vnpay             # Inspect VNPay gateway docs
 vietlang doc my_package            # Inspect custom or community package docs
 vietlang doc --all                 # Generate complete Markdown docs into docs/api/
 
@@ -275,9 +298,11 @@ vietlang remove redis
 vietlang publish
 ```
 
-## Standalone AOT Binary Compilation (`vietlang build`)
+## Standalone Source Bundle (`vietlang build`)
 
-Compile any VietLang source file into an independent, self-contained native executable binary with zero external dependencies:
+Bundle a VietLang source file with the Rust runtime into an independent,
+self-contained executable. The embedded source is parsed and interpreted at
+startup; this is not ahead-of-time native compilation of VietLang code.
 
 ```bash
 # 🐧 Build standalone Linux binary (ELF)
@@ -296,7 +321,7 @@ vietlang build src/main.vl -o my_service_macos --target macos
 ```rust
 import std.concurrency
 
-// 1. Thread-safe Channels & Green Threads (spawn)
+// 1. Thread-safe Channels & OS Threads (spawn)
 let ch = channel_new(10)
 
 spawn(fn() {
@@ -313,33 +338,34 @@ let squared = parallel_map(numbers, fn(n) { return n * n })
 // [100, 400, 900, 1600, 2500] (executed in parallel across threads)
 ```
 
-## Vietnamese Fintech & Cloud Integrations
+## Provider integrations belong in community packages
+
+The core standard library provides crypto, HTTP/HTTPS, JSON, and database
+building blocks. Provider-specific payment behavior such as MoMo and VNPay is
+not part of core security conformance. Applications should install or build a
+versioned community package and validate it against the provider contract they
+actually use. The legacy `std.momo` and `std.vnpay` compatibility modules remain
+disabled by default and must not be used for live transactions.
 
 ```rust
 import std.vietqr
-import std.vnpay
-import std.momo
 import std.zalo
 
 // 1. VietQR (50+ Vietnamese Commercial Banks)
 let qr = vietqr_create_payment("MB", "0901234567", 250000, "Thanh toan #101")
 
-// 2. VNPay 2.1.0 Gateway URL + HMAC-SHA512
-let vnp = vnpay_client("TMN_CODE", "HASH_SECRET", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
-let url = vnpay_create_payment_url(vnp, 1001, 500000, "Nap vi", "https://mysite.vn/return", "127.0.0.1")
-
-// 3. MoMo E-Wallet Gateway Payload + HMAC-SHA256
-let momo = momo_client("PARTNER_CODE", "ACCESS_KEY", "SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
-let payload = momo_create_payment_payload(momo, 1002, 150000, "Don hang", "https://site.vn/return", "https://site.vn/ipn", "")
+// Provider SDKs should be installed as versioned community packages.
 ```
 
 ## Self-Hosting Bootstrap & Bytecode Virtual Machine (VM)
 
-VietLang provides both a Tree-walking Interpreter and a high-performance stack-based Bytecode Virtual Machine (VM):
+VietLang provides a tree-walking interpreter and an experimental stack-based Bytecode Virtual Machine (VM):
 
 - `bootstrap/lexer.vl`: 100% VietLang lexer that tokenizes VietLang source code (including itself, 3,304 tokens)
 - `bootstrap/parser.vl`: 100% VietLang parser that produces an Abstract Syntax Tree (AST)
 - `--vm`: Execute source files using the Bytecode VM
+- The covered VM subset is checked by differential tests against the interpreter;
+  unsupported AST nodes fail compilation explicitly.
 
 ```bash
 # Run self-hosted lexer on its own source
@@ -365,14 +391,14 @@ vietlang/
 │   │   ├── hello_world.vl
 │   │   ├── data_structures.vl
 │   │   └── file_and_json.vl
-│   ├── 02_backend/          # Backend Services, SQLite Database, HTTP/2 REST API & WebSockets
+│   ├── 02_backend/          # HTTP/1.1 + HTTP/2 backend examples, SQLite & WebSockets
 │   │   ├── sqlite_database.vl
 │   │   ├── http_rest_api.vl
 │   │   └── websocket_realtime.vl
 │   ├── 03_fintech_and_concurrency/ # Multi-Channel Fintech & Concurrency Thread Pool
 │   │   ├── vietnam_fintech.vl
 │   │   └── concurrency_csp.vl
-│   └── 04_full_apps/        # Production-Grade Complete Full-Stack Projects
+│   └── 04_full_apps/        # Experimental Full-Stack Example Projects
 │       ├── agricultural_ecommerce/ # Nông Sản Việt (Clean Architecture E-Commerce Platform)
 │       └── viet_fintech_gateway/   # VietFintech Payment Gateway Microservice
 └── docs/                    # Architecture guides, API reference & Developer tutorials
@@ -397,12 +423,16 @@ make demo
 - [x] Phase 2: Memory & Concurrency (CSP Channels, Spawn, Mutex, Control Flow Signals)
 - [x] Phase 3: Standard Library (HTTP, DB, JSON, File I/O, Crypto, Logging, Env, Time, Collections)
 - [x] Phase 4: Extended Syntax (Compound Assignment += -= *= /= %=, Short-circuit && ||, Try/Catch)
-- [x] Phase 5: Community Standard Library in VietLang (54 pure modules in `std.*`)
+- [x] Phase 5 prototype library catalog (55 modules in `std.*`, with legacy modules clearly marked)
 - [x] Phase 6: Central Package Manager & Community Registry (`vietlang install`, `publish`, `search`)
-- [x] Phase 7: Standalone AOT Binary Compiler (`vietlang build` for Linux ELF & Windows `.exe`)
-- [x] Phase 8: Vietnamese Fintech Ecosystem (`std.vietqr`, `std.vnpay`, `std.momo`, `std.zalo`)
+- [x] Phase 7: Standalone Source Bundler (`vietlang build` for Linux ELF & Windows `.exe`)
+- [x] Phase 8 prototype archive: VietQR/Zalo helpers and disabled legacy payment adapters
 - [x] Phase 9: Self-Hosting Bootstrap (Stage 1: `bootstrap/lexer.vl`, Stage 2: `bootstrap/parser.vl`)
 - [x] Phase 10: Bytecode VM / Native Stack-based Execution (`vietlang --vm`)
+- [x] Phase 11 initial: semantic analyzer for scopes, arity, local annotations,
+      structs, methods, enum payloads, returns, and match exhaustiveness
+- [x] Phase 12 initial: lexical closures and interpreter/VM differential
+      conformance for the documented bytecode subset
 
 ## License
 

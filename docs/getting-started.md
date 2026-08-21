@@ -1,6 +1,6 @@
 # Getting Started with VietLang
 
-Welcome to **VietLang** — The Backend-First Programming Language designed for high-performance microservices, REST APIs, real-time WebSockets, and ACID transactional databases.
+Welcome to **VietLang** — an experimental backend-oriented programming language for exploring REST APIs, services, WebSockets, and SQLite-backed applications.
 
 ---
 
@@ -125,5 +125,5 @@ curl http://localhost:9090/api/v1/products
 
 - 📖 **[Complete Language Reference](language-reference.md)**: Full syntax, types, and error handling.
 - 📦 **[Standard Library Ecosystem (49 Modules)](standard-library-ecosystem.md)**: Explore all built-in modules.
-- 🍳 **[Backend Cookbook](backend-cookbook.md)**: JWT auth, WebSocket events, and database transactions.
+- 🍳 **[Backend Cookbook](backend-cookbook.md)**: authentication boundaries, WebSocket events, and database transactions.
 - 💻 **[VS Code Setup](installation-and-vscode-marketplace.md)**: Install the official VS Code extension with snippets and syntax highlighting.

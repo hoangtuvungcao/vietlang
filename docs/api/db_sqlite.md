@@ -1,6 +1,7 @@
 # Module `std.db_sqlite`
 
-VietLang Production-Grade SQLite Driver & Storage Engine (std.db_sqlite)
+VietLang experimental SQLite adapter. It is not yet production-hardened with
+bounded pooling, migration locking, cancellation, or comprehensive failure tests.
 
 ## Quickstart
 
@@ -86,4 +87,3 @@ Function provided by module
 #### `fn sqlite_aggregate(conn, table_name: String, initial_val, acc_fn)`
 
 Function provided by module
-

@@ -161,11 +161,12 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 - `sqlite_commit(db) -> Map`: Commits pending changes.
 - `sqlite_rollback(db) -> Map`: Rolls back to pre-transaction snapshot on failure.
 
-### `std.db_mysql` (MySQL Protocol & Connection Pool)
-- `mysql_parse_dsn(dsn: String) -> Map`: Parses MySQL DSN strings (`user:pass@tcp(host:port)/db`).
-- `mysql_connect_pool(dsn: String) -> Map`: Creates a managed connection pool.
-- `mysql_exec(pool, sql_query: String, params = none) -> Map`: Executes parameterized query.
-- `mysql_ping(pool) -> Bool`: Probes MySQL server connectivity.
+### `std.db_mysql` (disabled compatibility API)
+- Native connection/query calls return an explicit error in 0.2.0-alpha.2.
+- The synchronous driver was removed because its dependency graph contains a
+  RustSec-unsound `lru` release. A reviewed async driver/pool is required before
+  this module can be enabled again.
+- `mysql_parse_dsn` remains a string/configuration helper only.
 
 ### `std.db_postgres` (PostgreSQL Client & Schema Manager)
 - `postgres_parse_url(url: String) -> Map`: Parses PostgreSQL URL (`postgres://user:pass@host:5432/db`).
@@ -224,8 +225,8 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 ## 10. Identity, JWT & Validation
 
 ### `std.jwt`
-- `jwt_sign(payload: Map, secret: String) -> String`: Signs HMAC-SHA256 JWT token.
-- `jwt_verify(token: String, secret: String) -> Map`: Verifies signature and decodes payload (`valid: true/false`).
+- Disabled legacy compatibility module. It is not a complete JWT validator and
+  must not be used for new or production authentication.
 
 ### `std.validator`
 - `validator_new() -> Map`: Initializes validator.

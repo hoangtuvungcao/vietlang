@@ -26,7 +26,7 @@ VietLang is a **backend-first** programming language. Unlike general-purpose lan
 - Built-in zero-dependency HTTP server and client.
 - Built-in connection-pooled database engine.
 - Fast JSON serialization and deserialization.
-- First-class lightweight green threads, channels, and synchronization primitives.
+- OS-thread-based tasks, blocking channels, and synchronization primitives.
 - Self-hosting toolchain and standalone single binary distribution.
 
 ---
@@ -207,7 +207,8 @@ println(u.format_display())
 VietLang includes **30 pure-VietLang standard modules**:
 
 1. `std.db_sqlite`: SQLite in-memory and file-backed database engine with ACID transactions.
-2. `std.db_mysql`: MySQL connection protocol, pooling, and prepared queries.
+2. `std.db_mysql`: disabled compatibility API pending a reviewed async driver;
+   it must not be presented as a working connection pool.
 3. `std.db_postgres`: PostgreSQL client, connection management, and health checks.
 4. `std.multipart`: Streaming multipart form-data and file upload parser.
 5. `std.saga`: Distributed SAGA Transaction Coordinator with compensating rollbacks.
@@ -223,7 +224,7 @@ VietLang includes **30 pure-VietLang standard modules**:
 15. `std.http_pipeline`: Onion-model middleware with automated Security Headers (CSP, HSTS).
 16. `std.websocket`: WebSocket RFC 6455 framing and room broadcaster.
 17. `std.socket`: Raw TCP/UDP low-level socket client.
-18. `std.jwt`: JWT authentication with Role-Based Access Control (RBAC).
+18. `std.jwt`: disabled legacy compatibility module; not for new authentication.
 19. `std.http_router`: High-level web routing and JSON responses.
 20. `std.validator`: Request payload validation rules.
 21. `std.orm`: SQL query builder and data layer.

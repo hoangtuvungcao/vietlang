@@ -1,0 +1,34 @@
+// P0 security conformance smoke test. Run with:
+//   cargo run -- tests/p0_security.vl
+
+import std.security
+import std.jwt
+
+assert(sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+assert(hmac_sha256("what do ya want for nothing?", "Jefe") == "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843")
+
+let encrypted = encrypt_secret("sensitive", "correct horse battery staple")
+assert(decrypt_secret(encrypted, "correct horse battery staple") == "sensitive")
+
+let password_digest = security_hash_password("p@ssword")
+assert(security_verify_password("p@ssword", password_digest) == true)
+assert(security_verify_password("wrong", password_digest) == false)
+
+let mut unsafe_scheme_rejected = false
+try {
+    http_fetch("file:///etc/passwd")
+} catch err {
+    unsafe_scheme_rejected = true
+}
+assert(unsafe_scheme_rejected)
+
+env_set("VIETLANG_ENABLE_EXPERIMENTAL_JWT", "")
+let mut jwt_rejected = false
+try {
+    jwt_sign(map_new(), "not-for-production")
+} catch err {
+    jwt_rejected = true
+}
+assert(jwt_rejected)
+
+println("P0 security conformance: PASS")

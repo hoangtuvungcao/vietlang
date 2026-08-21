@@ -1,17 +1,15 @@
 //! VietLang Interpreter
 //! Tree-walking interpreter that executes VietLang AST.
 
-pub mod value;
 pub mod environment;
+pub mod value;
 
-use std::collections::{HashMap, HashSet};
-use std::net::TcpListener;
-use std::io::{BufRead, Read, Write};
-use crate::error::{VietError, VietResult, ErrorKind};
+use crate::error::{ErrorKind, VietError, VietResult};
 use crate::lexer::token::Span;
 use crate::parser::ast::*;
-use value::Value;
 use environment::Environment;
+use std::collections::{HashMap, HashSet};
+use value::Value;
 
 #[derive(Clone)]
 pub struct Interpreter {
@@ -24,6 +22,117 @@ pub struct Interpreter {
     loaded_modules: HashSet<String>,
     /// Base directory for relative project imports
     pub base_dir: Option<std::path::PathBuf>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{lexer::Lexer, parser::Parser};
+
+    fn execute(source: &str) -> VietResult<Value> {
+        let tokens = Lexer::new(source).tokenize()?;
+        let program = Parser::new(tokens).parse()?;
+        Interpreter::new().execute(&program)
+    }
+
+    #[test]
+    fn user_function_arity_is_enforced() {
+        let error = execute("fn add(a, b) { return a + b }\nadd(1)").unwrap_err();
+        assert!(error.message.contains("expects 2 argument(s), received 1"));
+    }
+
+    #[test]
+    fn builtin_arity_is_enforced() {
+        let error = execute("len()").unwrap_err();
+        assert!(error
+            .message
+            .contains("len() expects 1 argument(s), received 0"));
+    }
+
+    #[test]
+    fn default_parameters_define_an_arity_range() {
+        let value = execute("fn add(a, b = 2) { return a + b }\nadd(3)").unwrap();
+        assert!(matches!(value, Value::Int(5)));
+        let error = execute("fn add(a, b = 2) { return a + b }\nadd()").unwrap_err();
+        assert!(error
+            .message
+            .contains("expects 1..=2 argument(s), received 0"));
+    }
+
+    #[test]
+    fn methods_can_read_self_fields() {
+        let value = execute(
+            "struct User { name: String }\nimpl User { fn label(self, prefix: String) -> String { return prefix + self.name } }\nlet user = User { name: \"Lan\" }\nuser.label(\"Hi \" )",
+        )
+        .unwrap();
+        assert_eq!(value, Value::String("Hi Lan".into()));
+    }
+
+    #[test]
+    fn tuple_enum_variants_construct_and_match() {
+        let value = execute(
+            "enum Result { Ok(Int), Err(String) }\nlet result = Ok(42)\nmatch result { Ok(value) => value, Err(message) => 0 }",
+        )
+        .unwrap();
+        assert_eq!(value, Value::Int(42));
+    }
+
+    #[test]
+    fn enum_equality_includes_the_declaring_type() {
+        let left = Value::EnumVariant {
+            type_name: "Left".into(),
+            variant: "Same".into(),
+            fields: vec![],
+        };
+        let right = Value::EnumVariant {
+            type_name: "Right".into(),
+            variant: "Same".into(),
+            fields: vec![],
+        };
+        assert_ne!(left, right);
+    }
+
+    #[test]
+    fn escaping_closure_preserves_mutable_state() {
+        let value = execute(
+            "fn make_counter() { let mut count = 0\nreturn fn() { count += 1\nreturn count } }\nlet counter = make_counter()\ncounter()\ncounter()",
+        )
+        .unwrap();
+        assert_eq!(value, Value::Int(2));
+    }
+
+    #[test]
+    fn sibling_closures_share_their_captured_binding() {
+        let value = execute(
+            "fn make_pair() { let mut count = 0\nlet increment = fn() { count += 1\nreturn count }\nlet current = fn() { return count }\nreturn [increment, current] }\nlet pair = make_pair()\nlet increment = pair[0]\nlet current = pair[1]\nincrement()\ncurrent()",
+        )
+        .unwrap();
+        assert_eq!(value, Value::Int(1));
+    }
+
+    #[test]
+    fn closure_uses_lexical_scope_instead_of_callers_shadow() {
+        let value = execute(
+            "let captured = 7\nlet read = fn() { return captured }\nfn invoke(callback) { let captured = 99\nreturn callback() }\ninvoke(read)",
+        )
+        .unwrap();
+        assert_eq!(value, Value::Int(7));
+    }
+
+    #[test]
+    fn named_functions_support_recursion_and_later_global_declarations() {
+        let recursive = execute(
+            "fn factorial(value: Int) -> Int { if value <= 1 { return 1 } else { return value * factorial(value - 1) } }\nfactorial(5)",
+        )
+        .unwrap();
+        assert_eq!(recursive, Value::Int(120));
+
+        let forward = execute(
+            "fn first() -> Int { return second() }\nfn second() -> Int { return 42 }\nfirst()",
+        )
+        .unwrap();
+        assert_eq!(forward, Value::Int(42));
+    }
 }
 
 impl Interpreter {
@@ -43,8 +152,8 @@ impl Interpreter {
         // Standard builtin functions
         let builtins = vec![
             // Core
-            ("print", None),       // variadic
-            ("println", None),     // variadic
+            ("print", None),   // variadic
+            ("println", None), // variadic
             ("len", Some(1)),
             ("type_of", Some(1)),
             ("to_string", Some(1)),
@@ -60,7 +169,6 @@ impl Interpreter {
             ("exit", None),
             ("format", None),
             ("range", None),
-
             // std.io — File I/O
             ("file_read", Some(1)),
             ("file_write", Some(2)),
@@ -69,36 +177,31 @@ impl Interpreter {
             ("file_delete", Some(1)),
             ("dir_list", Some(1)),
             ("dir_create", Some(1)),
-
             // std.json
             ("json_parse", Some(1)),
             ("json_stringify", None),
-
             // std.env
             ("env_get", None),
             ("env_set", Some(2)),
             ("env_all", Some(0)),
-
             // std.time
             ("time_now", Some(0)),
             ("time_now_ms", Some(0)),
             ("sleep", Some(1)),
             ("timer_start", Some(0)),
-
             // std.crypto
             ("sha256", Some(1)),
             ("sha1", Some(1)),
             ("ws_accept_key", Some(1)),
             ("uuid", Some(0)),
             ("base64_encode", Some(1)),
+            ("base64_url_encode", Some(1)),
             ("random_int", Some(2)),
-
             // std.log
             ("log_debug", None),
             ("log_info", None),
             ("log_warn", None),
             ("log_error", None),
-
             // std.collections (Map)
             ("map_new", Some(0)),
             ("map_set", Some(3)),
@@ -107,10 +210,8 @@ impl Interpreter {
             ("map_keys", Some(1)),
             ("map_values", Some(1)),
             ("map_remove", Some(2)),
-
             // std.http
             ("http_listen", None),
-
             // std.db & std.db_sqlite (Real Binary SQLite)
             ("db_query", None),
             ("db_table", Some(1)),
@@ -124,7 +225,6 @@ impl Interpreter {
             ("builtin_sqlite_execute", None),
             ("builtin_sqlite_query", None),
             ("builtin_sqlite_close", Some(1)),
-
             // MySQL Native Driver Builtins
             ("mysql_connect", None),
             ("mysql_exec", Some(2)),
@@ -142,7 +242,6 @@ impl Interpreter {
             ("ws_enable", None),
             ("ws_broadcast", None),
             ("html_escape", Some(1)),
-
             // Concurrency
             ("spawn", None),
             ("channel", None),
@@ -153,7 +252,6 @@ impl Interpreter {
             ("channel_close", None),
             ("thread_sleep", None),
             ("mutex_new", None),
-
             // String character operations
             ("char_at", Some(2)),
             ("char_code", Some(1)),
@@ -162,19 +260,16 @@ impl Interpreter {
             ("str_repeat", Some(2)),
             ("parse_int", Some(1)),
             ("parse_float", Some(1)),
-
             // Array operations
             ("sort", Some(1)),
             ("slice", None),
             ("index_of", Some(2)),
             ("flat", Some(1)),
-
             // Error handling & Reflection
             ("throw", None),
             ("is_error", Some(1)),
             ("typeof", Some(1)),
             ("type_of", Some(1)),
-
             // System & Timers
             ("get_args", Some(0)),
             ("platform", Some(0)),
@@ -196,6 +291,10 @@ impl Interpreter {
             ("contains", Some(2)),
             ("hmac_sha256", Some(2)),
             ("hmac_sha512", Some(2)),
+            ("hmac_sha256_base64url", Some(2)),
+            ("secure_compare", Some(2)),
+            ("password_hash", Some(1)),
+            ("password_verify", Some(2)),
             ("encrypt_secret", Some(2)),
             ("decrypt_secret", Some(2)),
             ("ip_in_cidr", Some(2)),
@@ -234,13 +333,22 @@ impl Interpreter {
 
     fn execute_statement(&mut self, stmt: &Statement) -> VietResult<Value> {
         match stmt {
-            Statement::Let { name, mutable, value, .. } => {
+            Statement::Let {
+                name,
+                mutable,
+                value,
+                ..
+            } => {
                 let val = self.evaluate_expression(value)?;
                 self.env.define(name, val.clone(), *mutable);
                 Ok(val)
             }
 
-            Statement::Assignment { target, value, span } => {
+            Statement::Assignment {
+                target,
+                value,
+                span,
+            } => {
                 let val = self.evaluate_expression(value)?;
                 match target {
                     Expression::Identifier { name, .. } => {
@@ -254,20 +362,28 @@ impl Interpreter {
                         // Get the struct, modify field, set back
                         let obj_val = self.evaluate_expression(object)?;
                         match obj_val {
-                            Value::Struct { type_name, mut fields } => {
+                            Value::Struct {
+                                type_name,
+                                mut fields,
+                            } => {
                                 fields.insert(field.clone(), val.clone());
                                 if let Expression::Identifier { name, .. } = object.as_ref() {
-                                    self.env.set(name, Value::Struct { type_name, fields }).map_err(|mut e| {
-                                        e.line = span.line;
-                                        e.column = span.column;
-                                        e
-                                    })?;
+                                    self.env
+                                        .set(name, Value::Struct { type_name, fields })
+                                        .map_err(|mut e| {
+                                            e.line = span.line;
+                                            e.column = span.column;
+                                            e
+                                        })?;
                                 }
                             }
-                            _ => return Err(VietError::runtime_error(
-                                "Cannot set field on non-struct value".to_string(),
-                                span.line, span.column,
-                            )),
+                            _ => {
+                                return Err(VietError::runtime_error(
+                                    "Cannot set field on non-struct value".to_string(),
+                                    span.line,
+                                    span.column,
+                                ))
+                            }
                         }
                     }
                     Expression::Index { object, index, .. } => {
@@ -275,47 +391,60 @@ impl Interpreter {
                         let obj_val = self.evaluate_expression(object)?;
                         match (obj_val, idx_val) {
                             (Value::Array(mut arr), Value::Int(i)) => {
-                                let idx = if i < 0 { (arr.len() as i64 + i) as usize } else { i as usize };
+                                let idx = if i < 0 {
+                                    (arr.len() as i64 + i) as usize
+                                } else {
+                                    i as usize
+                                };
                                 if idx < arr.len() {
                                     arr[idx] = val.clone();
                                     if let Expression::Identifier { name, .. } = object.as_ref() {
-                                        self.env.set(name, Value::Array(arr)).map_err(|mut e| {
-                                            e.line = span.line;
-                                            e.column = span.column;
-                                            e
-                                        })?;
+                                        self.env.set(name, Value::Array(arr)).map_err(
+                                            |mut e| {
+                                                e.line = span.line;
+                                                e.column = span.column;
+                                                e
+                                            },
+                                        )?;
                                     }
                                 } else {
                                     return Err(VietError::runtime_error(
                                         format!("Index {} out of bounds (length {})", i, arr.len()),
-                                        span.line, span.column,
+                                        span.line,
+                                        span.column,
                                     ));
                                 }
                             }
-                            _ => return Err(VietError::runtime_error(
-                                "Invalid index assignment".to_string(),
-                                span.line, span.column,
-                            )),
+                            _ => {
+                                return Err(VietError::runtime_error(
+                                    "Invalid index assignment".to_string(),
+                                    span.line,
+                                    span.column,
+                                ))
+                            }
                         }
                     }
-                    _ => return Err(VietError::runtime_error(
-                        "Invalid assignment target".to_string(),
-                        span.line, span.column,
-                    )),
+                    _ => {
+                        return Err(VietError::runtime_error(
+                            "Invalid assignment target".to_string(),
+                            span.line,
+                            span.column,
+                        ))
+                    }
                 }
                 Ok(val)
             }
 
-            Statement::Expression { expr, .. } => {
-                self.evaluate_expression(expr)
-            }
+            Statement::Expression { expr, .. } => self.evaluate_expression(expr),
 
-            Statement::Function { name, params, body, .. } => {
+            Statement::Function {
+                name, params, body, ..
+            } => {
                 let func = Value::Function {
                     name: name.clone(),
                     params: params.clone(),
                     body: body.clone(),
-                    closure_env: None,
+                    closure_env: self.env.capture(),
                 };
                 self.env.define(name, func, false);
                 Ok(Value::None)
@@ -329,7 +458,12 @@ impl Interpreter {
                 Err(VietError::return_signal(val))
             }
 
-            Statement::If { condition, then_body, else_body, .. } => {
+            Statement::If {
+                condition,
+                then_body,
+                else_body,
+                ..
+            } => {
                 let cond = self.evaluate_expression(condition)?;
                 if cond.is_truthy() {
                     self.execute_block(then_body)
@@ -340,7 +474,9 @@ impl Interpreter {
                 }
             }
 
-            Statement::While { condition, body, .. } => {
+            Statement::While {
+                condition, body, ..
+            } => {
                 loop {
                     let cond = self.evaluate_expression(condition)?;
                     if !cond.is_truthy() {
@@ -348,28 +484,38 @@ impl Interpreter {
                     }
                     match self.execute_block(body) {
                         Ok(_) => {}
-                        Err(VietError { kind: ErrorKind::Break, .. }) => break,
-                        Err(VietError { kind: ErrorKind::Continue, .. }) => continue,
+                        Err(VietError {
+                            kind: ErrorKind::Break,
+                            ..
+                        }) => break,
+                        Err(VietError {
+                            kind: ErrorKind::Continue,
+                            ..
+                        }) => continue,
                         Err(e) => return Err(e),
                     }
                 }
                 Ok(Value::None)
             }
 
-            Statement::For { variable, iterable, body, .. } => {
+            Statement::For {
+                variable,
+                iterable,
+                body,
+                ..
+            } => {
                 let iter_val = self.evaluate_expression(iterable)?;
                 let items = match iter_val {
                     Value::Array(arr) => arr,
-                    Value::Range { start, end } => {
-                        (start..end).map(Value::Int).collect()
+                    Value::Range { start, end } => (start..end).map(Value::Int).collect(),
+                    Value::String(s) => s.chars().map(|c| Value::String(c.to_string())).collect(),
+                    _ => {
+                        return Err(VietError::runtime_error(
+                            format!("Cannot iterate over {}", iter_val.type_name()),
+                            0,
+                            0,
+                        ))
                     }
-                    Value::String(s) => {
-                        s.chars().map(|c| Value::String(c.to_string())).collect()
-                    }
-                    _ => return Err(VietError::runtime_error(
-                        format!("Cannot iterate over {}", iter_val.type_name()),
-                        0, 0,
-                    )),
                 };
 
                 for item in items {
@@ -377,11 +523,17 @@ impl Interpreter {
                     self.env.define(variable, item, false);
                     match self.execute_block_no_scope(body) {
                         Ok(_) => {}
-                        Err(VietError { kind: ErrorKind::Break, .. }) => {
+                        Err(VietError {
+                            kind: ErrorKind::Break,
+                            ..
+                        }) => {
                             self.env.pop_scope();
                             break;
                         }
-                        Err(VietError { kind: ErrorKind::Continue, .. }) => {
+                        Err(VietError {
+                            kind: ErrorKind::Continue,
+                            ..
+                        }) => {
                             self.env.pop_scope();
                             continue;
                         }
@@ -395,13 +547,9 @@ impl Interpreter {
                 Ok(Value::None)
             }
 
-            Statement::Break { .. } => {
-                Err(VietError::break_signal())
-            }
+            Statement::Break { .. } => Err(VietError::break_signal()),
 
-            Statement::Continue { .. } => {
-                Err(VietError::continue_signal())
-            }
+            Statement::Continue { .. } => Err(VietError::continue_signal()),
 
             Statement::Struct { name, fields, .. } => {
                 self.struct_defs.insert(name.clone(), fields.clone());
@@ -411,7 +559,6 @@ impl Interpreter {
             Statement::Enum { name, variants, .. } => {
                 // Register enum variants as constructors
                 for variant in variants {
-                    let variant_name = format!("{}.{}", name, variant.name);
                     if variant.fields.is_empty() {
                         // Simple variant - define as a value
                         self.env.define(
@@ -423,23 +570,39 @@ impl Interpreter {
                             },
                             false,
                         );
+                    } else {
+                        self.env.define(
+                            &variant.name,
+                            Value::EnumConstructor {
+                                type_name: name.clone(),
+                                variant: variant.name.clone(),
+                                arity: variant.fields.len(),
+                            },
+                            false,
+                        );
                     }
-                    // Store for pattern matching
-                    let _ = variant_name; // used for matching later
                 }
                 self.enum_defs.insert(name.clone(), variants.clone());
                 Ok(Value::None)
             }
 
-            Statement::Impl { type_name, methods, .. } => {
+            Statement::Impl {
+                type_name, methods, ..
+            } => {
                 for method in methods {
-                    if let Statement::Function { name: method_name, params, body, .. } = method {
+                    if let Statement::Function {
+                        name: method_name,
+                        params,
+                        body,
+                        ..
+                    } = method
+                    {
                         let full_name = format!("{}::{}", type_name, method_name);
                         let func = Value::Function {
                             name: full_name.clone(),
                             params: params.clone(),
                             body: body.clone(),
-                            closure_env: None,
+                            closure_env: self.env.capture(),
                         };
                         self.env.define(&full_name, func, false);
                     }
@@ -470,7 +633,7 @@ impl Interpreter {
                 // If path contains 'src', also search from 'src' onwards
                 if let Some(src_pos) = path.iter().position(|seg| seg == "src") {
                     let from_src = path[src_pos..].join("/");
-                    let after_src = path[src_pos+1..].join("/");
+                    let after_src = path[src_pos + 1..].join("/");
                     search_paths.push(format!("{}.vl", from_src));
                     search_paths.push(format!("{}.vl", after_src));
                     search_paths.push(format!("src/{}.vl", after_src));
@@ -483,8 +646,12 @@ impl Interpreter {
                 }
 
                 // If path contains 'examples', also search relative to current repo
-                if let Some(app_pos) = path.iter().position(|seg| seg == "agricultural_ecommerce" || seg == "viet_fintech_gateway" || seg == "viet_finance_desktop") {
-                    let from_app = path[app_pos+1..].join("/");
+                if let Some(app_pos) = path.iter().position(|seg| {
+                    seg == "agricultural_ecommerce"
+                        || seg == "viet_fintech_gateway"
+                        || seg == "viet_finance_desktop"
+                }) {
+                    let from_app = path[app_pos + 1..].join("/");
                     search_paths.push(format!("{}.vl", from_app));
                     search_paths.push(format!("src/{}.vl", from_app));
                 }
@@ -498,7 +665,11 @@ impl Interpreter {
                     search_paths.push(format!("{}/.vietlang/std/{}.vl", home, joined));
                     search_paths.push(format!("{}/.vietlang/modules/{}.vl", home, joined));
                     if path.len() > 1 && path[0] == "std" {
-                        search_paths.push(format!("{}/.vietlang/std/{}.vl", home, path[1..].join("/")));
+                        search_paths.push(format!(
+                            "{}/.vietlang/std/{}.vl",
+                            home,
+                            path[1..].join("/")
+                        ));
                     }
                 }
 
@@ -509,7 +680,11 @@ impl Interpreter {
                         search_paths.push(format!("{}/std/{}.vl", exe_dir_str, joined));
                         search_paths.push(format!("{}/modules/{}.vl", exe_dir_str, joined));
                         if path.len() > 1 && path[0] == "std" {
-                            search_paths.push(format!("{}/std/{}.vl", exe_dir_str, path[1..].join("/")));
+                            search_paths.push(format!(
+                                "{}/std/{}.vl",
+                                exe_dir_str,
+                                path[1..].join("/")
+                            ));
                         }
                     }
                 }
@@ -529,13 +704,18 @@ impl Interpreter {
 
                     if !self.loaded_modules.contains(&canonical) {
                         self.loaded_modules.insert(canonical);
-                        let source = std::fs::read_to_string(&resolved_path).map_err(|e|
-                            VietError::runtime_error(format!("Cannot import '{}': {}", resolved_path, e), span.line, span.column)
-                        )?;
+                        let source = std::fs::read_to_string(&resolved_path).map_err(|e| {
+                            VietError::runtime_error(
+                                format!("Cannot import '{}': {}", resolved_path, e),
+                                span.line,
+                                span.column,
+                            )
+                        })?;
                         let mut lexer = crate::lexer::Lexer::new(&source);
                         let tokens = lexer.tokenize()?;
                         let mut parser = crate::parser::Parser::new(tokens);
                         let program = parser.parse()?;
+                        crate::semantic::SemanticAnalyzer::new().analyze(&program)?;
                         self.execute(&program)?;
                     }
                     Ok(Value::None)
@@ -545,16 +725,25 @@ impl Interpreter {
                 }
             }
 
-            Statement::TryCatch { try_body, catch_var, catch_body, .. } => {
+            Statement::TryCatch {
+                try_body,
+                catch_var,
+                catch_body,
+                ..
+            } => {
                 match self.execute_block(try_body) {
                     Ok(val) => Ok(val),
                     Err(err) => {
-                        if matches!(err.kind, ErrorKind::Return(_) | ErrorKind::Break | ErrorKind::Continue) {
+                        if matches!(
+                            err.kind,
+                            ErrorKind::Return(_) | ErrorKind::Break | ErrorKind::Continue
+                        ) {
                             // Control flow signals pass through
                             return Err(err);
                         }
                         self.env.push_scope();
-                        self.env.define(catch_var, Value::String(err.message.clone()), false);
+                        self.env
+                            .define(catch_var, Value::String(err.message.clone()), false);
                         let result = self.execute_block_no_scope(catch_body);
                         self.env.pop_scope();
                         result
@@ -591,41 +780,42 @@ impl Interpreter {
             Expression::BoolLiteral { value, .. } => Ok(Value::Bool(*value)),
             Expression::NoneLiteral { .. } => Ok(Value::None),
 
-            Expression::Identifier { name, span } => {
-                self.env.get(name).cloned().map_err(|mut e| {
-                    e.line = span.line;
-                    e.column = span.column;
-                    e
-                })
-            }
+            Expression::Identifier { name, span } => self.env.get(name).map_err(|mut e| {
+                e.line = span.line;
+                e.column = span.column;
+                e
+            }),
 
-            Expression::BinaryOp { left, op, right, span } => {
-                match op {
-                    BinaryOperator::And => {
-                        let lval = self.evaluate_expression(left)?;
-                        if !lval.is_truthy() {
-                            Ok(Value::Bool(false))
-                        } else {
-                            let rval = self.evaluate_expression(right)?;
-                            Ok(Value::Bool(rval.is_truthy()))
-                        }
-                    }
-                    BinaryOperator::Or => {
-                        let lval = self.evaluate_expression(left)?;
-                        if lval.is_truthy() {
-                            Ok(Value::Bool(true))
-                        } else {
-                            let rval = self.evaluate_expression(right)?;
-                            Ok(Value::Bool(rval.is_truthy()))
-                        }
-                    }
-                    _ => {
-                        let lval = self.evaluate_expression(left)?;
+            Expression::BinaryOp {
+                left,
+                op,
+                right,
+                span,
+            } => match op {
+                BinaryOperator::And => {
+                    let lval = self.evaluate_expression(left)?;
+                    if !lval.is_truthy() {
+                        Ok(Value::Bool(false))
+                    } else {
                         let rval = self.evaluate_expression(right)?;
-                        self.evaluate_binary_op(&lval, op, &rval, span)
+                        Ok(Value::Bool(rval.is_truthy()))
                     }
                 }
-            }
+                BinaryOperator::Or => {
+                    let lval = self.evaluate_expression(left)?;
+                    if lval.is_truthy() {
+                        Ok(Value::Bool(true))
+                    } else {
+                        let rval = self.evaluate_expression(right)?;
+                        Ok(Value::Bool(rval.is_truthy()))
+                    }
+                }
+                _ => {
+                    let lval = self.evaluate_expression(left)?;
+                    let rval = self.evaluate_expression(right)?;
+                    self.evaluate_binary_op(&lval, op, &rval, span)
+                }
+            },
 
             Expression::UnaryOp { op, operand, span } => {
                 let val = self.evaluate_expression(operand)?;
@@ -635,14 +825,19 @@ impl Interpreter {
                         Value::Float(f) => Ok(Value::Float(-f)),
                         _ => Err(VietError::type_error(
                             format!("Cannot negate {}", val.type_name()),
-                            span.line, span.column,
+                            span.line,
+                            span.column,
                         )),
                     },
                     UnaryOperator::Not => Ok(Value::Bool(!val.is_truthy())),
                 }
             }
 
-            Expression::Call { callee, arguments, span } => {
+            Expression::Call {
+                callee,
+                arguments,
+                span,
+            } => {
                 let func = self.evaluate_expression(callee)?;
                 let mut args = Vec::new();
                 for arg in arguments {
@@ -651,7 +846,12 @@ impl Interpreter {
                 self.call_function(&func, &args, span)
             }
 
-            Expression::MethodCall { object, method, arguments, span } => {
+            Expression::MethodCall {
+                object,
+                method,
+                arguments,
+                span,
+            } => {
                 let obj = self.evaluate_expression(object)?;
                 let mut args = Vec::new();
                 for arg in arguments {
@@ -660,25 +860,33 @@ impl Interpreter {
                 self.call_method(&obj, method, &args, span)
             }
 
-            Expression::FieldAccess { object, field, span } => {
+            Expression::FieldAccess {
+                object,
+                field,
+                span,
+            } => {
                 let obj = self.evaluate_expression(object)?;
                 match &obj {
-                    Value::Struct { fields, .. } => {
-                        fields.get(field).cloned().ok_or_else(|| {
-                            VietError::runtime_error(
-                                format!("Struct has no field '{}'", field),
-                                span.line, span.column,
-                            )
-                        })
-                    }
+                    Value::Struct { fields, .. } => fields.get(field).cloned().ok_or_else(|| {
+                        VietError::runtime_error(
+                            format!("Struct has no field '{}'", field),
+                            span.line,
+                            span.column,
+                        )
+                    }),
                     _ => Err(VietError::type_error(
                         format!("Cannot access field on {}", obj.type_name()),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
 
-            Expression::Index { object, index, span } => {
+            Expression::Index {
+                object,
+                index,
+                span,
+            } => {
                 let obj = self.evaluate_expression(object)?;
                 let idx = self.evaluate_expression(index)?;
                 match (&obj, &idx) {
@@ -691,7 +899,8 @@ impl Interpreter {
                         arr.get(index).cloned().ok_or_else(|| {
                             VietError::runtime_error(
                                 format!("Index {} out of bounds (length {})", i, arr.len()),
-                                span.line, span.column,
+                                span.line,
+                                span.column,
                             )
                         })
                     }
@@ -701,18 +910,21 @@ impl Interpreter {
                         } else {
                             *i as usize
                         };
-                        s.chars().nth(index)
+                        s.chars()
+                            .nth(index)
                             .map(|c| Value::String(c.to_string()))
                             .ok_or_else(|| {
                                 VietError::runtime_error(
                                     format!("Index {} out of bounds", i),
-                                    span.line, span.column,
+                                    span.line,
+                                    span.column,
                                 )
                             })
                     }
                     _ => Err(VietError::type_error(
                         format!("Cannot index {} with {}", obj.type_name(), idx.type_name()),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
@@ -730,7 +942,8 @@ impl Interpreter {
                 if !self.struct_defs.contains_key(name) {
                     return Err(VietError::type_error(
                         format!("Unknown struct type: '{}'", name),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     ));
                 }
 
@@ -745,7 +958,11 @@ impl Interpreter {
                 })
             }
 
-            Expression::Match { subject, arms, span } => {
+            Expression::Match {
+                subject,
+                arms,
+                span,
+            } => {
                 let subject_val = self.evaluate_expression(subject)?;
                 for arm in arms {
                     if let Some(bindings) = self.match_pattern(&arm.pattern, &subject_val) {
@@ -760,11 +977,16 @@ impl Interpreter {
                 }
                 Err(VietError::runtime_error(
                     "Non-exhaustive match expression".to_string(),
-                    span.line, span.column,
+                    span.line,
+                    span.column,
                 ))
             }
 
-            Expression::Block { statements, final_expr, .. } => {
+            Expression::Block {
+                statements,
+                final_expr,
+                ..
+            } => {
                 self.env.push_scope();
                 for stmt in statements {
                     self.execute_statement(stmt)?;
@@ -777,28 +999,25 @@ impl Interpreter {
                 result
             }
 
-            Expression::Lambda { params, body, .. } => {
-                Ok(Value::Function {
-                    name: "<lambda>".to_string(),
-                    params: params.clone(),
-                    body: vec![Statement::Return {
-                        value: Some(*body.clone()),
-                        span: body.span().clone(),
-                    }],
-                    closure_env: Some(self.env.depth()),
-                })
-            }
+            Expression::Lambda { params, body, .. } => Ok(Value::Function {
+                name: "<lambda>".to_string(),
+                params: params.clone(),
+                body: vec![Statement::Return {
+                    value: Some(*body.clone()),
+                    span: body.span().clone(),
+                }],
+                closure_env: self.env.capture(),
+            }),
 
             Expression::Range { start, end, span } => {
                 let start_val = self.evaluate_expression(start)?;
                 let end_val = self.evaluate_expression(end)?;
                 match (&start_val, &end_val) {
-                    (Value::Int(s), Value::Int(e)) => {
-                        Ok(Value::Range { start: *s, end: *e })
-                    }
+                    (Value::Int(s), Value::Int(e)) => Ok(Value::Range { start: *s, end: *e }),
                     _ => Err(VietError::type_error(
                         "Range bounds must be integers".to_string(),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
@@ -833,7 +1052,8 @@ impl Interpreter {
                 }
                 _ => Err(VietError::type_error(
                     format!("Cannot add {} and {}", left.type_name(), right.type_name()),
-                    span.line, span.column,
+                    span.line,
+                    span.column,
                 )),
             },
             BinaryOperator::Sub => self.numeric_op(left, right, |a, b| a - b, |a, b| a - b, span),
@@ -848,11 +1068,13 @@ impl Interpreter {
                 match right {
                     Value::Int(0) => Err(VietError::runtime_error(
                         "Division by zero".to_string(),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                     Value::Float(f) if *f == 0.0 => Err(VietError::runtime_error(
                         "Division by zero".to_string(),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                     _ => self.numeric_op(left, right, |a, b| a / b, |a, b| a / b, span),
                 }
@@ -864,8 +1086,12 @@ impl Interpreter {
             BinaryOperator::NotEq => Ok(Value::Bool(left != right)),
             BinaryOperator::Lt => self.comparison_op(left, right, |a, b| a < b, |a, b| a < b, span),
             BinaryOperator::Gt => self.comparison_op(left, right, |a, b| a > b, |a, b| a > b, span),
-            BinaryOperator::LtEq => self.comparison_op(left, right, |a, b| a <= b, |a, b| a <= b, span),
-            BinaryOperator::GtEq => self.comparison_op(left, right, |a, b| a >= b, |a, b| a >= b, span),
+            BinaryOperator::LtEq => {
+                self.comparison_op(left, right, |a, b| a <= b, |a, b| a <= b, span)
+            }
+            BinaryOperator::GtEq => {
+                self.comparison_op(left, right, |a, b| a >= b, |a, b| a >= b, span)
+            }
 
             // Logical
             BinaryOperator::And => Ok(Value::Bool(left.is_truthy() && right.is_truthy())),
@@ -891,8 +1117,13 @@ impl Interpreter {
             (Value::Int(a), Value::Float(b)) => Ok(Value::Float(float_op(*a as f64, *b))),
             (Value::Float(a), Value::Int(b)) => Ok(Value::Float(float_op(*a, *b as f64))),
             _ => Err(VietError::type_error(
-                format!("Cannot perform arithmetic on {} and {}", left.type_name(), right.type_name()),
-                span.line, span.column,
+                format!(
+                    "Cannot perform arithmetic on {} and {}",
+                    left.type_name(),
+                    right.type_name()
+                ),
+                span.line,
+                span.column,
             )),
         }
     }
@@ -916,8 +1147,13 @@ impl Interpreter {
             (Value::Float(a), Value::Int(b)) => Ok(Value::Bool(float_cmp(*a, *b as f64))),
             (Value::String(a), Value::String(b)) => Ok(Value::Bool(int_cmp(a.cmp(b) as i64, 0))),
             _ => Err(VietError::type_error(
-                format!("Cannot compare {} and {}", left.type_name(), right.type_name()),
-                span.line, span.column,
+                format!(
+                    "Cannot compare {} and {}",
+                    left.type_name(),
+                    right.type_name()
+                ),
+                span.line,
+                span.column,
             )),
         }
     }
@@ -926,44 +1162,116 @@ impl Interpreter {
     // Function Calls
     // ========================================
 
-    fn call_function(
+    pub(crate) fn call_function(
         &mut self,
         func: &Value,
         args: &[Value],
         span: &Span,
     ) -> VietResult<Value> {
         match func {
-            Value::Function { params, body, .. } => {
-                self.env.push_scope();
-
-                // Bind parameters
-                for (i, param) in params.iter().enumerate() {
-                    let val = if i < args.len() {
-                        args[i].clone()
-                    } else if let Some(default) = &param.default {
-                        self.evaluate_expression(default)?
+            Value::Function {
+                name,
+                params,
+                body,
+                closure_env,
+            } => {
+                let required = params
+                    .iter()
+                    .filter(|param| param.default.is_none())
+                    .count();
+                if args.len() < required || args.len() > params.len() {
+                    let expected = if required == params.len() {
+                        required.to_string()
                     } else {
-                        Value::None
+                        format!("{}..={}", required, params.len())
                     };
-                    self.env.define(&param.name, val, false);
+                    return Err(VietError::runtime_error(
+                        format!(
+                            "Function expects {} argument(s), received {}",
+                            expected,
+                            args.len()
+                        ),
+                        span.line,
+                        span.column,
+                    ));
+                }
+                let caller_env =
+                    std::mem::replace(&mut self.env, Environment::from_capture(closure_env));
+                self.env.merge_missing_globals_from(&caller_env);
+                self.env.push_scope();
+                if name != "<lambda>" {
+                    self.env.define(name, func.clone(), false);
                 }
 
-                // Execute body
-                let result = self.execute_block_no_scope(body);
-                self.env.pop_scope();
+                let result = (|| {
+                    for (i, param) in params.iter().enumerate() {
+                        let val = if i < args.len() {
+                            args[i].clone()
+                        } else if let Some(default) = &param.default {
+                            self.evaluate_expression(default)?
+                        } else {
+                            Value::None
+                        };
+                        self.env.define(&param.name, val, false);
+                    }
+                    self.execute_block_no_scope(body)
+                })();
+                self.env = caller_env;
 
                 match result {
                     Ok(val) => Ok(val),
-                    Err(VietError { kind: ErrorKind::Return(val), .. }) => Ok(val),
+                    Err(VietError {
+                        kind: ErrorKind::Return(val),
+                        ..
+                    }) => Ok(val),
                     Err(e) => Err(e),
                 }
             }
-            Value::BuiltinFunction { name, .. } => {
+            Value::BuiltinFunction { name, arity } => {
+                if let Some(expected) = arity {
+                    if args.len() != *expected {
+                        return Err(VietError::runtime_error(
+                            format!(
+                                "{}() expects {} argument(s), received {}",
+                                name,
+                                expected,
+                                args.len()
+                            ),
+                            span.line,
+                            span.column,
+                        ));
+                    }
+                }
                 self.call_builtin(name, args, span)
+            }
+            Value::EnumConstructor {
+                type_name,
+                variant,
+                arity,
+            } => {
+                if args.len() != *arity {
+                    return Err(VietError::runtime_error(
+                        format!(
+                            "Enum constructor {}.{} expects {} argument(s), received {}",
+                            type_name,
+                            variant,
+                            arity,
+                            args.len()
+                        ),
+                        span.line,
+                        span.column,
+                    ));
+                }
+                Ok(Value::EnumVariant {
+                    type_name: type_name.clone(),
+                    variant: variant.clone(),
+                    fields: args.to_vec(),
+                })
             }
             _ => Err(VietError::type_error(
                 format!("'{}' is not callable", func.type_name()),
-                span.line, span.column,
+                span.line,
+                span.column,
             )),
         }
     }
@@ -978,7 +1286,7 @@ impl Interpreter {
         // Try to find impl method first
         let type_name = object.type_name().to_string();
         let full_name = format!("{}::{}", type_name, method);
-        if let Ok(func) = self.env.get(&full_name).cloned() {
+        if let Ok(func) = self.env.get(&full_name) {
             let mut all_args = vec![object.clone()];
             all_args.extend_from_slice(args);
             return self.call_function(&func, &all_args, span);
@@ -992,14 +1300,26 @@ impl Interpreter {
                 if let Some(Value::String(sub)) = args.first() {
                     Ok(Value::Bool(s.contains(sub.as_str())))
                 } else {
-                    Err(VietError::type_error("contains() expects a string argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "contains() expects a string argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::String(s), "split") => {
                 if let Some(Value::String(sep)) = args.first() {
-                    Ok(Value::Array(s.split(sep.as_str()).map(|p| Value::String(p.to_string())).collect()))
+                    Ok(Value::Array(
+                        s.split(sep.as_str())
+                            .map(|p| Value::String(p.to_string()))
+                            .collect(),
+                    ))
                 } else {
-                    Err(VietError::type_error("split() expects a string argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "split() expects a string argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::String(s), "trim") => Ok(Value::String(s.trim().to_string())),
@@ -1009,14 +1329,22 @@ impl Interpreter {
                 if let Some(Value::String(prefix)) = args.first() {
                     Ok(Value::Bool(s.starts_with(prefix.as_str())))
                 } else {
-                    Err(VietError::type_error("starts_with() expects a string argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "starts_with() expects a string argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::String(s), "ends_with") => {
                 if let Some(Value::String(suffix)) = args.first() {
                     Ok(Value::Bool(s.ends_with(suffix.as_str())))
                 } else {
-                    Err(VietError::type_error("ends_with() expects a string argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "ends_with() expects a string argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::String(s), "replace") => {
@@ -1024,15 +1352,23 @@ impl Interpreter {
                     if let (Value::String(from), Value::String(to)) = (&args[0], &args[1]) {
                         Ok(Value::String(s.replace(from.as_str(), to.as_str())))
                     } else {
-                        Err(VietError::type_error("replace() expects two string arguments".to_string(), span.line, span.column))
+                        Err(VietError::type_error(
+                            "replace() expects two string arguments".to_string(),
+                            span.line,
+                            span.column,
+                        ))
                     }
                 } else {
-                    Err(VietError::type_error("replace() expects exactly 2 arguments".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "replace() expects exactly 2 arguments".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
-            (Value::String(s), "chars") => {
-                Ok(Value::Array(s.chars().map(|c| Value::String(c.to_string())).collect()))
-            }
+            (Value::String(s), "chars") => Ok(Value::Array(
+                s.chars().map(|c| Value::String(c.to_string())).collect(),
+            )),
 
             // Array methods
             (Value::Array(arr), "len") => Ok(Value::Int(arr.len() as i64)),
@@ -1043,20 +1379,24 @@ impl Interpreter {
                     new_arr.push(item.clone());
                     Ok(Value::Array(new_arr))
                 } else {
-                    Err(VietError::type_error("push() expects an item argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "push() expects an item argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
-            (Value::Array(arr), "first") => {
-                Ok(arr.first().cloned().unwrap_or(Value::None))
-            }
-            (Value::Array(arr), "last") => {
-                Ok(arr.last().cloned().unwrap_or(Value::None))
-            }
+            (Value::Array(arr), "first") => Ok(arr.first().cloned().unwrap_or(Value::None)),
+            (Value::Array(arr), "last") => Ok(arr.last().cloned().unwrap_or(Value::None)),
             (Value::Array(arr), "contains") => {
                 if let Some(needle) = args.first() {
                     Ok(Value::Bool(arr.contains(needle)))
                 } else {
-                    Err(VietError::type_error("contains() expects an argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "contains() expects an argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::Array(arr), "join") => {
@@ -1082,7 +1422,11 @@ impl Interpreter {
                     }
                     Ok(Value::Array(result))
                 } else {
-                    Err(VietError::type_error("map() expects a function argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "map() expects a function argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::Array(arr), "filter") => {
@@ -1096,7 +1440,11 @@ impl Interpreter {
                     }
                     Ok(Value::Array(result))
                 } else {
-                    Err(VietError::type_error("filter() expects a function argument".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "filter() expects a function argument".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
             (Value::Array(arr), "reduce") => {
@@ -1108,24 +1456,27 @@ impl Interpreter {
                     }
                     Ok(acc)
                 } else {
-                    Err(VietError::type_error("reduce() expects (function, initial) arguments".to_string(), span.line, span.column))
+                    Err(VietError::type_error(
+                        "reduce() expects (function, initial) arguments".to_string(),
+                        span.line,
+                        span.column,
+                    ))
                 }
             }
 
             // Int/Float methods
-            (Value::Int(_) | Value::Float(_), "abs") => {
-                match object {
-                    Value::Int(n) => Ok(Value::Int(n.abs())),
-                    Value::Float(f) => Ok(Value::Float(f.abs())),
-                    _ => unreachable!(),
-                }
-            }
+            (Value::Int(_) | Value::Float(_), "abs") => match object {
+                Value::Int(n) => Ok(Value::Int(n.abs())),
+                Value::Float(f) => Ok(Value::Float(f.abs())),
+                _ => unreachable!(),
+            },
             (Value::Int(n), "to_float") => Ok(Value::Float(*n as f64)),
             (Value::Float(f), "to_int") => Ok(Value::Int(*f as i64)),
 
             _ => Err(VietError::runtime_error(
                 format!("No method '{}' on type '{}'", method, object.type_name()),
-                span.line, span.column,
+                span.line,
+                span.column,
             )),
         }
     }
@@ -1134,12 +1485,7 @@ impl Interpreter {
     // Built-in Functions
     // ========================================
 
-    fn call_builtin(
-        &mut self,
-        name: &str,
-        args: &[Value],
-        span: &Span,
-    ) -> VietResult<Value> {
+    fn call_builtin(&mut self, name: &str, args: &[Value], span: &Span) -> VietResult<Value> {
         match name {
             "print" => {
                 let output: Vec<String> = args.iter().map(|a| format!("{}", a)).collect();
@@ -1153,71 +1499,100 @@ impl Interpreter {
             }
             "len" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("len() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "len() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::String(s) => Ok(Value::Int(s.len() as i64)),
                     Value::Array(a) => Ok(Value::Int(a.len() as i64)),
                     _ => Err(VietError::type_error(
                         format!("len() not supported for {}", args[0].type_name()),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
             "type_of" | "typeof" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("type_of() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "type_of() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 Ok(Value::String(args[0].type_name().to_string()))
             }
             "to_string" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("to_string() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "to_string() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 Ok(Value::String(format!("{}", args[0])))
             }
             "to_int" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("to_int() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "to_int() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::Int(n) => Ok(Value::Int(*n)),
                     Value::Float(f) => Ok(Value::Int(*f as i64)),
-                    Value::String(s) => s.parse::<i64>()
-                        .map(Value::Int)
-                        .map_err(|_| VietError::runtime_error(
+                    Value::String(s) => s.parse::<i64>().map(Value::Int).map_err(|_| {
+                        VietError::runtime_error(
                             format!("Cannot convert '{}' to Int", s),
-                            span.line, span.column,
-                        )),
+                            span.line,
+                            span.column,
+                        )
+                    }),
                     Value::Bool(b) => Ok(Value::Int(if *b { 1 } else { 0 })),
                     _ => Err(VietError::type_error(
                         format!("Cannot convert {} to Int", args[0].type_name()),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
             "to_float" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("to_float() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "to_float() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::Int(n) => Ok(Value::Float(*n as f64)),
                     Value::Float(f) => Ok(Value::Float(*f)),
-                    Value::String(s) => s.parse::<f64>()
-                        .map(Value::Float)
-                        .map_err(|_| VietError::runtime_error(
+                    Value::String(s) => s.parse::<f64>().map(Value::Float).map_err(|_| {
+                        VietError::runtime_error(
                             format!("Cannot convert '{}' to Float", s),
-                            span.line, span.column,
-                        )),
+                            span.line,
+                            span.column,
+                        )
+                    }),
                     _ => Err(VietError::type_error(
                         format!("Cannot convert {} to Float", args[0].type_name()),
-                        span.line, span.column,
+                        span.line,
+                        span.column,
                     )),
                 }
             }
             "push" => {
                 if args.len() != 2 {
-                    return Err(VietError::runtime_error("push() takes exactly 2 arguments (array, value)".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "push() takes exactly 2 arguments (array, value)".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::Array(arr) => {
@@ -1225,12 +1600,20 @@ impl Interpreter {
                         new_arr.push(args[1].clone());
                         Ok(Value::Array(new_arr))
                     }
-                    _ => Err(VietError::type_error("push() first argument must be an array".to_string(), span.line, span.column)),
+                    _ => Err(VietError::type_error(
+                        "push() first argument must be an array".to_string(),
+                        span.line,
+                        span.column,
+                    )),
                 }
             }
             "pop" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("pop() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "pop() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::Array(arr) => {
@@ -1239,12 +1622,20 @@ impl Interpreter {
                         // Returns the popped value
                         Ok(popped)
                     }
-                    _ => Err(VietError::type_error("pop() argument must be an array".to_string(), span.line, span.column)),
+                    _ => Err(VietError::type_error(
+                        "pop() argument must be an array".to_string(),
+                        span.line,
+                        span.column,
+                    )),
                 }
             }
             "input" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("input() takes exactly 1 argument (prompt)".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "input() takes exactly 1 argument (prompt)".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 print!("{}", args[0]);
                 use std::io::{self, Write};
@@ -1255,32 +1646,56 @@ impl Interpreter {
             }
             "abs" => {
                 if args.len() != 1 {
-                    return Err(VietError::runtime_error("abs() takes exactly 1 argument".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "abs() takes exactly 1 argument".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match &args[0] {
                     Value::Int(n) => Ok(Value::Int(n.abs())),
                     Value::Float(f) => Ok(Value::Float(f.abs())),
-                    _ => Err(VietError::type_error("abs() requires a numeric argument".to_string(), span.line, span.column)),
+                    _ => Err(VietError::type_error(
+                        "abs() requires a numeric argument".to_string(),
+                        span.line,
+                        span.column,
+                    )),
                 }
             }
             "min" => {
                 if args.len() != 2 {
-                    return Err(VietError::runtime_error("min() takes exactly 2 arguments".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "min() takes exactly 2 arguments".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match (&args[0], &args[1]) {
                     (Value::Int(a), Value::Int(b)) => Ok(Value::Int(*a.min(b))),
                     (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a.min(*b))),
-                    _ => Err(VietError::type_error("min() requires numeric arguments".to_string(), span.line, span.column)),
+                    _ => Err(VietError::type_error(
+                        "min() requires numeric arguments".to_string(),
+                        span.line,
+                        span.column,
+                    )),
                 }
             }
             "max" => {
                 if args.len() != 2 {
-                    return Err(VietError::runtime_error("max() takes exactly 2 arguments".to_string(), span.line, span.column));
+                    return Err(VietError::runtime_error(
+                        "max() takes exactly 2 arguments".to_string(),
+                        span.line,
+                        span.column,
+                    ));
                 }
                 match (&args[0], &args[1]) {
                     (Value::Int(a), Value::Int(b)) => Ok(Value::Int(*a.max(b))),
                     (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a.max(*b))),
-                    _ => Err(VietError::type_error("max() requires numeric arguments".to_string(), span.line, span.column)),
+                    _ => Err(VietError::type_error(
+                        "max() requires numeric arguments".to_string(),
+                        span.line,
+                        span.column,
+                    )),
                 }
             }
 
@@ -1316,6 +1731,9 @@ impl Interpreter {
             "ws_accept_key" => crate::stdlib::builtin_ws_accept_key(args, span.line, span.column),
             "uuid" => crate::stdlib::builtin_uuid(args, span.line, span.column),
             "base64_encode" => crate::stdlib::builtin_base64_encode(args, span.line, span.column),
+            "base64_url_encode" => {
+                crate::stdlib::builtin_base64_url_encode(args, span.line, span.column)
+            }
             "random_int" => crate::stdlib::builtin_random_int(args, span.line, span.column),
 
             // std.log
@@ -1342,10 +1760,14 @@ impl Interpreter {
 
             // Concurrency
             "spawn" => self.eval_spawn(args, span),
-            "channel" | "channel_new" => crate::stdlib::builtin_channel(args, span.line, span.column),
+            "channel" | "channel_new" => {
+                crate::stdlib::builtin_channel(args, span.line, span.column)
+            }
             "channel_send" => crate::stdlib::builtin_channel_send(args, span.line, span.column),
             "channel_recv" => crate::stdlib::builtin_channel_recv(args, span.line, span.column),
-            "channel_try_recv" => crate::stdlib::builtin_channel_try_recv(args, span.line, span.column),
+            "channel_try_recv" => {
+                crate::stdlib::builtin_channel_try_recv(args, span.line, span.column)
+            }
             "channel_close" => crate::stdlib::builtin_channel_close(args, span.line, span.column),
             "thread_sleep" => crate::stdlib::builtin_thread_sleep(args, span.line, span.column),
             "mutex_new" => crate::stdlib::builtin_mutex_new(args, span.line, span.column),
@@ -1384,7 +1806,9 @@ impl Interpreter {
             "tcp_ping" => crate::stdlib::builtin_tcp_ping(args, span.line, span.column),
             "tcp_send" => crate::stdlib::builtin_tcp_send(args, span.line, span.column),
             "udp_send" => crate::stdlib::builtin_udp_send(args, span.line, span.column),
-            "str_split_lines" => crate::stdlib::builtin_str_split_lines(args, span.line, span.column),
+            "str_split_lines" => {
+                crate::stdlib::builtin_str_split_lines(args, span.line, span.column)
+            }
             "system_cmd" => crate::stdlib::builtin_system_cmd(args, span.line, span.column),
             "url_encode" => crate::stdlib::builtin_url_encode(args, span.line, span.column),
             "url_decode" => crate::stdlib::builtin_url_decode(args, span.line, span.column),
@@ -1396,36 +1820,79 @@ impl Interpreter {
             "contains" => crate::stdlib::builtin_contains(args, span.line, span.column),
             "hmac_sha256" => crate::stdlib::builtin_hmac_sha256(args, span.line, span.column),
             "hmac_sha512" => crate::stdlib::builtin_hmac_sha512(args, span.line, span.column),
+            "hmac_sha256_base64url" => {
+                crate::stdlib::builtin_hmac_sha256_base64url(args, span.line, span.column)
+            }
+            "secure_compare" => crate::stdlib::builtin_secure_compare(args, span.line, span.column),
+            "password_hash" => crate::stdlib::builtin_password_hash(args, span.line, span.column),
+            "password_verify" => {
+                crate::stdlib::builtin_password_verify(args, span.line, span.column)
+            }
             "encrypt_secret" => crate::stdlib::builtin_encrypt_secret(args, span.line, span.column),
             "decrypt_secret" => crate::stdlib::builtin_decrypt_secret(args, span.line, span.column),
             "ip_in_cidr" => crate::stdlib::builtin_ip_in_cidr(args, span.line, span.column),
             "hex_encode" => crate::stdlib::builtin_hex_encode(args, span.line, span.column),
             "hex_decode" => crate::stdlib::builtin_hex_decode(args, span.line, span.column),
-            "crypto_random_hex" => crate::stdlib::builtin_crypto_random_hex(args, span.line, span.column),
+            "crypto_random_hex" => {
+                crate::stdlib::builtin_crypto_random_hex(args, span.line, span.column)
+            }
             "uuid_v4" => crate::stdlib::builtin_uuid_v4(args, span.line, span.column),
             "time_unix_ms" => crate::stdlib::builtin_time_unix_ms(args, span.line, span.column),
-            "sqlite_open" | "builtin_sqlite_open" => crate::stdlib::builtin_sqlite_open(args, span.line, span.column),
-            "sqlite_exec" | "builtin_sqlite_exec" => crate::stdlib::builtin_sqlite_exec(args, span.line, span.column),
-            "sqlite_execute" | "builtin_sqlite_execute" => crate::stdlib::builtin_sqlite_execute(args, span.line, span.column),
-            "sqlite_query" | "builtin_sqlite_query" => crate::stdlib::builtin_sqlite_query(args, span.line, span.column),
-            "sqlite_close" | "builtin_sqlite_close" => crate::stdlib::builtin_sqlite_close(args, span.line, span.column),
+            "sqlite_open" | "builtin_sqlite_open" => {
+                crate::stdlib::builtin_sqlite_open(args, span.line, span.column)
+            }
+            "sqlite_exec" | "builtin_sqlite_exec" => {
+                crate::stdlib::builtin_sqlite_exec(args, span.line, span.column)
+            }
+            "sqlite_execute" | "builtin_sqlite_execute" => {
+                crate::stdlib::builtin_sqlite_execute(args, span.line, span.column)
+            }
+            "sqlite_query" | "builtin_sqlite_query" => {
+                crate::stdlib::builtin_sqlite_query(args, span.line, span.column)
+            }
+            "sqlite_close" | "builtin_sqlite_close" => {
+                crate::stdlib::builtin_sqlite_close(args, span.line, span.column)
+            }
 
-            "mysql_connect" | "builtin_mysql_connect" => crate::stdlib::builtin_mysql_connect(args, span.line, span.column),
-            "mysql_exec" | "builtin_mysql_exec" => crate::stdlib::builtin_mysql_exec(args, span.line, span.column),
-            "mysql_execute" | "builtin_mysql_execute" => crate::stdlib::builtin_mysql_execute(args, span.line, span.column),
-            "mysql_query" | "builtin_mysql_query" => crate::stdlib::builtin_mysql_query(args, span.line, span.column),
-            "mysql_close" | "builtin_mysql_close" => crate::stdlib::builtin_mysql_close(args, span.line, span.column),
+            "mysql_connect" | "builtin_mysql_connect" => {
+                crate::stdlib::builtin_mysql_connect(args, span.line, span.column)
+            }
+            "mysql_exec" | "builtin_mysql_exec" => {
+                crate::stdlib::builtin_mysql_exec(args, span.line, span.column)
+            }
+            "mysql_execute" | "builtin_mysql_execute" => {
+                crate::stdlib::builtin_mysql_execute(args, span.line, span.column)
+            }
+            "mysql_query" | "builtin_mysql_query" => {
+                crate::stdlib::builtin_mysql_query(args, span.line, span.column)
+            }
+            "mysql_close" | "builtin_mysql_close" => {
+                crate::stdlib::builtin_mysql_close(args, span.line, span.column)
+            }
 
-            "http_fetch" | "builtin_http_fetch" => crate::stdlib::builtin_http_fetch(args, span.line, span.column),
-            "csv_parse" | "builtin_csv_parse" => crate::stdlib::builtin_csv_parse(args, span.line, span.column),
-            "csv_stringify" | "builtin_csv_stringify" => crate::stdlib::builtin_csv_stringify(args, span.line, span.column),
-            "ws_enable" | "builtin_ws_enable" => crate::stdlib::builtin_ws_enable(args, span.line, span.column),
-            "ws_broadcast" | "builtin_ws_broadcast" => crate::stdlib::builtin_ws_broadcast(args, span.line, span.column),
-            "html_escape" | "builtin_html_escape" => crate::stdlib::builtin_html_escape(args, span.line, span.column),
+            "http_fetch" | "builtin_http_fetch" => {
+                crate::stdlib::builtin_http_fetch(args, span.line, span.column)
+            }
+            "csv_parse" | "builtin_csv_parse" => {
+                crate::stdlib::builtin_csv_parse(args, span.line, span.column)
+            }
+            "csv_stringify" | "builtin_csv_stringify" => {
+                crate::stdlib::builtin_csv_stringify(args, span.line, span.column)
+            }
+            "ws_enable" | "builtin_ws_enable" => {
+                crate::stdlib::builtin_ws_enable(args, span.line, span.column)
+            }
+            "ws_broadcast" | "builtin_ws_broadcast" => {
+                crate::stdlib::builtin_ws_broadcast(args, span.line, span.column)
+            }
+            "html_escape" | "builtin_html_escape" => {
+                crate::stdlib::builtin_html_escape(args, span.line, span.column)
+            }
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),
-                span.line, span.column,
+                span.line,
+                span.column,
             )),
         }
     }
@@ -1437,9 +1904,7 @@ impl Interpreter {
     fn match_pattern(&self, pattern: &Pattern, value: &Value) -> Option<Vec<(String, Value)>> {
         match pattern {
             Pattern::Wildcard => Some(Vec::new()),
-            Pattern::Variable(name) => {
-                Some(vec![(name.clone(), value.clone())])
-            }
+            Pattern::Variable(name) => Some(vec![(name.clone(), value.clone())]),
             Pattern::Literal(expr) => {
                 let pattern_val = match expr {
                     Expression::IntLiteral { value, .. } => Value::Int(*value),
@@ -1454,25 +1919,27 @@ impl Interpreter {
                     None
                 }
             }
-            Pattern::EnumVariant { name, fields } => {
-                match value {
-                    Value::EnumVariant { variant, fields: val_fields, .. } => {
-                        if variant == name && fields.len() == val_fields.len() {
-                            let mut bindings = Vec::new();
-                            for (pat, val) in fields.iter().zip(val_fields.iter()) {
-                                match self.match_pattern(pat, val) {
-                                    Some(mut b) => bindings.append(&mut b),
-                                    None => return None,
-                                }
+            Pattern::EnumVariant { name, fields } => match value {
+                Value::EnumVariant {
+                    variant,
+                    fields: val_fields,
+                    ..
+                } => {
+                    if variant == name && fields.len() == val_fields.len() {
+                        let mut bindings = Vec::new();
+                        for (pat, val) in fields.iter().zip(val_fields.iter()) {
+                            match self.match_pattern(pat, val) {
+                                Some(mut b) => bindings.append(&mut b),
+                                None => return None,
                             }
-                            Some(bindings)
-                        } else {
-                            None
                         }
+                        Some(bindings)
+                    } else {
+                        None
                     }
-                    _ => None,
                 }
-            }
+                _ => None,
+            },
         }
     }
 
@@ -1481,8 +1948,17 @@ impl Interpreter {
     // ========================================
 
     fn eval_http_listen(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
+        crate::http_runtime::run_http_server(self.clone(), args, span)
+    }
+
+    #[cfg(any())]
+    fn eval_http_listen_legacy(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
         if args.is_empty() {
-            return Err(VietError::runtime_error("http_listen() takes 1+ arguments (port_or_addr_or_config, handler_fn)".into(), span.line, span.column));
+            return Err(VietError::runtime_error(
+                "http_listen() takes 1+ arguments (port_or_addr_or_config, handler_fn)".into(),
+                span.line,
+                span.column,
+            ));
         }
 
         let mut bind_ip = "0.0.0.0".to_string();
@@ -1523,20 +1999,36 @@ impl Interpreter {
                     handler = Some(args[1].clone());
                 }
             }
-            _ => return Err(VietError::type_error("http_listen() first argument must be Int, String or Config Map".into(), span.line, span.column)),
+            _ => {
+                return Err(VietError::type_error(
+                    "http_listen() first argument must be Int, String or Config Map".into(),
+                    span.line,
+                    span.column,
+                ))
+            }
         }
 
         let addr = format!("{}:{}", bind_ip, port);
-        eprintln!("\x1b[32m[VietLang]\x1b[0m Listening on http://{}:{}", bind_ip, port);
+        eprintln!(
+            "\x1b[32m[VietLang]\x1b[0m Listening on http://{}:{}",
+            bind_ip, port
+        );
 
-        let listener = TcpListener::bind(&addr).map_err(|e|
-            VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), span.line, span.column)
-        )?;
+        let listener = TcpListener::bind(&addr).map_err(|e| {
+            VietError::runtime_error(
+                format!("Cannot bind to {}: {}", addr, e),
+                span.line,
+                span.column,
+            )
+        })?;
 
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
-                    let client_ip = stream.peer_addr().map(|a| a.to_string()).unwrap_or_else(|_| "127.0.0.1".to_string());
+                    let client_ip = stream
+                        .peer_addr()
+                        .map(|a| a.to_string())
+                        .unwrap_or_else(|_| "127.0.0.1".to_string());
                     let mut reader = std::io::BufReader::new(&stream);
                     let mut request_line = String::new();
                     let _ = reader.read_line(&mut request_line);
@@ -1557,10 +2049,12 @@ impl Interpreter {
                         let mut header_line = String::new();
                         let _ = reader.read_line(&mut header_line);
                         let header_line = header_line.trim().to_string();
-                        if header_line.is_empty() { break; }
+                        if header_line.is_empty() {
+                            break;
+                        }
                         if let Some(pos) = header_line.find(':') {
                             let key = header_line[..pos].trim().to_lowercase();
-                            let val = header_line[pos+1..].trim().to_string();
+                            let val = header_line[pos + 1..].trim().to_string();
                             if key == "content-length" {
                                 content_length = val.parse().unwrap_or(0);
                             }
@@ -1577,7 +2071,8 @@ impl Interpreter {
                     }
 
                     // WebSocket RFC 6455 Handshake Upgrade (Only if explicitly enabled by user via std.ws)
-                    let ws_is_active = crate::stdlib::WS_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
+                    let ws_is_active =
+                        crate::stdlib::WS_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
                     let ws_path_matches = {
                         let guard = crate::stdlib::WS_ENDPOINT.lock().unwrap();
                         match &*guard {
@@ -1586,7 +2081,17 @@ impl Interpreter {
                         }
                     };
 
-                    if ws_is_active && ws_path_matches && (headers_map.contains_key("sec-websocket-key") || headers_map.get("upgrade").map(|v| match v { Value::String(s) => s.to_lowercase().contains("websocket"), _ => false }).unwrap_or(false)) {
+                    if ws_is_active
+                        && ws_path_matches
+                        && (headers_map.contains_key("sec-websocket-key")
+                            || headers_map
+                                .get("upgrade")
+                                .map(|v| match v {
+                                    Value::String(s) => s.to_lowercase().contains("websocket"),
+                                    _ => false,
+                                })
+                                .unwrap_or(false))
+                    {
                         let ws_key = match headers_map.get("sec-websocket-key") {
                             Some(Value::String(s)) => s.clone(),
                             _ => "".to_string(),
@@ -1648,55 +2153,73 @@ impl Interpreter {
                         req_map.insert("query".to_string(), Value::String(query_str));
                         req_map.insert("protocol".to_string(), Value::String(http_proto));
                         req_map.insert("client_ip".to_string(), Value::String(client_ip));
-                        req_map.insert("headers".to_string(), Value::Struct { type_name: "Map".to_string(), fields: headers_map });
+                        req_map.insert(
+                            "headers".to_string(),
+                            Value::Struct {
+                                type_name: "Map".to_string(),
+                                fields: headers_map,
+                            },
+                        );
                         req_map.insert("body".to_string(), Value::String(body));
 
-                        let req_val = Value::Struct { type_name: "Map".to_string(), fields: req_map };
+                        let req_val = Value::Struct {
+                            type_name: "Map".to_string(),
+                            fields: req_map,
+                        };
 
                         match self.call_function(h, &[req_val], span) {
-                            Ok(res_val) => {
-                                match &res_val {
-                                    Value::String(s) => {
-                                        let ct = if s.starts_with("<!DOCTYPE") || s.starts_with("<html") {
-                                            "text/html; charset=utf-8".to_string()
-                                        } else {
-                                            "application/json; charset=utf-8".to_string()
-                                        };
-                                        (200, ct, s.clone())
-                                    }
-                                    Value::Struct { fields: m, .. } => {
-                                        let code = if let Some(Value::Int(c)) = m.get("status_code") {
-                                            *c as usize
-                                        } else {
-                                            200
-                                        };
-                                        let ct = if let Some(Value::String(c)) = m.get("content_type") {
-                                            c.clone()
-                                        } else {
-                                            "application/json; charset=utf-8".to_string()
-                                        };
-                                        let b = if let Some(Value::String(body_val)) = m.get("body") {
-                                            body_val.clone()
-                                        } else {
-                                            match crate::stdlib::builtin_json_stringify(&[res_val.clone()], 0, 0) {
-                                                Ok(Value::String(s)) => s,
-                                                _ => format!("{}", res_val),
-                                            }
-                                        };
-                                        (code, ct, b)
-                                    }
-                                    other => {
-                                        let b = match crate::stdlib::builtin_json_stringify(&[other.clone()], 0, 0) {
-                                            Ok(Value::String(s)) => s,
-                                            _ => format!("{}", other),
-                                        };
-                                        (200, "application/json; charset=utf-8".to_string(), b)
-                                    }
+                            Ok(res_val) => match &res_val {
+                                Value::String(s) => {
+                                    let ct = if s.starts_with("<!DOCTYPE") || s.starts_with("<html")
+                                    {
+                                        "text/html; charset=utf-8".to_string()
+                                    } else {
+                                        "application/json; charset=utf-8".to_string()
+                                    };
+                                    (200, ct, s.clone())
                                 }
-                            }
-                            Err(e) => {
-                                (500, "application/json; charset=utf-8".to_string(), format!("{{\"error\":\"Internal Server Error: {}\"}}", e))
-                            }
+                                Value::Struct { fields: m, .. } => {
+                                    let code = if let Some(Value::Int(c)) = m.get("status_code") {
+                                        *c as usize
+                                    } else {
+                                        200
+                                    };
+                                    let ct = if let Some(Value::String(c)) = m.get("content_type") {
+                                        c.clone()
+                                    } else {
+                                        "application/json; charset=utf-8".to_string()
+                                    };
+                                    let b = if let Some(Value::String(body_val)) = m.get("body") {
+                                        body_val.clone()
+                                    } else {
+                                        match crate::stdlib::builtin_json_stringify(
+                                            &[res_val.clone()],
+                                            0,
+                                            0,
+                                        ) {
+                                            Ok(Value::String(s)) => s,
+                                            _ => format!("{}", res_val),
+                                        }
+                                    };
+                                    (code, ct, b)
+                                }
+                                other => {
+                                    let b = match crate::stdlib::builtin_json_stringify(
+                                        &[other.clone()],
+                                        0,
+                                        0,
+                                    ) {
+                                        Ok(Value::String(s)) => s,
+                                        _ => format!("{}", other),
+                                    };
+                                    (200, "application/json; charset=utf-8".to_string(), b)
+                                }
+                            },
+                            Err(e) => (
+                                500,
+                                "application/json; charset=utf-8".to_string(),
+                                format!("{{\"error\":\"Internal Server Error: {}\"}}", e),
+                            ),
                         }
                     } else {
                         (200, "application/json; charset=utf-8".to_string(), format!("{{\"status\":\"OK\",\"path\":\"{}\",\"server\":\"VietLang/0.1.0\"}}", path))
@@ -1708,7 +2231,10 @@ impl Interpreter {
                     );
                     let _ = stream.write_all(response.as_bytes());
                     let _ = stream.flush();
-                    eprintln!("\x1b[36m[HTTP API]\x1b[0m {} {} -> {}", method, path, status_code);
+                    eprintln!(
+                        "\x1b[36m[HTTP API]\x1b[0m {} {} -> {}",
+                        method, path, status_code
+                    );
                 }
                 Err(e) => {
                     eprintln!("\x1b[31m[HTTP Error]\x1b[0m {}", e);
@@ -1721,7 +2247,11 @@ impl Interpreter {
 
     fn eval_spawn(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
         if args.is_empty() {
-            return Err(VietError::runtime_error("spawn() takes at least 1 function or closure argument".into(), span.line, span.column));
+            return Err(VietError::runtime_error(
+                "spawn() takes at least 1 function or closure argument".into(),
+                span.line,
+                span.column,
+            ));
         }
         let func = args[0].clone();
         let call_args = args[1..].to_vec();

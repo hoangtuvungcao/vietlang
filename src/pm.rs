@@ -3,6 +3,7 @@
 
 #![allow(dead_code)]
 
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -40,25 +41,43 @@ pub fn handle_vpm_command(args: &[String]) {
             install_package(&args[1]);
         }
         "update" => {
-            let target = if args.len() >= 2 { Some(args[1].as_str()) } else { None };
+            let target = if args.len() >= 2 {
+                Some(args[1].as_str())
+            } else {
+                None
+            };
             update_package(target);
         }
         "remove" | "uninstall" => {
             if args.len() < 2 {
-                eprintln!("\x1b[31mError:\x1b[0m Package name required.\nExample: vietlang remove redis");
+                eprintln!(
+                    "\x1b[31mError:\x1b[0m Package name required.\nExample: vietlang remove redis"
+                );
                 return;
             }
             remove_package(&args[1]);
         }
         "search" => {
-            let query = if args.len() >= 2 { args[1].as_str() } else { "" };
+            let query = if args.len() >= 2 {
+                args[1].as_str()
+            } else {
+                ""
+            };
             search_registry(query);
         }
         "publish" => publish_package(),
         "sync" | "registry" => sync_registry(),
         "init" | "new" | "create" => {
-            let name = if args.len() >= 2 { args[1].as_str() } else { "my_app" };
-            let tmpl = if args.len() >= 3 { args[2].as_str() } else { "api" };
+            let name = if args.len() >= 2 {
+                args[1].as_str()
+            } else {
+                "my_app"
+            };
+            let tmpl = if args.len() >= 3 {
+                args[2].as_str()
+            } else {
+                "api"
+            };
             init_project(name, tmpl);
         }
         "list" | "ls" => list_installed(),
@@ -90,7 +109,9 @@ fn print_pm_help() {
     println!("  vietlang search <query>             Search Central Registry by name, keywords, or author");
     println!("  vietlang publish                    Publish your library from personal GitHub to Central Registry");
     println!("  vietlang sync                       Sync local registry index with remote community catalog");
-    println!("  vietlang init <name> [template]     Initialize new project (lib | api | microservice)");
+    println!(
+        "  vietlang init <name> [template]     Initialize new project (lib | api | microservice)"
+    );
     println!("  vietlang list                       List installed dependencies");
     println!("  vietlang docs <module>              Inspect module exported function signatures");
     println!("  vietlang verify                     Verify project syntax & test suite");
@@ -98,8 +119,12 @@ fn print_pm_help() {
     println!("EXAMPLES:");
     println!("  vietlang install redis              Install latest Redis from Central Registry");
     println!("  vietlang install redis@1.2.0        Install exact version 1.2.0");
-    println!("  vietlang search postgres            Search for PostgreSQL modules in Central Registry");
-    println!("  vietlang publish                    Publish current module to the Central Registry");
+    println!(
+        "  vietlang search postgres            Search for PostgreSQL modules in Central Registry"
+    );
+    println!(
+        "  vietlang publish                    Publish current module to the Central Registry"
+    );
     println!("  vietlang sync                       Sync sharded package index");
     println!();
 }
@@ -143,7 +168,11 @@ fn sync_registry() {
 
     // Verify git connectivity
     let res = Command::new("git")
-        .args(["ls-remote", "https://github.com/hoangtuvungcao/vietlang.git", "refs/heads/main"])
+        .args([
+            "ls-remote",
+            "https://github.com/hoangtuvungcao/vietlang.git",
+            "refs/heads/main",
+        ])
         .output();
 
     if let Ok(out) = res {
@@ -163,42 +192,258 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
 
     // Standard baseline catalog (30+ official modules & drivers)
     let default_entries = [
-        ("redis", "1.2.0", "High-performance Redis client & Pub/Sub broker", "https://github.com/hoangtuvungcao/vietlang_redis.git", "hoangtuvungcao"),
-        ("postgres", "2.1.0", "Production-grade PostgreSQL driver with connection pool", "https://github.com/hoangtuvungcao/vietlang_postgres.git", "hoangtuvungcao"),
-        ("mysql", "1.1.0", "MySQL protocol driver with connection pool & prepared queries", "https://github.com/hoangtuvungcao/vietlang_mysql.git", "hoangtuvungcao"),
-        ("sqlite", "1.0.0", "ACID compliant SQLite relational storage engine", "https://github.com/hoangtuvungcao/vietlang_sqlite.git", "hoangtuvungcao"),
-        ("auth", "3.0.0", "OAuth2, JWT RBAC security, session & password hashing", "https://github.com/hoangtuvungcao/vietlang_auth.git", "hoangtuvungcao"),
-        ("mailer", "1.0.1", "SMTP Email client with template rendering", "https://github.com/hoangtuvungcao/vietlang_mailer.git", "hoangtuvungcao"),
-        ("graphql", "0.9.0", "GraphQL schema parser, query executor & resolvers", "https://github.com/hoangtuvungcao/vietlang_graphql.git", "hoangtuvungcao"),
-        ("grpc", "0.8.5", "gRPC & Protobuf RPC microservice framework", "https://github.com/hoangtuvungcao/vietlang_grpc.git", "hoangtuvungcao"),
-        ("kafka", "2.0.1", "Distributed event streaming partitioned consumer & producer", "https://github.com/hoangtuvungcao/vietlang_kafka.git", "hoangtuvungcao"),
-        ("rabbitmq", "1.0.2", "AMQP RabbitMQ message broker client", "https://github.com/hoangtuvungcao/vietlang_rabbitmq.git", "hoangtuvungcao"),
-        ("saga", "1.0.0", "Distributed SAGA transaction coordinator with compensating rollbacks", "https://github.com/hoangtuvungcao/vietlang_saga.git", "hoangtuvungcao"),
-        ("retry", "1.0.0", "Exponential backoff retry policy with jitter", "https://github.com/hoangtuvungcao/vietlang_retry.git", "hoangtuvungcao"),
-        ("cron", "1.0.0", "Enterprise cron job scheduler engine", "https://github.com/hoangtuvungcao/vietlang_cron.git", "hoangtuvungcao"),
-        ("cache_lru", "1.0.0", "Fixed-capacity Least-Recently-Used cache with eviction", "https://github.com/hoangtuvungcao/vietlang_cache_lru.git", "hoangtuvungcao"),
-        ("sql_builder", "1.0.0", "Multi-table SQL Query Builder (INNER/LEFT JOIN, GROUP BY)", "https://github.com/hoangtuvungcao/vietlang_sql_builder.git", "hoangtuvungcao"),
-        ("metrics", "1.0.0", "Prometheus metrics exporter (Counters, Gauges)", "https://github.com/hoangtuvungcao/vietlang_metrics.git", "hoangtuvungcao"),
-        ("security", "1.0.0", "Password hashing, constant-time compare, CSRF, XSS filter", "https://github.com/hoangtuvungcao/vietlang_security.git", "hoangtuvungcao"),
-        ("crypto_advanced", "1.0.0", "Webhook HMAC-SHA256 signature verification & payload encryption", "https://github.com/hoangtuvungcao/vietlang_crypto_advanced.git", "hoangtuvungcao"),
-        ("kv_store", "1.0.0", "In-memory Redis engine (Atomic INCR, Hashes, TTL)", "https://github.com/hoangtuvungcao/vietlang_kv_store.git", "hoangtuvungcao"),
-        ("stream", "1.0.0", "Kafka-like partitioned stream broker with consumer offsets", "https://github.com/hoangtuvungcao/vietlang_stream.git", "hoangtuvungcao"),
-        ("http_pipeline", "1.0.0", "Onion-model middleware with automated Security Headers", "https://github.com/hoangtuvungcao/vietlang_http_pipeline.git", "hoangtuvungcao"),
-        ("websocket", "1.0.0", "WebSocket RFC 6455 framing & room broadcaster", "https://github.com/hoangtuvungcao/vietlang_websocket.git", "hoangtuvungcao"),
-        ("socket", "1.0.0", "Raw TCP/UDP low-level socket client", "https://github.com/hoangtuvungcao/vietlang_socket.git", "hoangtuvungcao"),
-        ("jwt", "1.0.0", "JWT authentication with Role-Based Access Control (RBAC)", "https://github.com/hoangtuvungcao/vietlang_jwt.git", "hoangtuvungcao"),
-        ("http_router", "1.0.0", "High-level web routing and JSON responses", "https://github.com/hoangtuvungcao/vietlang_http_router.git", "hoangtuvungcao"),
-        ("validator", "1.0.0", "Request payload validation rules", "https://github.com/hoangtuvungcao/vietlang_validator.git", "hoangtuvungcao"),
-        ("orm", "1.0.0", "SQL query builder and data layer", "https://github.com/hoangtuvungcao/vietlang_orm.git", "hoangtuvungcao"),
-        ("migration", "1.0.0", "Database schema migration versioning", "https://github.com/hoangtuvungcao/vietlang_migration.git", "hoangtuvungcao"),
-        ("rate_limiter", "1.0.0", "Token bucket DDoS protection", "https://github.com/hoangtuvungcao/vietlang_rate_limiter.git", "hoangtuvungcao"),
-        ("circuit_breaker", "1.0.0", "Fault-tolerance circuit breaker pattern", "https://github.com/hoangtuvungcao/vietlang_circuit_breaker.git", "hoangtuvungcao"),
-        ("telemetry", "1.0.0", "OpenTelemetry trace context and header propagation", "https://github.com/hoangtuvungcao/vietlang_telemetry.git", "hoangtuvungcao"),
-        ("health", "1.0.0", "Kubernetes /healthz and /readyz probe checkers", "https://github.com/hoangtuvungcao/vietlang_health.git", "hoangtuvungcao"),
-        ("event_bus", "1.0.0", "In-memory Pub/Sub event bus", "https://github.com/hoangtuvungcao/vietlang_event_bus.git", "hoangtuvungcao"),
-        ("queue", "1.0.0", "Asynchronous task queue with Dead-Letter Queue (DLQ)", "https://github.com/hoangtuvungcao/vietlang_queue.git", "hoangtuvungcao"),
-        ("config", "1.0.0", "Environment variables and .env loader", "https://github.com/hoangtuvungcao/vietlang_config.git", "hoangtuvungcao"),
-        ("multipart", "1.0.0", "Streaming multipart form-data and binary/text file upload decoder", "https://github.com/hoangtuvungcao/vietlang_multipart.git", "hoangtuvungcao"),
+        (
+            "redis",
+            "1.2.0",
+            "High-performance Redis client & Pub/Sub broker",
+            "https://github.com/hoangtuvungcao/vietlang_redis.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "postgres",
+            "2.1.0",
+            "Experimental PostgreSQL adapter with connection pool helpers",
+            "https://github.com/hoangtuvungcao/vietlang_postgres.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "mysql",
+            "1.1.0",
+            "MySQL protocol driver with connection pool & prepared queries",
+            "https://github.com/hoangtuvungcao/vietlang_mysql.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "sqlite",
+            "1.0.0",
+            "ACID compliant SQLite relational storage engine",
+            "https://github.com/hoangtuvungcao/vietlang_sqlite.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "auth",
+            "3.0.0",
+            "OAuth2, JWT RBAC security, session & password hashing",
+            "https://github.com/hoangtuvungcao/vietlang_auth.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "mailer",
+            "1.0.1",
+            "SMTP Email client with template rendering",
+            "https://github.com/hoangtuvungcao/vietlang_mailer.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "graphql",
+            "0.9.0",
+            "GraphQL schema parser, query executor & resolvers",
+            "https://github.com/hoangtuvungcao/vietlang_graphql.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "grpc",
+            "0.8.5",
+            "gRPC & Protobuf RPC microservice framework",
+            "https://github.com/hoangtuvungcao/vietlang_grpc.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "kafka",
+            "2.0.1",
+            "Distributed event streaming partitioned consumer & producer",
+            "https://github.com/hoangtuvungcao/vietlang_kafka.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "rabbitmq",
+            "1.0.2",
+            "AMQP RabbitMQ message broker client",
+            "https://github.com/hoangtuvungcao/vietlang_rabbitmq.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "saga",
+            "1.0.0",
+            "Distributed SAGA transaction coordinator with compensating rollbacks",
+            "https://github.com/hoangtuvungcao/vietlang_saga.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "retry",
+            "1.0.0",
+            "Exponential backoff retry policy with jitter",
+            "https://github.com/hoangtuvungcao/vietlang_retry.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "cron",
+            "1.0.0",
+            "Enterprise cron job scheduler engine",
+            "https://github.com/hoangtuvungcao/vietlang_cron.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "cache_lru",
+            "1.0.0",
+            "Fixed-capacity Least-Recently-Used cache with eviction",
+            "https://github.com/hoangtuvungcao/vietlang_cache_lru.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "sql_builder",
+            "1.0.0",
+            "Multi-table SQL Query Builder (INNER/LEFT JOIN, GROUP BY)",
+            "https://github.com/hoangtuvungcao/vietlang_sql_builder.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "metrics",
+            "1.0.0",
+            "Prometheus metrics exporter (Counters, Gauges)",
+            "https://github.com/hoangtuvungcao/vietlang_metrics.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "security",
+            "1.0.0",
+            "Password hashing, constant-time compare, CSRF, XSS filter",
+            "https://github.com/hoangtuvungcao/vietlang_security.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "crypto_advanced",
+            "1.0.0",
+            "Webhook HMAC-SHA256 signature verification & payload encryption",
+            "https://github.com/hoangtuvungcao/vietlang_crypto_advanced.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "kv_store",
+            "1.0.0",
+            "In-memory Redis engine (Atomic INCR, Hashes, TTL)",
+            "https://github.com/hoangtuvungcao/vietlang_kv_store.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "stream",
+            "1.0.0",
+            "Kafka-like partitioned stream broker with consumer offsets",
+            "https://github.com/hoangtuvungcao/vietlang_stream.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "http_pipeline",
+            "1.0.0",
+            "Onion-model middleware with automated Security Headers",
+            "https://github.com/hoangtuvungcao/vietlang_http_pipeline.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "websocket",
+            "1.0.0",
+            "WebSocket RFC 6455 framing & room broadcaster",
+            "https://github.com/hoangtuvungcao/vietlang_websocket.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "socket",
+            "1.0.0",
+            "Raw TCP/UDP low-level socket client",
+            "https://github.com/hoangtuvungcao/vietlang_socket.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "jwt",
+            "1.0.0",
+            "JWT authentication with Role-Based Access Control (RBAC)",
+            "https://github.com/hoangtuvungcao/vietlang_jwt.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "http_router",
+            "1.0.0",
+            "High-level web routing and JSON responses",
+            "https://github.com/hoangtuvungcao/vietlang_http_router.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "validator",
+            "1.0.0",
+            "Request payload validation rules",
+            "https://github.com/hoangtuvungcao/vietlang_validator.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "orm",
+            "1.0.0",
+            "SQL query builder and data layer",
+            "https://github.com/hoangtuvungcao/vietlang_orm.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "migration",
+            "1.0.0",
+            "Database schema migration versioning",
+            "https://github.com/hoangtuvungcao/vietlang_migration.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "rate_limiter",
+            "1.0.0",
+            "Token bucket DDoS protection",
+            "https://github.com/hoangtuvungcao/vietlang_rate_limiter.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "circuit_breaker",
+            "1.0.0",
+            "Fault-tolerance circuit breaker pattern",
+            "https://github.com/hoangtuvungcao/vietlang_circuit_breaker.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "telemetry",
+            "1.0.0",
+            "OpenTelemetry trace context and header propagation",
+            "https://github.com/hoangtuvungcao/vietlang_telemetry.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "health",
+            "1.0.0",
+            "Kubernetes /healthz and /readyz probe checkers",
+            "https://github.com/hoangtuvungcao/vietlang_health.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "event_bus",
+            "1.0.0",
+            "In-memory Pub/Sub event bus",
+            "https://github.com/hoangtuvungcao/vietlang_event_bus.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "queue",
+            "1.0.0",
+            "Asynchronous task queue with Dead-Letter Queue (DLQ)",
+            "https://github.com/hoangtuvungcao/vietlang_queue.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "config",
+            "1.0.0",
+            "Environment variables and .env loader",
+            "https://github.com/hoangtuvungcao/vietlang_config.git",
+            "hoangtuvungcao",
+        ),
+        (
+            "multipart",
+            "1.0.0",
+            "Streaming multipart form-data and binary/text file upload decoder",
+            "https://github.com/hoangtuvungcao/vietlang_multipart.git",
+            "hoangtuvungcao",
+        ),
     ];
 
     for (name, ver, desc, src, author) in default_entries {
@@ -210,7 +455,7 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
                 description: desc.to_string(),
                 author: author.to_string(),
                 source: src.to_string(),
-                checksum: "sha256_verified".to_string(),
+                checksum: "unverified".to_string(),
                 keywords: vec![name.to_string()],
             },
         );
@@ -256,15 +501,39 @@ fn scan_shards_recursive(dir: &Path, map: &mut HashMap<String, PackageIndexEntry
 }
 
 fn parse_shard_file(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
-    let name = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"name\":")).unwrap_or(""));
-    let version = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"version\":")).unwrap_or(""));
+    let name = extract_json_str(
+        &raw.lines()
+            .find(|l| l.trim().starts_with("\"name\":"))
+            .unwrap_or(""),
+    );
+    let version = extract_json_str(
+        &raw.lines()
+            .find(|l| l.trim().starts_with("\"version\":"))
+            .unwrap_or(""),
+    );
     let desc = extract_json_str(&raw_manifest_desc(raw));
-    let author = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"author\":")).unwrap_or(""));
-    let source = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"source\":")).unwrap_or(""));
+    let author = extract_json_str(
+        &raw.lines()
+            .find(|l| l.trim().starts_with("\"author\":"))
+            .unwrap_or(""),
+    );
+    let source = extract_json_str(
+        &raw.lines()
+            .find(|l| l.trim().starts_with("\"source\":"))
+            .unwrap_or(""),
+    );
 
     if !name.is_empty() && !version.is_empty() {
-        let author_str = if author.is_empty() { "community".to_string() } else { author };
-        let src_str = if source.is_empty() { format!("https://github.com/hoangtuvungcao/vietlang_{}.git", name) } else { source };
+        let author_str = if author.is_empty() {
+            "community".to_string()
+        } else {
+            author
+        };
+        let src_str = if source.is_empty() {
+            format!("https://github.com/hoangtuvungcao/vietlang_{}.git", name)
+        } else {
+            source
+        };
 
         let mut versions = HashMap::new();
         versions.insert(
@@ -274,7 +543,7 @@ fn parse_shard_file(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
                 description: desc,
                 author: author_str,
                 source: src_str,
-                checksum: "sha256_verified".to_string(),
+                checksum: "unverified".to_string(),
                 keywords: vec![name.clone()],
             },
         );
@@ -291,7 +560,9 @@ fn parse_shard_file(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
 }
 
 fn raw_manifest_desc(raw: &str) -> &str {
-    raw.lines().find(|l| l.trim().starts_with("\"description\":")).unwrap_or("")
+    raw.lines()
+        .find(|l| l.trim().starts_with("\"description\":"))
+        .unwrap_or("")
 }
 
 fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
@@ -323,7 +594,10 @@ fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEnt
         if (trimmed == "}," || trimmed == "}") && current_pkg.is_some() {
             let pkg_name = current_pkg.clone().unwrap();
             let src = if current_source.is_empty() {
-                format!("https://github.com/hoangtuvungcao/vietlang_{}.git", pkg_name)
+                format!(
+                    "https://github.com/hoangtuvungcao/vietlang_{}.git",
+                    pkg_name
+                )
             } else {
                 current_source.clone()
             };
@@ -336,7 +610,7 @@ fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEnt
                     description: current_desc.clone(),
                     author: current_author.clone(),
                     source: src,
-                    checksum: "sha256_verified".to_string(),
+                    checksum: "unverified".to_string(),
                     keywords: vec![pkg_name.clone()],
                 },
             );
@@ -363,7 +637,10 @@ fn extract_json_str(line: &str) -> String {
 }
 
 fn search_registry(query: &str) {
-    println!("\x1b[36mSearching VietLang Central Community Registry for:\x1b[0m '\x1b[33m{}\x1b[0m'...", query);
+    println!(
+        "\x1b[36mSearching VietLang Central Community Registry for:\x1b[0m '\x1b[33m{}\x1b[0m'...",
+        query
+    );
     println!("=========================================================================");
     let registry = load_registry();
     let mut count = 0;
@@ -374,7 +651,9 @@ fn search_registry(query: &str) {
     for name in keys {
         let entry = &registry[name];
         let latest_ver = entry.versions.get(&entry.latest);
-        let desc = latest_ver.map(|v| v.description.as_str()).unwrap_or("No description");
+        let desc = latest_ver
+            .map(|v| v.description.as_str())
+            .unwrap_or("No description");
         let author = latest_ver.map(|v| v.author.as_str()).unwrap_or("community");
 
         let matches = query.is_empty()
@@ -384,9 +663,15 @@ fn search_registry(query: &str) {
 
         if matches {
             count += 1;
-            println!("* \x1b[36m{}\x1b[0m (v{}) by \x1b[35m@{}\x1b[0m", name, entry.latest, author);
+            println!(
+                "* \x1b[36m{}\x1b[0m (v{}) by \x1b[35m@{}\x1b[0m",
+                name, entry.latest, author
+            );
             println!("    Description: {}", desc);
-            println!("    Install:     \x1b[33mvietlang install {}\x1b[0m (or vietlang install {}@{})", name, name, entry.latest);
+            println!(
+                "    Install:     \x1b[33mvietlang install {}\x1b[0m (or vietlang install {}@{})",
+                name, name, entry.latest
+            );
             println!();
         }
     }
@@ -410,23 +695,54 @@ fn install_package(spec: &str) {
             Some(v_entry) => v_entry.source.clone(),
             None => {
                 println!("\x1b[33mWarning:\x1b[0m Version '{}' not found for '{}'. Using latest version '{}'", ver, raw_name, entry.latest);
-                entry.versions.get(&entry.latest).map(|v| v.source.clone()).unwrap_or_else(|| format!("https://github.com/hoangtuvungcao/vietlang_{}.git", raw_name))
+                entry
+                    .versions
+                    .get(&entry.latest)
+                    .map(|v| v.source.clone())
+                    .unwrap_or_else(|| {
+                        format!(
+                            "https://github.com/hoangtuvungcao/vietlang_{}.git",
+                            raw_name
+                        )
+                    })
             }
         };
         (raw_name.to_string(), ver.to_string(), src)
-    } else if raw_name.starts_with("http://") || raw_name.starts_with("https://") || raw_name.starts_with("git@") {
+    } else if raw_name.starts_with("http://")
+        || raw_name.starts_with("https://")
+        || raw_name.starts_with("git@")
+    {
         let clean = raw_name.trim_end_matches(".git");
         let name = clean.split('/').last().unwrap_or(clean).to_string();
-        (name, req_version.unwrap_or("latest").to_string(), raw_name.to_string())
+        (
+            name,
+            req_version.unwrap_or("latest").to_string(),
+            raw_name.to_string(),
+        )
     } else if raw_name.contains('/') {
         let clean = raw_name.trim_start_matches("github:");
         let name = clean.split('/').last().unwrap_or(clean).to_string();
         let url = format!("https://github.com/{}.git", clean);
         (name, req_version.unwrap_or("latest").to_string(), url)
     } else {
-        let url = format!("https://github.com/hoangtuvungcao/vietlang_{}.git", raw_name);
-        (raw_name.to_string(), req_version.unwrap_or("latest").to_string(), url)
+        let url = format!(
+            "https://github.com/hoangtuvungcao/vietlang_{}.git",
+            raw_name
+        );
+        (
+            raw_name.to_string(),
+            req_version.unwrap_or("latest").to_string(),
+            url,
+        )
     };
+
+    if !valid_package_name(&pkg_name) {
+        eprintln!(
+            "\x1b[31mError:\x1b[0m Invalid package name '{}'. Use ASCII letters, digits, '-' or '_' only.",
+            pkg_name
+        );
+        return;
+    }
 
     println!("\x1b[36m[Central Registry]\x1b[0m Resolving '\x1b[33m{}\x1b[0m' (version: \x1b[32m{}\x1b[0m)...", pkg_name, target_version);
     println!("Source Repository: {}", source_url);
@@ -435,24 +751,47 @@ fn install_package(spec: &str) {
     let target_dir = format!("modules/{}", pkg_name);
 
     if Path::new(&target_dir).exists() {
-        println!("Package '{}' already exists in modules/. Updating...", pkg_name);
-        let _ = Command::new("git").args(["-C", &target_dir, "pull"]).output();
+        println!(
+            "Package '{}' already exists in modules/. Updating...",
+            pkg_name
+        );
+        let status = Command::new("git")
+            .args(["-C", &target_dir, "pull"])
+            .status();
+        if !command_succeeded(status) {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot update '{}'.", pkg_name);
+            return;
+        }
     } else {
         println!("Cloning package from source into {}...", target_dir);
-        let status = Command::new("git").args(["clone", &source_url, &target_dir]).status();
-        if let Err(e) = status {
-            eprintln!("\x1b[31mError cloning package:\x1b[0m {}", e);
+        let status = Command::new("git")
+            .args(["clone", &source_url, &target_dir])
+            .status();
+        if !command_succeeded(status) {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot clone package '{}'.", pkg_name);
             return;
         }
     }
 
     if target_version != "latest" {
-        let _ = Command::new("git").args(["-C", &target_dir, "checkout", &target_version]).output();
+        let status = Command::new("git")
+            .args(["-C", &target_dir, "checkout", &target_version])
+            .status();
+        if !command_succeeded(status) {
+            eprintln!(
+                "\x1b[31mError:\x1b[0m Cannot check out requested revision '{}'.",
+                target_version
+            );
+            return;
+        }
     }
 
     ensure_manifest_dependency(&pkg_name, &target_version);
 
-    println!("\x1b[32mSuccessfully installed\x1b[0m '{}@{}' into modules/{}", pkg_name, target_version, pkg_name);
+    println!(
+        "\x1b[32mSuccessfully installed\x1b[0m '{}@{}' into modules/{}",
+        pkg_name, target_version, pkg_name
+    );
     println!("Usage in your code:");
     println!("  \x1b[33mimport modules.{}.src.main\x1b[0m", pkg_name);
 }
@@ -462,19 +801,32 @@ fn update_package(target: Option<&str>) {
         Some(spec) => {
             let parts: Vec<&str> = spec.split('@').collect();
             let pkg_name = parts[0];
+            if !valid_package_name(pkg_name) {
+                eprintln!("\x1b[31mError:\x1b[0m Invalid package name '{}'.", pkg_name);
+                return;
+            }
             let target_dir = format!("modules/{}", pkg_name);
             if !Path::new(&target_dir).exists() {
-                eprintln!("\x1b[31mError:\x1b[0m Module '{}' is not installed in modules/.", pkg_name);
+                eprintln!(
+                    "\x1b[31mError:\x1b[0m Module '{}' is not installed in modules/.",
+                    pkg_name
+                );
                 return;
             }
             println!("Updating package '{}' in {}...", pkg_name, target_dir);
-            let _ = Command::new("git").args(["-C", &target_dir, "fetch", "--all"]).output();
+            let _ = Command::new("git")
+                .args(["-C", &target_dir, "fetch", "--all"])
+                .output();
             if parts.len() > 1 && !parts[1].is_empty() && parts[1] != "latest" {
                 let ver = parts[1];
-                let _ = Command::new("git").args(["-C", &target_dir, "checkout", ver]).output();
+                let _ = Command::new("git")
+                    .args(["-C", &target_dir, "checkout", ver])
+                    .output();
                 println!("\x1b[32mChecked out version tag '{}'\x1b[0m", ver);
             } else {
-                let _ = Command::new("git").args(["-C", &target_dir, "pull"]).output();
+                let _ = Command::new("git")
+                    .args(["-C", &target_dir, "pull"])
+                    .output();
                 println!("\x1b[32mUpdated to latest version on default branch.\x1b[0m");
             }
         }
@@ -495,6 +847,10 @@ fn update_package(target: Option<&str>) {
 }
 
 fn remove_package(pkg_name: &str) {
+    if !valid_package_name(pkg_name) {
+        eprintln!("\x1b[31mError:\x1b[0m Invalid package name '{}'.", pkg_name);
+        return;
+    }
     let target_dir = format!("modules/{}", pkg_name);
     if Path::new(&target_dir).exists() {
         let _ = fs::remove_dir_all(&target_dir);
@@ -503,7 +859,8 @@ fn remove_package(pkg_name: &str) {
 
     if Path::new("vietlang.json").exists() {
         if let Ok(content) = fs::read_to_string("vietlang.json") {
-            let updated = content.lines()
+            let updated = content
+                .lines()
                 .filter(|line| !line.contains(&format!("\"{}\"", pkg_name)))
                 .collect::<Vec<&str>>()
                 .join("\n");
@@ -511,7 +868,35 @@ fn remove_package(pkg_name: &str) {
         }
     }
 
-    println!("\x1b[32mRemoved package '{}' successfully.\x1b[0m", pkg_name);
+    println!(
+        "\x1b[32mRemoved package '{}' successfully.\x1b[0m",
+        pkg_name
+    );
+}
+
+fn valid_package_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+}
+
+fn command_succeeded(status: std::io::Result<std::process::ExitStatus>) -> bool {
+    matches!(status, Ok(status) if status.success())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::valid_package_name;
+
+    #[test]
+    fn package_names_cannot_escape_modules_directory() {
+        assert!(valid_package_name("http-router_2"));
+        assert!(!valid_package_name("../outside"));
+        assert!(!valid_package_name("nested/package"));
+        assert!(!valid_package_name(""));
+    }
 }
 
 fn publish_package() {
@@ -525,15 +910,42 @@ fn publish_package() {
     }
 
     let raw_manifest = fs::read_to_string("vietlang.json").unwrap_or_default();
-    let pkg_name = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"name\":")).unwrap_or(""));
-    let version = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"version\":")).unwrap_or(""));
-    let desc = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"description\":")).unwrap_or(""));
-    let author = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"author\":")).unwrap_or(""));
-    let mut repo = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"repository\":")).unwrap_or(""));
+    let pkg_name = extract_json_str(
+        &raw_manifest
+            .lines()
+            .find(|l| l.trim().starts_with("\"name\":"))
+            .unwrap_or(""),
+    );
+    let version = extract_json_str(
+        &raw_manifest
+            .lines()
+            .find(|l| l.trim().starts_with("\"version\":"))
+            .unwrap_or(""),
+    );
+    let desc = extract_json_str(
+        &raw_manifest
+            .lines()
+            .find(|l| l.trim().starts_with("\"description\":"))
+            .unwrap_or(""),
+    );
+    let author = extract_json_str(
+        &raw_manifest
+            .lines()
+            .find(|l| l.trim().starts_with("\"author\":"))
+            .unwrap_or(""),
+    );
+    let mut repo = extract_json_str(
+        &raw_manifest
+            .lines()
+            .find(|l| l.trim().starts_with("\"repository\":"))
+            .unwrap_or(""),
+    );
 
     // Auto-detect git origin remote if not explicitly specified in manifest
     if repo.is_empty() {
-        let git_remote_cmd = Command::new("git").args(["remote", "get-url", "origin"]).output();
+        let git_remote_cmd = Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .output();
         if let Ok(out) = git_remote_cmd {
             if out.status.success() {
                 repo = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -541,8 +953,16 @@ fn publish_package() {
         }
     }
 
-    let author_display = if author.is_empty() { "community_developer" } else { &author };
-    let repo_display = if repo.is_empty() { format!("https://github.com/{}/{}.git", author_display, pkg_name) } else { repo.clone() };
+    let author_display = if author.is_empty() {
+        "community_developer"
+    } else {
+        &author
+    };
+    let repo_display = if repo.is_empty() {
+        format!("https://github.com/{}/{}.git", author_display, pkg_name)
+    } else {
+        repo.clone()
+    };
 
     println!("\x1b[36m=== Publishing Module to Central Community Registry ===\x1b[0m");
     println!("  Package:     \x1b[33m{}\x1b[0m", pkg_name);
@@ -551,11 +971,17 @@ fn publish_package() {
     println!("  Repository:  {}", repo_display);
     println!("  Description: {}", desc);
 
-    // Compute checksum
-    let src_content = fs::read_to_string("src/main.vl").unwrap_or_default();
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    std::hash::Hash::hash(&src_content, &mut hasher);
-    let checksum = format!("vlt_{:016x}", std::hash::Hasher::finish(&hasher));
+    // Hash the manifest and complete source tree with stable relative paths.
+    let checksum = match package_sha256(Path::new(".")) {
+        Ok(digest) => format!("sha256:{}", digest),
+        Err(error) => {
+            eprintln!(
+                "\x1b[31mError:\x1b[0m Cannot hash package contents: {}",
+                error
+            );
+            return;
+        }
+    };
 
     println!("  Checksum:    {}", checksum);
 
@@ -604,24 +1030,78 @@ fn publish_package() {
       }}
     }},
 "#,
-            pkg_name, pkg_name, version, version, version, desc, author_display, repo_display, checksum, pkg_name
+            pkg_name,
+            pkg_name,
+            version,
+            version,
+            version,
+            desc,
+            author_display,
+            repo_display,
+            checksum,
+            pkg_name
         );
 
         if !reg_content.contains(&format!("\"{}\":", pkg_name)) {
-            let updated = reg_content.replacen("\"packages\": {", &format!("\"packages\": {{\n{}", new_pkg_entry), 1);
+            let updated = reg_content.replacen(
+                "\"packages\": {",
+                &format!("\"packages\": {{\n{}", new_pkg_entry),
+                1,
+            );
             let _ = fs::write(&master_index, updated);
             println!("  Master Index:  \x1b[32mUpdated {}\x1b[0m", master_index);
         }
     }
 
-    println!("\x1b[32mSuccessfully published '{}@{}' to VietLang Central Registry!\x1b[0m", pkg_name, version);
+    println!(
+        "\x1b[32mSuccessfully published '{}@{}' to VietLang Central Registry!\x1b[0m",
+        pkg_name, version
+    );
     println!();
     println!("Global Discovery & Usage:");
-    println!("  Any developer can search:  \x1b[33mvietlang search {}\x1b[0m", pkg_name);
+    println!(
+        "  Any developer can search:  \x1b[33mvietlang search {}\x1b[0m",
+        pkg_name
+    );
     println!("  Any developer can install: \x1b[33mvietlang install {}\x1b[0m (or vietlang install {}@{})", pkg_name, pkg_name, version);
     println!();
     println!("Community Contribution:");
-    println!("  Submit your shard file ({}) to https://github.com/hoangtuvungcao/vietlang/pulls", shard_rel);
+    println!(
+        "  Submit your shard file ({}) to https://github.com/hoangtuvungcao/vietlang/pulls",
+        shard_rel
+    );
+}
+
+fn package_sha256(root: &Path) -> std::io::Result<String> {
+    let mut files = vec![root.join("vietlang.json")];
+    collect_package_files(&root.join("src"), &mut files)?;
+    files.retain(|path| path.is_file());
+    files.sort();
+
+    let mut hasher = Sha256::new();
+    for path in files {
+        let relative = path.strip_prefix(root).unwrap_or(&path);
+        hasher.update(relative.to_string_lossy().as_bytes());
+        hasher.update([0]);
+        hasher.update(fs::read(&path)?);
+        hasher.update([0]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn collect_package_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_package_files(&path, files)?;
+        } else if path.is_file() {
+            files.push(path);
+        }
+    }
+    Ok(())
 }
 
 fn init_project(name: &str, _template_type: &str) {
@@ -642,7 +1122,7 @@ fn init_project(name: &str, _template_type: &str) {
   "author": "developer",
   "repository": "https://github.com/developer/{}.git",
   "type": "backend_api",
-  "description": "Production Backend REST API & High-Performance Microservice in VietLang",
+  "description": "Experimental Backend REST API Prototype in VietLang",
   "main": "src/main.vl",
   "scripts": {{
     "start": "vietlang run src/main.vl",
@@ -654,8 +1134,7 @@ fn init_project(name: &str, _template_type: &str) {
   "dependencies": {{
     "sqlite": "1.0.0",
     "http_router": "1.0.0",
-    "validator": "1.0.0",
-    "jwt": "1.0.0"
+    "validator": "1.0.0"
   }},
   "license": "MIT"
 }}
@@ -667,7 +1146,7 @@ fn init_project(name: &str, _template_type: &str) {
     // 2. config.json & .env.example
     let config_json = r#"{
   "port": 8080,
-  "workers": 200,
+  "workers": 4,
   "db_path": "data/app.sqlite"
 }
 "#;
@@ -675,7 +1154,7 @@ fn init_project(name: &str, _template_type: &str) {
 
     let env_example = r#"# VietLang Backend Service Environment Configuration
 PORT=8080
-WORKERS=200
+WORKERS=4
 DATABASE_PATH=data/app.sqlite
 "#;
     let _ = fs::write(format!("{}/.env.example", name), env_example);
@@ -713,8 +1192,11 @@ fn service_list_users(db) {
 }
 
 fn service_create_user(db, name: String, email: String, role: String) {
-    let query = "INSERT INTO users (name, email, role, created_at) VALUES ('" + name + "', '" + email + "', '" + role + "', " + to_string(time_now()) + ")"
-    sqlite_exec(db, query)
+    sqlite_execute(
+        db,
+        "INSERT INTO users (name, email, role, created_at) VALUES (?, ?, ?, ?)",
+        [name, email, role, time_now()]
+    )
     
     let mut result = map_new()
     result = map_set(result, "name", name)
@@ -723,7 +1205,10 @@ fn service_create_user(db, name: String, email: String, role: String) {
     return result
 }
 "#;
-    let _ = fs::write(format!("{}/src/services/user_service.vl", name), service_code);
+    let _ = fs::write(
+        format!("{}/src/services/user_service.vl", name),
+        service_code,
+    );
 
     // 5. src/routes/router.vl
     let router_code = r#"import std.json
@@ -735,7 +1220,7 @@ fn dispatch_api(db, method: String, path: String, body_raw: String) {
         let mut h = map_new()
         h = map_set(h, "status", "HEALTHY")
         h = map_set(h, "uptime_s", time_now())
-        h = map_set(h, "engine", "VietLang Pure Backend Engine")
+        h = map_set(h, "engine", "VietLang Experimental Backend Runtime")
         return json_response(200, h)
     }
 
@@ -795,7 +1280,7 @@ if env_p != "" && env_p != none && env_p != "none" {
 
 let db = db_connect(db_path)
 println("========================================================================")
-println("VietLang Pure Backend Service listening on http://0.0.0.0:" + to_string(port))
+println("VietLang experimental backend service listening on http://0.0.0.0:" + to_string(port))
 println("========================================================================")
 
 let server_cfg = http2_server_config(port, 200)
@@ -813,7 +1298,7 @@ http_listen(server_cfg, fn(req) {
     let test_code = format!(
         r#"import std.test
 
-suite("{} Pure Backend Test Suite")
+suite("{} Backend Prototype Test Suite")
 
 test("Sanity test", fn() {{
     assert_eq(1 + 1, 2, "Sanity check failure")
@@ -829,7 +1314,9 @@ test_summary()
     let readme_content = format!(
         r#"# {}
 
-High-Performance Pure Backend REST API & Microservice built with **VietLang**.
+Experimental backend REST API prototype built with **VietLang**. Complete the
+security, load, failure-injection, and dependency-integrity review before any
+public production deployment.
 
 ## 🚀 Commands
 
@@ -839,7 +1326,7 @@ vietlang dev
 ```
 Health Check Endpoint: `http://localhost:8080/api/health`
 
-### 2. Compile to Standalone Native Binary:
+### 2. Bundle Source with the Runtime:
 ```bash
 # Build for Linux
 vietlang run build
@@ -858,23 +1345,26 @@ vietlang test
     );
     let _ = fs::write(format!("{}/README.md", name), readme_content);
 
-    println!("\x1b[32;1m[SUCCESS] Created new VietLang backend service '{}' successfully!\x1b[0m", name);
+    println!(
+        "\x1b[32;1m[SUCCESS] Created new VietLang backend service '{}' successfully!\x1b[0m",
+        name
+    );
     println!("Project Structure Generated:");
     println!("  ├── \x1b[36mvietlang.json\x1b[0m       (Service manifest & scripts)");
     println!("  ├── \x1b[36mconfig.json\x1b[0m         (Dynamic runtime configuration)");
     println!("  ├── \x1b[36m.env.example\x1b[0m        (Environment variables template)");
-    println!("  ├── \x1b[33msrc/\x1b[0m                (Pure Backend Modular Architecture)");
+    println!("  ├── \x1b[33msrc/\x1b[0m                (Layered Backend Prototype)");
     println!("  │   ├── \x1b[32mconfig/database.vl\x1b[0m (Database pool & JSON responses)");
     println!("  │   ├── \x1b[32mservices/user_service.vl\x1b[0m (Business logic & Queries)");
     println!("  │   ├── \x1b[32mroutes/router.vl\x1b[0m   (REST API Routing)");
-    println!("  │   └── \x1b[32mmain.vl\x1b[0m            (HTTP/2 Server entrypoint)");
+    println!("  │   └── \x1b[32mmain.vl\x1b[0m            (Experimental HTTP/1.1 entrypoint)");
     println!("  ├── \x1b[33mdata/\x1b[0m               (SQLite Database directory)");
     println!("  └── \x1b[33mtests/\x1b[0m              (Automated test suites)");
     println!();
     println!("Next Steps:");
     println!("  1. \x1b[36mcd {}\x1b[0m", name);
     println!("  2. \x1b[36mvietlang dev\x1b[0m           (Start server on http://localhost:8080)");
-    println!("  3. \x1b[36mvietlang run build\x1b[0m     (Compile to standalone executable)");
+    println!("  3. \x1b[36mvietlang run build\x1b[0m     (Bundle source with the runtime)");
 }
 
 fn list_installed() {
@@ -910,9 +1400,15 @@ fn verify_project() {
 
 pub fn show_docs(module_name: &str) {
     if module_name.is_empty() || module_name == "--help" || module_name == "-h" {
-        println!("\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m");
-        println!("\x1b[36m║             VietLang Standard Library & Module Explorer            ║\x1b[0m");
-        println!("\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m");
+        println!(
+            "\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m"
+        );
+        println!(
+            "\x1b[36m║             VietLang Standard Library & Module Explorer            ║\x1b[0m"
+        );
+        println!(
+            "\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m"
+        );
         println!("Usage: \x1b[33mvietlang doc <module_name>\x1b[0m (e.g. 'vietlang doc std.pagination', 'vietlang doc std.rate_limiter')");
         println!("       \x1b[33mvietlang doc --all\x1b[0m (generate full Markdown documentation in docs/api/)\n");
         println!("Available Standard Library Modules in std/:");
@@ -929,8 +1425,12 @@ pub fn show_docs(module_name: &str) {
             for m in mods {
                 let file_path = format!("std/{}.vl", m);
                 let first_desc = if let Ok(content) = fs::read_to_string(&file_path) {
-                    content.lines()
-                        .find(|l| l.starts_with("// Module:") || (l.starts_with("//") && !l.contains("===")))
+                    content
+                        .lines()
+                        .find(|l| {
+                            l.starts_with("// Module:")
+                                || (l.starts_with("//") && !l.contains("==="))
+                        })
                         .map(|l| l.trim_start_matches("//").trim().to_string())
                         .unwrap_or_else(|| "Standard utility module".to_string())
                 } else {
@@ -958,10 +1458,24 @@ pub fn show_docs(module_name: &str) {
 
                         for line in content.lines() {
                             let trimmed = line.trim();
-                            if (trimmed.starts_with("// Module:") || trimmed.starts_with("// VietLang")) && !trimmed.contains("===") {
-                                header_desc.push(trimmed.trim_start_matches("//").trim().to_string());
-                            } else if trimmed.starts_with("///") || (trimmed.starts_with("//") && !trimmed.contains("===") && !trimmed.contains("Module:")) {
-                                doc_buf.push(trimmed.trim_start_matches("///").trim_start_matches("//").trim().to_string());
+                            if (trimmed.starts_with("// Module:")
+                                || trimmed.starts_with("// VietLang"))
+                                && !trimmed.contains("===")
+                            {
+                                header_desc
+                                    .push(trimmed.trim_start_matches("//").trim().to_string());
+                            } else if trimmed.starts_with("///")
+                                || (trimmed.starts_with("//")
+                                    && !trimmed.contains("===")
+                                    && !trimmed.contains("Module:"))
+                            {
+                                doc_buf.push(
+                                    trimmed
+                                        .trim_start_matches("///")
+                                        .trim_start_matches("//")
+                                        .trim()
+                                        .to_string(),
+                                );
                             } else if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
                                 let sig = trimmed.trim_end_matches('{').trim().to_string();
                                 let desc = if doc_buf.is_empty() {
@@ -1024,14 +1538,27 @@ pub fn show_docs(module_name: &str) {
     } else if Path::new(module_name).exists() && !Path::new(module_name).is_dir() {
         module_name.to_string()
     } else {
-        eprintln!("\x1b[31mError:\x1b[0m Module '{}' not found in std/, modules/, or local path.", module_name);
+        eprintln!(
+            "\x1b[31mError:\x1b[0m Module '{}' not found in std/, modules/, or local path.",
+            module_name
+        );
         return;
     };
 
-    println!("\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[36m║ Module: \x1b[32m{:<58}\x1b[36m ║\x1b[0m", module_name);
-    println!("\x1b[36m║ File:   \x1b[33m{:<58}\x1b[36m ║\x1b[0m", target_path);
-    println!("\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m\n");
+    println!(
+        "\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m"
+    );
+    println!(
+        "\x1b[36m║ Module: \x1b[32m{:<58}\x1b[36m ║\x1b[0m",
+        module_name
+    );
+    println!(
+        "\x1b[36m║ File:   \x1b[33m{:<58}\x1b[36m ║\x1b[0m",
+        target_path
+    );
+    println!(
+        "\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m\n"
+    );
 
     let readme_file = if Path::new(&pkg_readme_path).exists() {
         Some(pkg_readme_path)
@@ -1043,7 +1570,10 @@ pub fn show_docs(module_name: &str) {
 
     if let Some(r_path) = readme_file {
         if let Ok(readme_content) = fs::read_to_string(&r_path) {
-            println!("\x1b[35m=== Package Documentation ({}) ===\x1b[0m\n", r_path);
+            println!(
+                "\x1b[35m=== Package Documentation ({}) ===\x1b[0m\n",
+                r_path
+            );
             println!("{}\n", readme_content.trim());
             println!("\x1b[36m=== Exported Function Signatures ===\x1b[0m\n");
         }
@@ -1053,11 +1583,24 @@ pub fn show_docs(module_name: &str) {
         let mut doc_buf: Vec<String> = Vec::new();
         for line in content.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("///") || (trimmed.starts_with("//") && !trimmed.contains("===") && !trimmed.contains("Module:")) {
-                doc_buf.push(trimmed.trim_start_matches("///").trim_start_matches("//").trim().to_string());
+            if trimmed.starts_with("///")
+                || (trimmed.starts_with("//")
+                    && !trimmed.contains("===")
+                    && !trimmed.contains("Module:"))
+            {
+                doc_buf.push(
+                    trimmed
+                        .trim_start_matches("///")
+                        .trim_start_matches("//")
+                        .trim()
+                        .to_string(),
+                );
             } else if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
                 let sig = trimmed.trim_end_matches('{').trim();
-                println!("  \x1b[32mfn\x1b[0m \x1b[33m{}\x1b[0m", sig.trim_start_matches("fn ").trim_start_matches("pub fn "));
+                println!(
+                    "  \x1b[32mfn\x1b[0m \x1b[33m{}\x1b[0m",
+                    sig.trim_start_matches("fn ").trim_start_matches("pub fn ")
+                );
                 if !doc_buf.is_empty() {
                     for d in &doc_buf {
                         println!("     \x1b[90m// {}\x1b[0m", d);
@@ -1152,13 +1695,9 @@ pub fn run_script(script_name: &str, extra_args: &[String]) -> bool {
             full_cmd.push_str(&extra_args.join(" "));
         }
         let status = if cfg!(windows) {
-            Command::new("cmd")
-                .args(["/C", &full_cmd])
-                .status()
+            Command::new("cmd").args(["/C", &full_cmd]).status()
         } else {
-            Command::new("sh")
-                .args(["-c", &full_cmd])
-                .status()
+            Command::new("sh").args(["-c", &full_cmd]).status()
         };
         match status {
             Ok(s) => {
@@ -1168,7 +1707,10 @@ pub fn run_script(script_name: &str, extra_args: &[String]) -> bool {
                 true
             }
             Err(e) => {
-                eprintln!("\x1b[31mError running script '{}':\x1b[0m {}", script_name, e);
+                eprintln!(
+                    "\x1b[31mError running script '{}':\x1b[0m {}",
+                    script_name, e
+                );
                 std::process::exit(1);
             }
         }
@@ -1176,4 +1718,3 @@ pub fn run_script(script_name: &str, extra_args: &[String]) -> bool {
         false
     }
 }
-

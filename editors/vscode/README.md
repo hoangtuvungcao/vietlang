@@ -15,10 +15,10 @@ Official Visual Studio Code extension providing rich language support, syntax hi
   - `vnpay`: VNPay 2.1.0 gateway session with HMAC-SHA512
   - `momo`: MoMo E-Wallet HMAC-SHA256 signature payload
   - `zalo`: Zalo ZNS & OA customer notification dispatch
-  - `http-server`: High-performance HTTP/2 REST server bootstrap
+  - `http-server`: Experimental HTTP/1.1 REST server bootstrap
   - `ws-server`: Real-time WebSocket broadcaster
   - `sqlite-crud`: SQLite ACID relational operations
-  - `concurrency`: CSP green threads `spawn` and channels
+  - `concurrency`: OS-thread-based `spawn` tasks and channels
   - `jwt-auth`: JWT signing & authorization verification
 - 🔧 **Command Palette Integration (`Ctrl+Shift+P`)**:
   - `VietLang: Run Active File`

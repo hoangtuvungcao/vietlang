@@ -37,6 +37,8 @@ pub enum OpCode {
     OpReturn = 23,
     /// Terminate execution
     OpHalt = 24,
+    /// Store and consume the observable value of the latest statement
+    OpRecordResult = 25,
 }
 
 impl OpCode {
@@ -66,6 +68,7 @@ impl OpCode {
             22 => Some(OpCode::OpCall),
             23 => Some(OpCode::OpReturn),
             24 => Some(OpCode::OpHalt),
+            25 => Some(OpCode::OpRecordResult),
             _ => None,
         }
     }

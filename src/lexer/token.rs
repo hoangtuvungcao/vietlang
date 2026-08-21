@@ -45,49 +45,49 @@ pub enum TokenKind {
     Self_,
 
     // === Operators ===
-    Plus,        // +
-    Minus,       // -
-    Star,        // *
-    Slash,       // /
-    Percent,     // %
-    Assign,      // =
-    PlusAssign,  // +=
-    MinusAssign, // -=
-    StarAssign,  // *=
-    SlashAssign, // /=
+    Plus,          // +
+    Minus,         // -
+    Star,          // *
+    Slash,         // /
+    Percent,       // %
+    Assign,        // =
+    PlusAssign,    // +=
+    MinusAssign,   // -=
+    StarAssign,    // *=
+    SlashAssign,   // /=
     PercentAssign, // %=
-    Eq,          // ==
-    NotEq,       // !=
-    Lt,          // <
-    Gt,          // >
-    LtEq,       // <=
-    GtEq,       // >=
-    And,         // &&
-    Or,          // ||
-    Not,         // !
-    Arrow,       // ->
-    FatArrow,    // =>
-    Question,    // ?
-    Dot,         // .
-    DotDot,      // ..
-    Colon,       // :
-    ColonColon,  // ::
-    Semicolon,   // ;  (optional in most cases)
-    Comma,       // ,
-    Pipe,        // |
-    Ampersand,   // &
-    Caret,       // ^
-    Tilde,       // ~
-    ShiftLeft,   // <<
-    ShiftRight,  // >>
+    Eq,            // ==
+    NotEq,         // !=
+    Lt,            // <
+    Gt,            // >
+    LtEq,          // <=
+    GtEq,          // >=
+    And,           // &&
+    Or,            // ||
+    Not,           // !
+    Arrow,         // ->
+    FatArrow,      // =>
+    Question,      // ?
+    Dot,           // .
+    DotDot,        // ..
+    Colon,         // :
+    ColonColon,    // ::
+    Semicolon,     // ;  (optional in most cases)
+    Comma,         // ,
+    Pipe,          // |
+    Ampersand,     // &
+    Caret,         // ^
+    Tilde,         // ~
+    ShiftLeft,     // <<
+    ShiftRight,    // >>
 
     // === Delimiters ===
-    LParen,      // (
-    RParen,      // )
-    LBrace,      // {
-    RBrace,      // }
-    LBracket,    // [
-    RBracket,    // ]
+    LParen,   // (
+    RParen,   // )
+    LBrace,   // {
+    RBrace,   // }
+    LBracket, // [
+    RBracket, // ]
 
     // === Special ===
     Newline,
@@ -139,7 +139,12 @@ pub struct Span {
 
 impl Span {
     pub fn new(line: usize, column: usize, start: usize, end: usize) -> Self {
-        Span { line, column, start, end }
+        Span {
+            line,
+            column,
+            start,
+            end,
+        }
     }
 }
 
