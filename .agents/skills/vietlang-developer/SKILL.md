@@ -422,38 +422,91 @@ let files = map_get(parsed, "files")
 let form_data = map_get(parsed, "fields")
 ```
 
+### 2.31 REST API Pagination Utility (`std.pagination`)
+```rust
+import std.pagination
+
+let items = [10, 20, 30, 40, 50, 60, 70, 80]
+let res = pagination_slice(items, page: 2, page_size: 4)
+// res.items -> [50, 60, 70, 80]
+// res.pagination -> { page: 2, page_size: 4, total_pages: 2, has_next: false, has_prev: true }
+```
+
+### 2.32 Generic Transactional Email Builder (`std.email`)
+```rust
+import std.email
+
+let mut mail = email_new("noreply@vietlang.dev", "user@gmail.com", "System Alert")
+let card_html = email_render_simple_card("Order Confirmed", "Your payment is processed", "View Order", "https://...")
+mail = email_set_html(mail, card_html)
+```
+
+### 2.33 Cryptographic OTP & 2FA Tokens (`std.otp`)
+```rust
+import std.otp
+
+let code = otp_generate(6) // "582914"
+let otp_data = otp_create(user_id: 101, digits: 6, ttl_seconds: 300)
+let valid = otp_verify(otp_data, code)
+```
+
+### 2.34 File Storage & MIME Utilities (`std.file_storage`)
+```rust
+import std.file_storage
+
+let is_valid_ext = file_storage_is_allowed_extension("avatar.png", ["jpg", "png", "webp"])
+let safe_name = file_storage_generate_safe_name("document.pdf", "invoice")
+let formatted_size = file_storage_format_size(1048576) // "1 MB"
+```
+
+### 2.35 Opt-in Standard WebSocket Engine (`std.ws`)
+```rust
+import std.ws
+
+// Explicitly enable WebSocket upgrades on /ws endpoint
+ws_init("/ws")
+ws_send_text("Hello Realtime Clients!")
+ws_emit("ORDER_CREATED", map_set(map_new(), "order_id", 101))
+```
+
+### 2.36 Configurable Sliding-Window Rate Limiter (`std.rate_limiter`)
+```rust
+import std.rate_limiter
+
+let mut limiter = rate_limiter_new(max_requests: 100, window_seconds: 60)
+let check = rate_limiter_check(limiter, "192.168.1.1")
+if !map_get(check, "allowed") {
+    // 429 Too Many Requests
+}
+limiter = map_get(check, "limiter")
+```
+
 ---
 
-## 3. Native Package Management & Central Registry
+## 3. Package Management, Documentation & Community Registry
 
-VietLang provides a **native package manager connected to the Central Community Registry**:
+VietLang provides a complete developer toolchain for building, testing, documenting, and publishing community libraries:
 
 ```bash
-# Initialize a new package (templates: lib | api | microservice)
-vietlang init my_service microservice
+# 1. Initialize a new package (templates: lib | api | microservice)
+vietlang init my_payment_sdk lib
 
-# Search Central Community Registry
+# 2. View and generate documentation
+vietlang doc                       # Browse all standard library modules
+vietlang doc std.pagination        # Inspect specific module signatures & parameters
+vietlang doc my_payment_sdk        # Inspect custom package documentation
+vietlang doc --all                 # Generate Markdown API docs into docs/api/
+
+# 3. Search and install community modules
 vietlang search redis
-vietlang search postgres
-
-# Install module directly (short name or version lock)
-vietlang install redis
 vietlang install redis@1.2.0
 vietlang install auth@3.0.0
 
-# Inspect module API signatures
-vietlang docs redis
-vietlang docs std.db_sqlite
-
-# Verify package syntax & test suite
+# 4. Verify project correctness & run test suites
 vietlang verify
+vietlang test
 
-# Update or remove modules
-vietlang update redis
-vietlang update redis@2.0.0
-vietlang remove redis
-
-# Publish module to Central Community Registry
+# 5. Publish to Central Community Registry
 vietlang publish
 ```
 
@@ -465,12 +518,11 @@ vietlang publish
 # Standard Tree-Walking Interpreter
 vietlang src/main.vl
 
-# High-Performance Bytecode Virtual Machine (Phase 8)
+# High-Performance Bytecode Virtual Machine
 vietlang --vm src/main.vl
 
 # Run Unit Tests
 cargo test --all
-
-# Run All Demos & Self-Hosting Bootstrap Tests
-make demo
+vietlang test examples/enterprise_ecosystem_demo.vl
 ```
+

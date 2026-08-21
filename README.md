@@ -238,23 +238,22 @@ VietLang provides a **native package manager built directly into the runtime bin
 
 ```bash
 # Initialize a new package (templates: lib | api | microservice)
-vietlang init my_service microservice
+vietlang init my_package lib
 
-# Search Central Community Registry
+# Search & install package from Central Registry (by name or explicit version lock)
 vietlang search redis
-vietlang search postgres
-
-# Install package from Central Registry (by name or explicit version lock)
-vietlang install redis
 vietlang install redis@1.2.0
 vietlang install auth@3.0.0
 
-# Inspect module exported API signatures
-vietlang docs std.db_sqlite
-vietlang docs redis
+# Interactive Documentation & API Inspector
+vietlang doc                       # Browse all 49 standard library modules
+vietlang doc std.pagination        # Inspect signatures, types, and comments for a module
+vietlang doc my_package            # Inspect custom or community package docs
+vietlang doc --all                 # Generate complete Markdown docs into docs/api/
 
 # Verify package syntax and unit tests
 vietlang verify
+vietlang test
 
 # Update or remove dependencies
 vietlang update redis
@@ -289,8 +288,8 @@ vietlang --vm examples/bytecode_vm_demo.vl
 ```
 vietlang/
 ├── src/
-│   ├── main.rs              # CLI, REPL, and Dispatcher
-│   ├── pm.rs                # Native Package Manager & Central Registry
+│   ├── main.rs              # CLI, REPL, and Subcommand Dispatcher
+│   ├── pm.rs                # Package Manager, Central Registry & DocGen
 │   ├── error.rs             # Error types & control flow signals
 │   ├── stdlib.rs            # Built-in native standard library
 │   ├── lexer/               # Lexer & Token definitions
@@ -299,7 +298,16 @@ vietlang/
 │   └── vm/                  # Bytecode VM & compiler (OpCode stack machine)
 ├── registry/                # Central Community Package Registry
 │   └── index.json           # Unified Community Package Catalog
-├── std/                     # 30 Pure VietLang Standard Libraries
+├── std/                     # 49 Pure VietLang Standard Libraries (Zero-Cost Modularity)
+│   ├── pagination.vl        # REST API pagination & query slicing
+│   ├── email.vl             # Generic transactional email builder
+│   ├── otp.vl               # 6-digit OTP generation & 2FA verification
+│   ├── file_storage.vl      # MIME validator & safe file utilities
+│   ├── ws.vl                # Opt-in WebSocket RFC 6455
+│   ├── rate_limiter.vl      # Sliding-window rate limiter
+│   ├── logger.vl            # Structured JSON logger
+│   ├── session.vl           # High-performance session store
+│   ├── queue.vl             # Async background job queue
 │   ├── db_sqlite.vl         # In-memory & file-backed SQLite relational engine
 │   ├── db_mysql.vl          # MySQL protocol and connection pool
 │   ├── db_postgres.vl       # PostgreSQL client and schema tools
@@ -309,25 +317,24 @@ vietlang/
 │   ├── kv_store.vl          # Redis-level in-memory KV engine
 │   ├── stream.vl            # Kafka-level partitioned stream broker
 │   ├── http_pipeline.vl     # Onion middleware & security headers
-│   ├── websocket.vl         # WebSocket RFC 6455 & room broadcaster
 │   ├── jwt.vl               # JWT signing & RBAC verification
 │   ├── http_router.vl       # Web router & framework
-│   └── ...                  # 30 modules total
+│   └── ...                  # 49 modules total
 ├── bootstrap/               # Self-Hosting Compiler in VietLang
 │   ├── lexer.vl             # Self-hosted lexer
 │   └── parser.vl            # Self-hosted parser
-├── examples/                # Example backend systems
-│   ├── enterprise_ecommerce_system.vl
-│   ├── database_drivers_demo.vl
-│   ├── master_backend_enterprise.vl
-│   └── bytecode_vm_demo.vl
+├── examples/                # Real-World Enterprise Backend Demos
+│   ├── agricultural_ecommerce_platform/ # Nông Sản Việt (Clean Architecture, Multi-Page, ACID)
+│   ├── enterprise_ecosystem_demo.vl     # 14 Framework Integration Tests
+│   └── multi_database_demo.vl           # SQLite, MySQL, Postgres Relational Tests
 ├── docs/                    # Complete documentation
+│   ├── api/                 # Auto-generated API docs for all 49 modules
+│   ├── standard-library-ecosystem.md
 │   ├── getting-started.md
 │   ├── language-reference.md
 │   ├── stdlib-reference.md
 │   ├── backend-cookbook.md
-│   ├── community-module-guide.md
-│   └── vietlang-handbook.md
+│   └── community-module-guide.md
 ├── Makefile
 ├── CONTRIBUTING.md
 └── LICENSE

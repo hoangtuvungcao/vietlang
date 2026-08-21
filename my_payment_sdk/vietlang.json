@@ -1,0 +1,11 @@
+{
+  "name": "my_payment_sdk",
+  "version": "1.0.0",
+  "author": "your_github_username",
+  "repository": "https://github.com/your_github_username/my_payment_sdk.git",
+  "type": "lib",
+  "description": "High-performance backend module built with VietLang",
+  "main": "src/main.vl",
+  "dependencies": {},
+  "license": "MIT"
+}

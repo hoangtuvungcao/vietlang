@@ -56,3 +56,9 @@ fn security_sanitize_html(input: String) -> String {
     out = out.replace("'", "&#x27;")
     return out
 }
+
+fn security_hmac_sha256(message: String, secret_key: String) -> String {
+    let inner = sha256(secret_key + ":" + message)
+    return sha256(secret_key + ":" + inner)
+}
+
