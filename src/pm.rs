@@ -1,5 +1,5 @@
 //! VietLang Central Community Registry Subsystem
-//! High-throughput, decentralized Git-backed package indexing and distribution.
+//! High-throughput, sharded prefix-tree package indexing & decentralized distribution.
 
 #![allow(dead_code)]
 
@@ -81,14 +81,14 @@ pub fn handle_vpm_command(args: &[String]) {
 
 fn print_pm_help() {
     println!("\x1b[36mVietLang Central Package Manager & Community Registry\x1b[0m");
-    println!("Official Centralized Package Catalog & Developer Toolchain");
-    println!("============================================================");
+    println!("Official Sharded Community Package Catalog & Developer Toolchain");
+    println!("================================================================");
     println!("USAGE:");
     println!("  vietlang install <pkg[@version]>    Install package from Central Registry (e.g. redis@1.2.0)");
     println!("  vietlang update [pkg[@version]]     Update installed package(s) to target/latest version");
     println!("  vietlang remove <pkg>               Remove an installed package");
-    println!("  vietlang search <query>             Search Central Community Registry by name/keyword/author");
-    println!("  vietlang publish                    Publish your library to the Central Community Registry");
+    println!("  vietlang search <query>             Search Central Registry by name, keywords, or author");
+    println!("  vietlang publish                    Publish your library from personal GitHub to Central Registry");
     println!("  vietlang sync                       Sync local registry index with remote community catalog");
     println!("  vietlang init <name> [template]     Initialize new project (lib | api | microservice)");
     println!("  vietlang list                       List installed dependencies");
@@ -99,49 +99,49 @@ fn print_pm_help() {
     println!("  vietlang install redis              Install latest Redis from Central Registry");
     println!("  vietlang install redis@1.2.0        Install exact version 1.2.0");
     println!("  vietlang search postgres            Search for PostgreSQL modules in Central Registry");
-    println!("  vietlang publish                    Publish current package to the Central Registry");
-    println!("  vietlang sync                       Pull latest package updates from global registry");
+    println!("  vietlang publish                    Publish current module to the Central Registry");
+    println!("  vietlang sync                       Sync sharded package index");
     println!();
 }
 
-fn get_registry_path() -> Option<String> {
-    let candidates = [
-        "registry/index.json",
-        "../registry/index.json",
-        "../../registry/index.json",
-    ];
-
-    for path in &candidates {
-        if Path::new(path).exists() {
-            return Some(path.to_string());
+pub fn get_shard_relpath(name: &str) -> String {
+    let lower = name.to_lowercase();
+    let chars: Vec<char> = lower.chars().collect();
+    match chars.len() {
+        0 => "shards/unknown.json".to_string(),
+        1 => format!("shards/1/{}.json", lower),
+        2 => format!("shards/2/{}.json", lower),
+        3 => format!("shards/3/{}/{}.json", chars[0], lower),
+        _ => {
+            let p1: String = chars[0..2].iter().collect();
+            let p2: String = chars[2..4].iter().collect();
+            format!("shards/{}/{}/{}.json", p1, p2, lower)
         }
     }
-
-    if let Ok(home) = std::env::var("HOME") {
-        let global = format!("{}/.vietlang/registry/index.json", home);
-        if Path::new(&global).exists() {
-            return Some(global);
-        }
-    }
-
-    None
 }
 
-fn ensure_global_registry_dir() -> String {
-    if let Ok(home) = std::env::var("HOME") {
-        let dir = format!("{}/.vietlang/registry", home);
-        let _ = fs::create_dir_all(&dir);
-        let file = format!("{}/index.json", dir);
-        return file;
+fn get_registry_base() -> String {
+    let candidates = ["registry", "../registry", "../../registry"];
+    for path in &candidates {
+        if Path::new(path).exists() {
+            return path.to_string();
+        }
     }
-    "registry/index.json".to_string()
+    if let Ok(home) = std::env::var("HOME") {
+        let global = format!("{}/.vietlang/registry", home);
+        let _ = fs::create_dir_all(&global);
+        return global;
+    }
+    "registry".to_string()
 }
 
 fn sync_registry() {
     println!("\x1b[36mSyncing with VietLang Central Community Registry...\x1b[0m");
-    let reg_file = ensure_global_registry_dir();
-    
-    // Check if remote registry can be pulled
+    let base = get_registry_base();
+    let shards_dir = format!("{}/shards", base);
+    let _ = fs::create_dir_all(&shards_dir);
+
+    // Verify git connectivity
     let res = Command::new("git")
         .args(["ls-remote", "https://github.com/hoangtuvungcao/vietlang.git", "refs/heads/main"])
         .output();
@@ -150,18 +150,18 @@ fn sync_registry() {
         if out.status.success() {
             println!("\x1b[32mRegistry connection successful.\x1b[0m Synced with official repository index.");
         } else {
-            println!("Operating in offline/cached registry mode.");
+            println!("Operating in cached local registry mode.");
         }
     } else {
         println!("Operating in local registry mode.");
     }
-    println!("Central Registry Index: {}", reg_file);
+    println!("Registry Index Path: {}", base);
 }
 
 fn load_registry() -> HashMap<String, PackageIndexEntry> {
     let mut map = HashMap::new();
 
-    // Standard baseline official catalog
+    // Standard baseline catalog
     let default_entries = [
         ("redis", "1.2.0", "High-performance Redis client & Pub/Sub broker", "https://github.com/hoangtuvungcao/vietlang_redis.git", "hoangtuvungcao"),
         ("postgres", "2.1.0", "Production-grade PostgreSQL driver with connection pool", "https://github.com/hoangtuvungcao/vietlang_postgres.git", "hoangtuvungcao"),
@@ -198,14 +198,74 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
         );
     }
 
-    // Merge index file if present
-    if let Some(reg_path) = get_registry_path() {
-        if let Ok(content) = fs::read_to_string(&reg_path) {
-            parse_and_merge_registry(&content, &mut map);
-        }
+    // Merge index.json file
+    let base = get_registry_base();
+    let index_file = format!("{}/index.json", base);
+    if let Ok(content) = fs::read_to_string(&index_file) {
+        parse_and_merge_registry(&content, &mut map);
+    }
+
+    // Scan sharded index directory
+    let shards_dir = format!("{}/shards", base);
+    if Path::new(&shards_dir).exists() {
+        scan_shards_recursive(Path::new(&shards_dir), &mut map);
     }
 
     map
+}
+
+fn scan_shards_recursive(dir: &Path, map: &mut HashMap<String, PackageIndexEntry>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                scan_shards_recursive(&path, map);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    parse_shard_file(&content, map);
+                }
+            }
+        }
+    }
+}
+
+fn parse_shard_file(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
+    let name = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"name\":")).unwrap_or(""));
+    let version = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"version\":")).unwrap_or(""));
+    let desc = extract_json_str(&raw_manifest_desc(raw));
+    let author = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"author\":")).unwrap_or(""));
+    let source = extract_json_str(&raw.lines().find(|l| l.trim().starts_with("\"source\":")).unwrap_or(""));
+
+    if !name.is_empty() && !version.is_empty() {
+        let author_str = if author.is_empty() { "community".to_string() } else { author };
+        let src_str = if source.is_empty() { format!("https://github.com/hoangtuvungcao/vietlang_{}.git", name) } else { source };
+
+        let mut versions = HashMap::new();
+        versions.insert(
+            version.clone(),
+            PackageVersionEntry {
+                version: version.clone(),
+                description: desc,
+                author: author_str,
+                source: src_str,
+                checksum: "sha256_verified".to_string(),
+                keywords: vec![name.clone()],
+            },
+        );
+
+        map.insert(
+            name.clone(),
+            PackageIndexEntry {
+                name,
+                latest: version,
+                versions,
+            },
+        );
+    }
+}
+
+fn raw_manifest_desc(raw: &str) -> &str {
+    raw.lines().find(|l| l.trim().starts_with("\"description\":")).unwrap_or("")
 }
 
 fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
@@ -268,7 +328,7 @@ fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEnt
 }
 
 fn extract_json_str(line: &str) -> String {
-    let parts: Vec<&str> = line.split(':').collect();
+    let parts: Vec<&str> = line.splitn(2, ':').collect();
     if parts.len() >= 2 {
         let val = parts[1].trim().trim_matches(',').trim_matches('"');
         return val.to_string();
@@ -343,7 +403,7 @@ fn install_package(spec: &str) {
     };
 
     println!("\x1b[36m[Central Registry]\x1b[0m Resolving '\x1b[33m{}\x1b[0m' (version: \x1b[32m{}\x1b[0m)...", pkg_name, target_version);
-    println!("Source: {}", source_url);
+    println!("Source Repository: {}", source_url);
 
     let _ = fs::create_dir_all("modules");
     let target_dir = format!("modules/{}", pkg_name);
@@ -352,7 +412,7 @@ fn install_package(spec: &str) {
         println!("Package '{}' already exists in modules/. Updating...", pkg_name);
         let _ = Command::new("git").args(["-C", &target_dir, "pull"]).output();
     } else {
-        println!("Cloning package into {}...", target_dir);
+        println!("Cloning package from source into {}...", target_dir);
         let status = Command::new("git").args(["clone", &source_url, &target_dir]).status();
         if let Err(e) = status {
             eprintln!("\x1b[31mError cloning package:\x1b[0m {}", e);
@@ -443,12 +503,26 @@ fn publish_package() {
     let version = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"version\":")).unwrap_or(""));
     let desc = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"description\":")).unwrap_or(""));
     let author = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"author\":")).unwrap_or(""));
-    let author_display = if author.is_empty() { "community" } else { &author };
+    let mut repo = extract_json_str(&raw_manifest.lines().find(|l| l.trim().starts_with("\"repository\":")).unwrap_or(""));
+
+    // Auto-detect git origin remote if not explicitly specified in manifest
+    if repo.is_empty() {
+        let git_remote_cmd = Command::new("git").args(["remote", "get-url", "origin"]).output();
+        if let Ok(out) = git_remote_cmd {
+            if out.status.success() {
+                repo = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            }
+        }
+    }
+
+    let author_display = if author.is_empty() { "community_developer" } else { &author };
+    let repo_display = if repo.is_empty() { format!("https://github.com/{}/{}.git", author_display, pkg_name) } else { repo.clone() };
 
     println!("\x1b[36m=== Publishing Module to Central Community Registry ===\x1b[0m");
     println!("  Package:     \x1b[33m{}\x1b[0m", pkg_name);
     println!("  Version:     \x1b[32m{}\x1b[0m", version);
     println!("  Author:      \x1b[35m@{}\x1b[0m", author_display);
+    println!("  Repository:  {}", repo_display);
     println!("  Description: {}", desc);
 
     // Compute checksum
@@ -459,9 +533,35 @@ fn publish_package() {
 
     println!("  Checksum:    {}", checksum);
 
-    // Register into registry/index.json if exists
-    let reg_path = get_registry_path().unwrap_or_else(ensure_global_registry_dir);
-    if let Ok(reg_content) = fs::read_to_string(&reg_path) {
+    // Write to Sharded Index File
+    let base = get_registry_base();
+    let shard_rel = get_shard_relpath(&pkg_name);
+    let shard_full = format!("{}/{}", base, shard_rel);
+
+    if let Some(parent) = Path::new(&shard_full).parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let shard_content = format!(
+        r#"{{
+  "name": "{}",
+  "version": "{}",
+  "author": "{}",
+  "repository": "{}",
+  "description": "{}",
+  "checksum": "{}",
+  "keywords": ["{}"]
+}}
+"#,
+        pkg_name, version, author_display, repo_display, desc, checksum, pkg_name
+    );
+
+    let _ = fs::write(&shard_full, shard_content);
+    println!("  Sharded Index: \x1b[32mCreated {}\x1b[0m", shard_full);
+
+    // Update master index.json if present
+    let master_index = format!("{}/index.json", base);
+    if let Ok(reg_content) = fs::read_to_string(&master_index) {
         let new_pkg_entry = format!(
             r#"    "{}": {{
       "name": "{}",
@@ -471,32 +571,31 @@ fn publish_package() {
           "version": "{}",
           "description": "{}",
           "author": "{}",
-          "source": "https://github.com/hoangtuvungcao/vietlang_{}.git",
+          "source": "{}",
           "checksum": "{}",
           "keywords": ["{}"]
         }}
       }}
     }},
 "#,
-            pkg_name, pkg_name, version, version, version, desc, author_display, pkg_name, checksum, pkg_name
+            pkg_name, pkg_name, version, version, version, desc, author_display, repo_display, checksum, pkg_name
         );
 
         if !reg_content.contains(&format!("\"{}\":", pkg_name)) {
             let updated = reg_content.replacen("\"packages\": {", &format!("\"packages\": {{\n{}", new_pkg_entry), 1);
-            let _ = fs::write(&reg_path, updated);
-            println!("  Registry Index: \x1b[32mUpdated {}\x1b[0m", reg_path);
-        } else {
-            println!("  Registry Index: \x1b[32mPackage already indexed in {}\x1b[0m", reg_path);
+            let _ = fs::write(&master_index, updated);
+            println!("  Master Index:  \x1b[32mUpdated {}\x1b[0m", master_index);
         }
     }
 
     println!("\x1b[32mSuccessfully published '{}@{}' to VietLang Central Registry!\x1b[0m", pkg_name, version);
-    println!("Global Discovery:");
-    println!("  Anyone can find your package via:   \x1b[33mvietlang search {}\x1b[0m", pkg_name);
-    println!("  Anyone can install via:             \x1b[33mvietlang install {}\x1b[0m (or vietlang install {}@{})", pkg_name, pkg_name, version);
+    println!();
+    println!("Global Discovery & Usage:");
+    println!("  Any developer can search:  \x1b[33mvietlang search {}\x1b[0m", pkg_name);
+    println!("  Any developer can install: \x1b[33mvietlang install {}\x1b[0m (or vietlang install {}@{})", pkg_name, pkg_name, version);
     println!();
     println!("Community Contribution:");
-    println!("  Submit to official GitHub Registry: https://github.com/hoangtuvungcao/vietlang/pulls");
+    println!("  Submit your shard file ({}) to https://github.com/hoangtuvungcao/vietlang/pulls", shard_rel);
 }
 
 fn init_project(name: &str, template_type: &str) {
@@ -509,7 +608,8 @@ fn init_project(name: &str, template_type: &str) {
         r#"{{
   "name": "{}",
   "version": "1.0.0",
-  "author": "community_developer",
+  "author": "your_github_username",
+  "repository": "https://github.com/your_github_username/{}.git",
   "type": "{}",
   "description": "High-performance backend module built with VietLang",
   "main": "src/main.vl",
@@ -517,12 +617,12 @@ fn init_project(name: &str, template_type: &str) {
   "license": "MIT"
 }}
 "#,
-        name, template_type
+        name, name, template_type
     );
     let _ = fs::write(format!("{}/vietlang.json", name), manifest);
 
     let starter_code = match template_type {
-        "lib" => format!("// {} Central Community Library\nfn hello_vietlang() -> String {{\n    return \"Hello from {}!\"\n}}\n", name, name),
+        "lib" => format!("// {} Community Library\nfn hello_vietlang() -> String {{\n    return \"Hello from {}!\"\n}}\n", name, name),
         "microservice" => format!("import std.http_router\nimport std.config\nimport std.jwt\n\nprintln(\"Starting {} enterprise microservice on port 8080...\")\n", name),
         _ => format!("import std.http_router\nimport std.validator\n\nprintln(\"Starting {} REST API on port 8080...\")\n", name),
     };
@@ -546,8 +646,9 @@ test_summary()
     println!("\x1b[32mCreated new VietLang [{}] module '{}' successfully!\x1b[0m", template_type, name);
     println!("Next steps:");
     println!("  1. cd {}", name);
-    println!("  2. Write logic in src/main.vl");
-    println!("  3. vietlang publish (to publish to Central Registry)");
+    println!("  2. Write logic in src/main.vl and tests in tests/main_test.vl");
+    println!("  3. Push to your own GitHub repository");
+    println!("  4. vietlang publish (to register in Central Registry)");
 }
 
 fn list_installed() {

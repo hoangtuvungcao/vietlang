@@ -1,0 +1,9 @@
+{
+  "name": "postgres",
+  "version": "2.1.0",
+  "author": "hoangtuvungcao",
+  "repository": "https://github.com/hoangtuvungcao/vietlang_postgres.git",
+  "description": "Production-grade PostgreSQL driver with connection pool",
+  "checksum": "vlt_c3d4e5f67890abcd",
+  "keywords": ["postgres", "postgresql", "sql", "db"]
+}

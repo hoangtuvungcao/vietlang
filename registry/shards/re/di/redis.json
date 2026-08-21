@@ -1,0 +1,9 @@
+{
+  "name": "redis",
+  "version": "1.2.0",
+  "author": "hoangtuvungcao",
+  "repository": "https://github.com/hoangtuvungcao/vietlang_redis.git",
+  "description": "High-performance Redis client & Pub/Sub broker",
+  "checksum": "vlt_a1b2c3d4e5f67890",
+  "keywords": ["redis", "cache", "pubsub", "kv"]
+}

@@ -2,6 +2,36 @@
   "registry_version": "1.0.0",
   "updated_at": "2026-08-21T08:15:00Z",
   "packages": {
+    "test_auth": {
+      "name": "test_auth",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "High-performance backend module built with VietLang",
+          "author": "your_github_username",
+          "source": "https://github.com/your_github_username/test_auth.git",
+          "checksum": "vlt_9a0a9d7904883b85",
+          "keywords": ["test_auth"]
+        }
+      }
+    },
+
+    "stripe_gateway": {
+      "name": "stripe_gateway",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "High-performance backend module built with VietLang",
+          "author": "your_github_username",
+          "source": "https",
+          "checksum": "vlt_d2dc3037c5791f50",
+          "keywords": ["stripe_gateway"]
+        }
+      }
+    },
+
     "vietpay": {
       "name": "vietpay",
       "latest": "1.0.0",
