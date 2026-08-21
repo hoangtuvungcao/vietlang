@@ -35,9 +35,20 @@ brew install vietlang
 
 ---
 
-## 2. Master Project Architecture & Directory Layout
+## 2. Master Project Architecture & 1-Command Scaffolding
 
-When creating a production-grade VietLang service, AI agents and developers **MUST** follow this clean, modular architecture:
+To instantly generate a complete, production-ready full-stack enterprise service with Clean Architecture, SQLite database, static Web UI, and automated scripts, run:
+
+```bash
+# 🚀 1-Command Project Scaffolding (aliases: 'new', 'init', 'create')
+vietlang new my_enterprise_app
+
+cd my_enterprise_app
+vietlang dev                 # Start development server on http://localhost:8080
+vietlang run build           # Compile to standalone native executable binary
+```
+
+### 2.1 Generated Project Directory Layout
 
 ```text
 my_enterprise_app/

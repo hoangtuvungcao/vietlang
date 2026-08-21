@@ -1,0 +1,23 @@
+{
+  "name": "my_test_app",
+  "version": "1.0.0",
+  "author": "developer",
+  "repository": "https://github.com/developer/my_test_app.git",
+  "type": "api",
+  "description": "Production Backend & Full-Stack Web Application built with VietLang",
+  "main": "src/main.vl",
+  "scripts": {
+    "start": "vietlang run src/main.vl",
+    "dev": "PORT=8080 vietlang run src/main.vl",
+    "build": "vietlang build src/main.vl -o my_test_app_app",
+    "build:win": "vietlang build src/main.vl -o my_test_app_app.exe --target windows",
+    "test": "vietlang test tests"
+  },
+  "dependencies": {
+    "sqlite": "1.0.0",
+    "http_router": "1.0.0",
+    "validator": "1.0.0",
+    "jwt": "1.0.0"
+  },
+  "license": "MIT"
+}

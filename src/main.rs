@@ -118,7 +118,7 @@ fn main() {
                 };
                 pm::show_docs(target);
             }
-            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
+            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "new" | "create" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
             "start" => {

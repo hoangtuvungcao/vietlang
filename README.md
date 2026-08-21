@@ -240,13 +240,14 @@ test_summary()
 VietLang provides a **native package manager built directly into the runtime binary** with a unified **Central Community Registry** and npm-style script execution:
 
 ```bash
-# Initialize a new package (templates: lib | api | microservice)
-vietlang init my_package api
+# 1-Command Project Scaffolding (Clean Architecture, SQLite, Static UI & Scripts)
+vietlang new my_enterprise_app
 
 # Run npm-style scripts from vietlang.json
+vietlang dev                       # Run development server (http://localhost:8080)
 vietlang start                     # Run the 'start' script or 'main' entrypoint
-vietlang dev                       # Run the 'dev' development server script
-vietlang run build                 # Run the 'build' standalone compilation script
+vietlang run build                 # Compile to standalone Linux binary (ELF)
+vietlang run build:win             # Compile to standalone Windows executable (.exe)
 vietlang run <script_name>         # Run any custom defined script in vietlang.json
 
 # Search & install package from Central Registry (by name or explicit version lock)

@@ -1,0 +1,6 @@
+{
+  "port": 8080,
+  "workers": 200,
+  "db_path": "data/app.sqlite",
+  "public_dir": "public"
+}

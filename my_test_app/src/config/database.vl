@@ -1,0 +1,21 @@
+import std.db_sqlite
+import std.json
+
+fn db_connect(db_path: String) {
+    let db = sqlite_open(db_path)
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, created_at INTEGER)")
+    return db
+}
+
+fn json_response(status_code: Int, data) {
+    let mut payload = map_new()
+    payload = map_set(payload, "status_code", status_code)
+    payload = map_set(payload, "data", data)
+    payload = map_set(payload, "timestamp", time_now())
+
+    let mut res = map_new()
+    res = map_set(res, "status_code", status_code)
+    res = map_set(res, "content_type", "application/json; charset=utf-8")
+    res = map_set(res, "body", json_stringify(payload, false))
+    return res
+}
