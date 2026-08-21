@@ -13,6 +13,7 @@ import std.validator
 import std.logger
 import std.session
 import std.queue
+import std.rate_limiter
 
 suite("VietLang Enterprise Backend Framework & Architecture Ecosystem")
 
@@ -102,4 +103,29 @@ test("8. Asynchronous Background Job Queue (std.queue)", fn() {
     let job = map_get(pop_res, "job")
     assert_true(job != none, "Job phai pop ra duoc")
     assert_eq(map_get(job, "type"), "send_order_email", "Job type phai khop")
+})
+
+test("9. Configurable Sliding-Window Rate Limiter (std.rate_limiter)", fn() {
+    // Config: allow 2 requests per 60s
+    let mut rl = rate_limiter_new(2, 60)
+    
+    // Request 1: Allowed
+    let r1 = rate_limiter_check(rl, "192.168.1.50")
+    assert_true(map_get(r1, "allowed"), "Request 1 phai duoc phep")
+    assert_eq(map_get(r1, "remaining"), 1, "Con lai phai la 1")
+    rl = map_get(r1, "limiter")
+
+    // Request 2: Allowed
+    let r2 = rate_limiter_check(rl, "192.168.1.50")
+    assert_true(map_get(r2, "allowed"), "Request 2 phai duoc phep")
+    assert_eq(map_get(r2, "remaining"), 0, "Con lai phai la 0")
+    rl = map_get(r2, "limiter")
+
+    // Request 3: Exceeded Limit -> Rejected
+    let r3 = rate_limiter_check(rl, "192.168.1.50")
+    assert_false(map_get(r3, "allowed"), "Request 3 phai bi reject vi vuot qua rate limit")
+
+    // Request from different IP: Allowed
+    let r4 = rate_limiter_check(rl, "10.0.0.1")
+    assert_true(map_get(r4, "allowed"), "IP khac phai duoc phep")
 })

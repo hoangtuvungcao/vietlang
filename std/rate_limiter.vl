@@ -1,54 +1,93 @@
-// ===================================================
-// VietLang Rate Limiter (std.rate_limiter)
-// Token Bucket & Sliding Window Rate Limiting Engine
-// ===================================================
+// ========================================================================
+// Module: std.rate_limiter
+// Configurable Enterprise Sliding-Window Rate Limiter Engine
+// ========================================================================
 
-fn rate_limiter_new(max_tokens: Int, refill_rate_per_sec: Int) {
-    let rl = map_new()
-    let rl = map_set(rl, "max_tokens", max_tokens)
-    let rl = map_set(rl, "refill_rate", refill_rate_per_sec)
-    let rl = map_set(rl, "buckets", map_new())
+fn rate_limiter_new(max_requests: Int = 100, window_seconds: Int = 60) {
+    let mut rl = map_new()
+    rl = map_set(rl, "max_requests", max_requests)
+    rl = map_set(rl, "window_seconds", window_seconds)
+    rl = map_set(rl, "records", map_new())
+    rl = map_set(rl, "whitelist", [])
     return rl
 }
 
-fn rate_limit_allow(rl, client_key: String) {
-    let max_t = map_get(rl, "max_tokens")
-    let rate = map_get(rl, "refill_rate")
-    let buckets = map_get(rl, "buckets")
+fn rate_limiter_whitelist(rl, ip: String) {
+    let list = map_get(rl, "whitelist")
+    let new_list = push(list, ip)
+    return map_set(rl, "whitelist", new_list)
+}
+
+fn rate_limiter_is_whitelisted(rl, key: String) -> Bool {
+    let list = map_get(rl, "whitelist")
+    if list == none {
+        return false
+    }
+    let mut i = 0
+    while i < len(list) {
+        if list[i] == key {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn rate_limiter_check(rl, key: String) {
+    if rate_limiter_is_whitelisted(rl, key) {
+        let mut allow_res = map_new()
+        allow_res = map_set(allow_res, "allowed", true)
+        allow_res = map_set(allow_res, "remaining", map_get(rl, "max_requests"))
+        allow_res = map_set(allow_res, "reset_in", 0)
+        allow_res = map_set(allow_res, "limiter", rl)
+        return allow_res
+    }
+
     let now = time_now()
+    let max_req = map_get(rl, "max_requests")
+    let window = map_get(rl, "window_seconds")
 
-    let mut tokens = max_t
-    let mut last_refill = now
+    let mut records = map_get(rl, "records")
+    let mut timestamps = []
+    if map_has(records, key) {
+        timestamps = map_get(records, key)
+    }
 
-    if map_has(buckets, client_key) {
-        let b = map_get(buckets, client_key)
-        let old_tokens = map_get(b, "tokens")
-        last_refill = map_get(b, "last_refill")
+    // Retain only timestamps within sliding window
+    let mut valid_timestamps = []
+    let mut i = 0
+    while i < len(timestamps) {
+        let t = timestamps[i]
+        if (now - t) < window {
+            valid_timestamps = push(valid_timestamps, t)
+        }
+        i = i + 1
+    }
 
-        let elapsed = now - last_refill
-        let added = elapsed * rate
-        tokens = old_tokens + added
-        if tokens > max_t {
-            tokens = max_t
+    let count = len(valid_timestamps)
+    let is_allowed = count < max_req
+
+    if is_allowed {
+        valid_timestamps = push(valid_timestamps, now)
+    }
+
+    records = map_set(records, key, valid_timestamps)
+    let updated_rl = map_set(rl, "records", records)
+
+    let remaining = max_req - len(valid_timestamps)
+    let mut reset_in = window
+    if len(valid_timestamps) > 0 {
+        let oldest = valid_timestamps[0]
+        reset_in = window - (now - oldest)
+        if reset_in < 0 {
+            reset_in = 0
         }
     }
 
-    if tokens >= 1 {
-        tokens -= 1
-        let updated_bucket = map_set(map_set(map_new(), "tokens", tokens), "last_refill", now)
-        let new_buckets = map_set(buckets, client_key, updated_bucket)
-        let updated_rl = map_set(rl, "buckets", new_buckets)
-
-        let res = map_new()
-        let res = map_set(res, "allowed", true)
-        let res = map_set(res, "remaining", tokens)
-        let res = map_set(res, "limiter", updated_rl)
-        return res
-    } else {
-        let res = map_new()
-        let res = map_set(res, "allowed", false)
-        let res = map_set(res, "remaining", 0)
-        let res = map_set(res, "limiter", rl)
-        return res
-    }
+    let mut result = map_new()
+    result = map_set(result, "allowed", is_allowed)
+    result = map_set(result, "remaining", remaining)
+    result = map_set(result, "reset_in", reset_in)
+    result = map_set(result, "limiter", updated_rl)
+    return result
 }

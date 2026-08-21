@@ -602,25 +602,6 @@ pub fn builtin_ws_broadcast(args: &[Value], line: usize, col: usize) -> VietResu
     Ok(Value::Bool(true))
 }
 
-pub static RATE_LIMITER: Mutex<Option<HashMap<String, Vec<Instant>>>> = Mutex::new(None);
-
-pub fn check_rate_limit(client_ip: &str, max_req_per_min: usize) -> bool {
-    let mut guard = RATE_LIMITER.lock().unwrap();
-    let map = guard.get_or_insert_with(HashMap::new);
-    let now = Instant::now();
-    let window = std::time::Duration::from_secs(60);
-
-    let timestamps = map.entry(client_ip.to_string()).or_insert_with(Vec::new);
-    timestamps.retain(|t| now.duration_since(*t) < window);
-
-    if timestamps.len() >= max_req_per_min {
-        false
-    } else {
-        timestamps.push(now);
-        true
-    }
-}
-
 pub fn builtin_html_escape(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.is_empty() {
         return Err(VietError::runtime_error("html_escape() takes 1 argument".into(), line, col));

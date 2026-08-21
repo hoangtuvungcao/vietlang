@@ -1555,18 +1555,6 @@ impl Interpreter {
                         continue;
                     }
 
-                    // Rate Limiting check (max 300 requests/minute per IP)
-                    if !crate::stdlib::check_rate_limit(&client_ip, 300) {
-                        let rate_err = "{\"error\":\"Too Many Requests. Rate limit exceeded (300 req/min).\",\"status_code\":429}";
-                        let resp = format!(
-                            "HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nRetry-After: 60\r\nConnection: close\r\n\r\n{}",
-                            rate_err.len(), rate_err
-                        );
-                        let _ = stream.write_all(resp.as_bytes());
-                        let _ = stream.flush();
-                        continue;
-                    }
-
                     // Pure VietLang Request Dispatching
                     let (status_code, content_type, response_body) = if let Some(ref h) = handler {
                         let mut req_map = HashMap::new();
