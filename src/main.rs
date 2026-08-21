@@ -42,7 +42,28 @@ const BANNER: &str = r#"
  ╚════════════════════════════════════════════════════════════╝
 "#;
 
+const STANDALONE_MAGIC_FOOTER: &[u8; 16] = b"__VIETLANG_BIN__";
+
 fn main() {
+    // 0. Check if current binary is a standalone compiled executable (O(1) footer check)
+    if let Ok(current_exe) = env::current_exe() {
+        if let Ok(bytes) = fs::read(&current_exe) {
+            let total_len = bytes.len();
+            if total_len > 24 && &bytes[total_len - 16..] == STANDALONE_MAGIC_FOOTER {
+                let mut len_bytes = [0u8; 8];
+                len_bytes.copy_from_slice(&bytes[total_len - 24..total_len - 16]);
+                let payload_len = u64::from_be_bytes(len_bytes) as usize;
+                if payload_len > 0 && payload_len <= total_len - 24 {
+                    let start = total_len - 24 - payload_len;
+                    if let Ok(embedded_source) = std::str::from_utf8(&bytes[start..start + payload_len]) {
+                        run_source(embedded_source, "<embedded>");
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() <= 1 {
@@ -53,6 +74,20 @@ fn main() {
                 println!("VietLang v{}", VERSION);
             }
             "--help" | "-h" => print_help(),
+            "build" | "compile" => {
+                if args.len() < 3 {
+                    eprintln!("Usage: vietlang build <source.vl> [-o <output_binary>]");
+                    std::process::exit(1);
+                }
+                let source_file = &args[2];
+                let mut output_file = source_file.trim_end_matches(".vl").to_string();
+                if args.len() >= 5 && (args[3] == "-o" || args[3] == "--output") {
+                    output_file = args[4].clone();
+                } else if args.len() >= 4 && args[3] != "-o" && args[3] != "--output" {
+                    output_file = args[3].clone();
+                }
+                build_standalone_binary(source_file, &output_file);
+            }
             "pkg" | "package" | "pm" => {
                 if args.len() >= 3 {
                     pm::handle_vpm_command(&args[2..]);
@@ -203,16 +238,8 @@ fn print_help() {
     println!("  vietlang                          Start REPL");
 }
 
-fn run_file(path: &str) {
-    let source = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("\x1b[31mError:\x1b[0m Cannot read file '{}': {}", path, e);
-            std::process::exit(1);
-        }
-    };
-
-    let mut lexer = Lexer::new(&source);
+fn run_source(source: &str, _name: &str) {
+    let mut lexer = Lexer::new(source);
     let tokens = match lexer.tokenize() {
         Ok(tokens) => tokens,
         Err(e) => {
@@ -234,13 +261,111 @@ fn run_file(path: &str) {
     match interpreter.execute(&program) {
         Ok(_) => {}
         Err(e) => {
-            // Filter out control flow signals
             if !e.message.starts_with("__") {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }
         }
     }
+}
+
+fn build_standalone_binary(source_path: &str, output_path: &str) {
+    println!("\x1b[36m[VietLang Compiler]\x1b[0m Compiling \x1b[33m{}\x1b[0m to standalone binary \x1b[32m{}\x1b[0m...", source_path, output_path);
+    
+    // 1. Read and validate source
+    let source = match fs::read_to_string(source_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot read source file '{}': {}", source_path, e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("\x1b[31mSyntax Error:\x1b[0m {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut parser = Parser::new(tokens);
+    if let Err(e) = parser.parse() {
+        eprintln!("\x1b[31mParse Error:\x1b[0m {}", e);
+        std::process::exit(1);
+    }
+
+    // 2. Read base runtime binary
+    let current_exe = env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("vietlang"));
+    let base_binary = match fs::read(&current_exe) {
+        Ok(b) if b.len() > 100_000 => b,
+        _ => match fs::read("target/release/vietlang") {
+            Ok(b) => b,
+            Err(_) => match fs::read("/home/vantrong/.vietlang/bin/vietlang") {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("\x1b[31mError:\x1b[0m Cannot locate base runtime binary: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+
+    // 3. Strip any preexisting footer from base_binary
+    let total_len = base_binary.len();
+    let clean_len = if total_len > 24 && &base_binary[total_len - 16..] == STANDALONE_MAGIC_FOOTER {
+        let mut len_bytes = [0u8; 8];
+        len_bytes.copy_from_slice(&base_binary[total_len - 24..total_len - 16]);
+        let old_payload_len = u64::from_be_bytes(len_bytes) as usize;
+        if old_payload_len <= total_len - 24 {
+            total_len - 24 - old_payload_len
+        } else {
+            total_len
+        }
+    } else {
+        total_len
+    };
+
+    let source_bytes = source.as_bytes();
+    let payload_len = source_bytes.len() as u64;
+
+    let mut standalone_bin = Vec::with_capacity(clean_len + source_bytes.len() + 24);
+    standalone_bin.extend_from_slice(&base_binary[..clean_len]);
+    standalone_bin.extend_from_slice(source_bytes);
+    standalone_bin.extend_from_slice(&payload_len.to_be_bytes());
+    standalone_bin.extend_from_slice(STANDALONE_MAGIC_FOOTER);
+
+    // 4. Write output binary
+    if let Err(e) = fs::write(output_path, &standalone_bin) {
+        eprintln!("\x1b[31mError:\x1b[0m Cannot write output binary '{}': {}", output_path, e);
+        std::process::exit(1);
+    }
+
+    // 5. Set executable permissions on Unix/Linux/macOS
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = fs::metadata(output_path) {
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o755);
+            let _ = fs::set_permissions(output_path, perms);
+        }
+    }
+
+    println!("\x1b[32m[SUCCESS]\x1b[0m Standalone executable created: \x1b[32;1m{}\x1b[0m ({} bytes)", output_path, standalone_bin.len());
+    println!("  -> Run directly with: \x1b[36m./{}\x1b[0m", output_path);
+}
+
+fn run_file(path: &str) {
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot read file '{}': {}", path, e);
+            std::process::exit(1);
+        }
+    };
+    run_source(&source, path);
 }
 
 fn run_vm(path: &str) {

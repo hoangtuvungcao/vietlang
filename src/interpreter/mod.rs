@@ -143,6 +143,12 @@ impl Interpreter {
             // Concurrency
             ("spawn", None),
             ("channel", None),
+            ("channel_new", None),
+            ("channel_send", None),
+            ("channel_recv", None),
+            ("channel_try_recv", None),
+            ("channel_close", None),
+            ("thread_sleep", None),
             ("mutex_new", None),
 
             // String character operations
@@ -1275,8 +1281,13 @@ impl Interpreter {
             "db_table" => crate::stdlib::builtin_db_table(args, span.line, span.column),
 
             // Concurrency
-            "spawn" => crate::stdlib::builtin_spawn(args, span.line, span.column),
-            "channel" => crate::stdlib::builtin_channel(args, span.line, span.column),
+            "spawn" => self.eval_spawn(args, span),
+            "channel" | "channel_new" => crate::stdlib::builtin_channel(args, span.line, span.column),
+            "channel_send" => crate::stdlib::builtin_channel_send(args, span.line, span.column),
+            "channel_recv" => crate::stdlib::builtin_channel_recv(args, span.line, span.column),
+            "channel_try_recv" => crate::stdlib::builtin_channel_try_recv(args, span.line, span.column),
+            "channel_close" => crate::stdlib::builtin_channel_close(args, span.line, span.column),
+            "thread_sleep" => crate::stdlib::builtin_thread_sleep(args, span.line, span.column),
             "mutex_new" => crate::stdlib::builtin_mutex_new(args, span.line, span.column),
 
             // Utility
@@ -1643,5 +1654,31 @@ impl Interpreter {
         }
 
         Ok(Value::None)
+    }
+
+    fn eval_spawn(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
+        if args.is_empty() {
+            return Err(VietError::runtime_error("spawn() takes at least 1 function or closure argument".into(), span.line, span.column));
+        }
+        let func = args[0].clone();
+        let call_args = args[1..].to_vec();
+
+        let mut sub_interpreter = self.clone();
+        let span_clone = span.clone();
+
+        static TASK_ID_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let task_id = TASK_ID_GEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        std::thread::spawn(move || {
+            let _ = sub_interpreter.call_function(&func, &call_args, &span_clone);
+        });
+
+        let mut fields = HashMap::new();
+        fields.insert("id".to_string(), Value::Int(task_id as i64));
+        fields.insert("type".to_string(), Value::String("Task".to_string()));
+        Ok(Value::Struct {
+            type_name: "Task".to_string(),
+            fields,
+        })
     }
 }

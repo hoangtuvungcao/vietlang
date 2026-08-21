@@ -1,0 +1,14 @@
+{
+  "name": "vnpay_sdk",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "description": "VNPay Payment Gateway Integration SDK with HMAC-SHA512 checksum and IPN listener",
+      "author": "hoangtuvungcao",
+      "source": "https://github.com/hoangtuvungcao/vietlang-vnpay-sdk.git",
+      "checksum": "vlt_8b2c9d0e1f3a4b5c",
+      "dependencies": {},
+      "published_at": "2026-08-21T11:00:00Z"
+    }
+  ]
+}

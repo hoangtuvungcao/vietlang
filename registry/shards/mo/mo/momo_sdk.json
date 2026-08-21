@@ -1,0 +1,14 @@
+{
+  "name": "momo_sdk",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "description": "MoMo E-Wallet Payment Gateway API and Webhook verification for VietLang",
+      "author": "hoangtuvungcao",
+      "source": "https://github.com/hoangtuvungcao/vietlang-momo-sdk.git",
+      "checksum": "vlt_9c3d0e1f2a4b5c6d",
+      "dependencies": {},
+      "published_at": "2026-08-21T11:00:00Z"
+    }
+  ]
+}

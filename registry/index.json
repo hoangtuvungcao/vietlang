@@ -2,6 +2,66 @@
   "registry_version": "1.0.0",
   "updated_at": "2026-08-21T08:15:00Z",
   "packages": {
+    "vietqr_sdk": {
+      "name": "vietqr_sdk",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "Standard VietQR & EMVCo Quick Response generator for 50+ Vietnamese Commercial Banks",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang-vietqr-sdk.git",
+          "checksum": "vlt_7a1b8c9d0e2f3a4b",
+          "keywords": ["vietqr", "banking", "emvco", "qr", "payments"]
+        }
+      }
+    },
+
+    "vnpay_sdk": {
+      "name": "vnpay_sdk",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "VNPay Payment Gateway Integration SDK with HMAC-SHA512 checksum and IPN listener",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang-vnpay-sdk.git",
+          "checksum": "vlt_8b2c9d0e1f3a4b5c",
+          "keywords": ["vnpay", "payment", "fintech", "vietnam"]
+        }
+      }
+    },
+
+    "momo_sdk": {
+      "name": "momo_sdk",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "MoMo E-Wallet Payment Gateway API and Webhook verification for VietLang",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang-momo-sdk.git",
+          "checksum": "vlt_9c3d0e1f2a4b5c6d",
+          "keywords": ["momo", "wallet", "fintech", "payment"]
+        }
+      }
+    },
+
+    "zalo_sdk": {
+      "name": "zalo_sdk",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "Zalo Official Account (OA), ZNS Notification & ZaloPay Mini-App Backend Gateway",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang-zalo-sdk.git",
+          "checksum": "vlt_0d4e1f2a3b5c6d7e",
+          "keywords": ["zalo", "zns", "zalopay", "oa"]
+        }
+      }
+    },
+
     "my_payment_sdk": {
       "name": "my_payment_sdk",
       "latest": "1.0.0",

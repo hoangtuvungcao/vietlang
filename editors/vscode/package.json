@@ -2,7 +2,7 @@
   "name": "vietlang",
   "displayName": "VietLang - Backend Programming Language",
   "description": "Official Visual Studio Code extension for VietLang: 1-Click Run, Real-Time Syntax Linter & Diagnostics, Custom File Icons (.vl), Code Snippets, Bracket Matching, and Language Support.",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "publisher": "hoangtuvungcao",
   "engines": {
     "vscode": "^1.75.0"

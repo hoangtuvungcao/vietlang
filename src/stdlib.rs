@@ -11,10 +11,10 @@
 //! - std.cache: In-memory caching
 //! - std.collections: HashMap, Set
 
-use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH, Instant};
+use std::collections::{HashMap, VecDeque};
+use std::time::{SystemTime, UNIX_EPOCH, Instant, Duration};
 use std::io::{Read, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Condvar, OnceLock};
 use crate::error::{VietError, VietResult};
 use crate::interpreter::value::Value;
 
@@ -1097,32 +1097,228 @@ pub fn builtin_db_table(args: &[Value], line: usize, col: usize) -> VietResult<V
 }
 
 // ============================================================
-// Concurrency — spawn, channel, mutex
+// ============================================================
+// Concurrency — spawn, channel, mutex, thread_sleep
 // ============================================================
 
-pub fn builtin_spawn(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
-    if args.is_empty() {
-        return Err(VietError::runtime_error("spawn() takes a function argument".into(), line, col));
-    }
-    // For now, log the spawn request - full threading requires deeper integration
-    eprintln!("\x1b[33m[SPAWN]\x1b[0m Task spawned");
-    Ok(Value::String("task-spawned".to_string()))
+pub struct NativeChannelState {
+    pub buffer: VecDeque<Value>,
+    pub capacity: usize,
+    pub closed: bool,
+}
+
+pub type NativeChannelEntry = (Arc<Mutex<NativeChannelState>>, Arc<Condvar>, Arc<Condvar>);
+
+static NATIVE_CHANNELS: OnceLock<Mutex<HashMap<u64, NativeChannelEntry>>> = OnceLock::new();
+static NATIVE_CHANNEL_ID_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+fn get_native_channels() -> &'static Mutex<HashMap<u64, NativeChannelEntry>> {
+    NATIVE_CHANNELS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub fn builtin_channel(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    let buffer = match args.first() {
-        Some(Value::Int(n)) => *n,
-        _ => 0,
+    let capacity = match args.first() {
+        Some(Value::Int(n)) if *n > 0 => *n as usize,
+        _ => 0, // 0 = unbounded
     };
+
+    let id = NATIVE_CHANNEL_ID_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let state = Arc::new(Mutex::new(NativeChannelState {
+        buffer: VecDeque::new(),
+        capacity,
+        closed: false,
+    }));
+    let not_empty = Arc::new(Condvar::new());
+    let not_full = Arc::new(Condvar::new());
+
+    {
+        let mut registry = get_native_channels().lock().unwrap();
+        registry.insert(id, (state, not_empty, not_full));
+    }
+
     let mut fields = HashMap::new();
-    fields.insert("buffer".to_string(), Value::Int(buffer));
+    fields.insert("id".to_string(), Value::Int(id as i64));
+    fields.insert("capacity".to_string(), Value::Int(capacity as i64));
     fields.insert("type".to_string(), Value::String("channel".to_string()));
-    fields.insert("messages".to_string(), Value::Array(Vec::new()));
-    fields.insert("closed".to_string(), Value::Bool(false));
+
     Ok(Value::Struct {
         type_name: "Channel".to_string(),
         fields,
     })
+}
+
+pub fn builtin_channel_send(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("channel_send(ch, value) expects 2 arguments".into(), line, col));
+    }
+
+    let id = match &args[0] {
+        Value::Struct { fields, .. } => {
+            match fields.get("id") {
+                Some(Value::Int(i)) => *i as u64,
+                _ => return Err(VietError::type_error("Invalid channel object".into(), line, col)),
+            }
+        }
+        _ => return Err(VietError::type_error("channel_send expects a Channel struct as first argument".into(), line, col)),
+    };
+
+    let value = args[1].clone();
+    let entry = {
+        let registry = get_native_channels().lock().unwrap();
+        registry.get(&id).cloned()
+    };
+
+    let (state_arc, not_empty_cond, not_full_cond): NativeChannelEntry = match entry {
+        Some(e) => e,
+        None => return Err(VietError::runtime_error(format!("Channel #{} not found or closed", id), line, col)),
+    };
+
+    let mut state = state_arc.lock().unwrap();
+    if state.closed {
+        return Err(VietError::runtime_error("Cannot send on closed channel".into(), line, col));
+    }
+
+    // If bounded channel is full, wait on not_full
+    if state.capacity > 0 {
+        while state.buffer.len() >= state.capacity && !state.closed {
+            state = not_full_cond.wait(state).unwrap();
+            if state.closed {
+                return Err(VietError::runtime_error("Cannot send on closed channel".into(), line, col));
+            }
+        }
+    }
+
+    state.buffer.push_back(value);
+    not_empty_cond.notify_one();
+    Ok(Value::Bool(true))
+}
+
+pub fn builtin_channel_recv(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("channel_recv(ch) expects 1 argument".into(), line, col));
+    }
+
+    let id = match &args[0] {
+        Value::Struct { fields, .. } => {
+            match fields.get("id") {
+                Some(Value::Int(i)) => *i as u64,
+                _ => return Err(VietError::type_error("Invalid channel object".into(), line, col)),
+            }
+        }
+        _ => return Err(VietError::type_error("channel_recv expects a Channel struct".into(), line, col)),
+    };
+
+    let entry = {
+        let registry = get_native_channels().lock().unwrap();
+        registry.get(&id).cloned()
+    };
+
+    let (state_arc, not_empty_cond, not_full_cond): NativeChannelEntry = match entry {
+        Some(e) => e,
+        None => return Err(VietError::runtime_error(format!("Channel #{} not found or closed", id), line, col)),
+    };
+
+    let mut state = state_arc.lock().unwrap();
+    while state.buffer.is_empty() && !state.closed {
+        state = not_empty_cond.wait(state).unwrap();
+    }
+
+    if let Some(val) = state.buffer.pop_front() {
+        if state.capacity > 0 {
+            not_full_cond.notify_one();
+        }
+        Ok(val)
+    } else {
+        Ok(Value::None)
+    }
+}
+
+pub fn builtin_channel_try_recv(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("channel_try_recv(ch) expects 1 argument".into(), line, col));
+    }
+
+    let id = match &args[0] {
+        Value::Struct { fields, .. } => {
+            match fields.get("id") {
+                Some(Value::Int(i)) => *i as u64,
+                _ => return Err(VietError::type_error("Invalid channel object".into(), line, col)),
+            }
+        }
+        _ => return Err(VietError::type_error("channel_try_recv expects a Channel struct".into(), line, col)),
+    };
+
+    let entry = {
+        let registry = get_native_channels().lock().unwrap();
+        registry.get(&id).cloned()
+    };
+
+    let (state_arc, _not_empty_cond, not_full_cond): NativeChannelEntry = match entry {
+        Some(e) => e,
+        None => {
+            let mut res = HashMap::new();
+            res.insert("ok".to_string(), Value::Bool(false));
+            res.insert("value".to_string(), Value::None);
+            return Ok(Value::Struct { type_name: "Map".to_string(), fields: res });
+        }
+    };
+
+    let mut state = state_arc.lock().unwrap();
+    if let Some(val) = state.buffer.pop_front() {
+        if state.capacity > 0 {
+            not_full_cond.notify_one();
+        }
+        let mut res = HashMap::new();
+        res.insert("ok".to_string(), Value::Bool(true));
+        res.insert("value".to_string(), val);
+        Ok(Value::Struct { type_name: "Map".to_string(), fields: res })
+    } else {
+        let mut res = HashMap::new();
+        res.insert("ok".to_string(), Value::Bool(false));
+        res.insert("value".to_string(), Value::None);
+        Ok(Value::Struct { type_name: "Map".to_string(), fields: res })
+    }
+}
+
+pub fn builtin_channel_close(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("channel_close(ch) expects 1 argument".into(), line, col));
+    }
+
+    let id = match &args[0] {
+        Value::Struct { fields, .. } => {
+            match fields.get("id") {
+                Some(Value::Int(i)) => *i as u64,
+                _ => return Err(VietError::type_error("Invalid channel object".into(), line, col)),
+            }
+        }
+        _ => return Err(VietError::type_error("channel_close expects a Channel struct".into(), line, col)),
+    };
+
+    let entry = {
+        let registry = get_native_channels().lock().unwrap();
+        registry.get(&id).cloned()
+    };
+
+    if let Some((state_arc, not_empty_cond, not_full_cond)) = entry {
+        let mut state = state_arc.lock().unwrap();
+        state.closed = true;
+        not_empty_cond.notify_all();
+        not_full_cond.notify_all();
+    }
+    Ok(Value::Bool(true))
+}
+
+pub fn builtin_thread_sleep(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let millis = match args.first() {
+        Some(Value::Int(n)) if *n > 0 => *n as u64,
+        Some(Value::Float(f)) if *f > 0.0 => *f as u64,
+        _ => 0,
+    };
+    if millis > 0 {
+        std::thread::sleep(Duration::from_millis(millis));
+    }
+    Ok(Value::Bool(true))
 }
 
 pub fn builtin_mutex_new(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
