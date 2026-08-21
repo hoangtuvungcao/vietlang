@@ -49,6 +49,9 @@ fn main() {
         run_repl();
     } else {
         match args[1].as_str() {
+            "--version" | "-v" | "version" => {
+                println!("VietLang v{}", VERSION);
+            }
             "--help" | "-h" => print_help(),
             "pkg" | "package" | "pm" => {
                 if args.len() >= 3 {
