@@ -1,0 +1,155 @@
+// ========================================================================
+// VietLang Unified Database Driver & Connection Manager (std.db)
+// Universal Connection Interface for SQLite, MySQL, and PostgreSQL
+// ========================================================================
+
+import std.db_sqlite
+import std.db_mysql
+import std.db_postgres
+
+fn db_connect(connection_url: String = "data/database.sqlite") {
+    let mut handle = map_new()
+
+    if connection_url.starts_with("mysql://") {
+        let pool = mysql_connect_pool(connection_url)
+        handle = map_set(handle, "driver", "mysql")
+        handle = map_set(handle, "url", connection_url)
+        handle = map_set(handle, "conn", pool)
+        handle = map_set(handle, "status", "CONNECTED")
+        return handle
+    }
+
+    if connection_url.starts_with("postgres://") || connection_url.starts_with("postgresql://") {
+        let client_pg = postgres_connect(connection_url)
+        handle = map_set(handle, "driver", "postgres")
+        handle = map_set(handle, "url", connection_url)
+        handle = map_set(handle, "conn", client_pg)
+        handle = map_set(handle, "status", "CONNECTED")
+        return handle
+    }
+
+    // Default: SQLite (Real Binary ACID Engine)
+    let mut clean_path = connection_url
+    if connection_url.starts_with("sqlite://") {
+        clean_path = connection_url.replace("sqlite://", "")
+    }
+
+    let sqlite_conn = sqlite_open(clean_path)
+    handle = map_set(handle, "driver", "sqlite")
+    handle = map_set(handle, "url", clean_path)
+    handle = map_set(handle, "conn", sqlite_conn)
+    handle = map_set(handle, "status", "CONNECTED")
+    return handle
+}
+
+fn db_exec(handle, sql: String) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_exec(conn, sql)
+    }
+    if driver == "mysql" {
+        return mysql_exec(conn, sql)
+    }
+    if driver == "postgres" {
+        return postgres_exec(conn, sql)
+    }
+    return none
+}
+
+fn db_execute(handle, sql: String, params = []) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_execute(conn, sql, params)
+    }
+    if driver == "mysql" {
+        return mysql_execute(conn, sql, params)
+    }
+    if driver == "postgres" {
+        return postgres_execute(conn, sql, params)
+    }
+    return 0
+}
+
+fn db_query(handle, sql: String, params = []) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_query(conn, sql, params)
+    }
+    if driver == "mysql" {
+        return mysql_query(conn, sql, params)
+    }
+    if driver == "postgres" {
+        return postgres_query(conn, sql, params)
+    }
+    return []
+}
+
+fn db_begin(handle) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_begin_transaction(conn)
+    }
+    if driver == "mysql" {
+        return mysql_begin_transaction(conn)
+    }
+    if driver == "postgres" {
+        return postgres_begin_transaction(conn)
+    }
+    return conn
+}
+
+fn db_commit(handle) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_commit(conn)
+    }
+    if driver == "mysql" {
+        return mysql_commit(conn)
+    }
+    if driver == "postgres" {
+        return postgres_commit(conn)
+    }
+    return conn
+}
+
+fn db_rollback(handle) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_rollback(conn)
+    }
+    if driver == "mysql" {
+        return mysql_rollback(conn)
+    }
+    if driver == "postgres" {
+        return postgres_rollback(conn)
+    }
+    return conn
+}
+
+fn db_close(handle) {
+    let driver = to_string(map_get(handle, "driver"))
+    let conn = map_get(handle, "conn")
+
+    if driver == "sqlite" {
+        return sqlite_close(conn)
+    }
+    if driver == "mysql" {
+        return mysql_close(conn)
+    }
+    if driver == "postgres" {
+        return postgres_close(conn)
+    }
+    return true
+}
