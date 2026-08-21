@@ -1,14 +1,44 @@
 # Module `std.rpc`
 
-## Exported Functions
+VietLang Microservice RPC Framework (std.rpc)
 
-### `fn rpc_server_new()`
+## Quickstart
 
-### `fn rpc_register(server, procedure_name: String, handler_fn_name: String)`
+```vietlang
+import std.rpc
+```
 
-### `fn rpc_create_request(procedure: String, params) -> String`
+## Exported Functions Reference
 
-### `fn rpc_create_response(req_id: String, result) -> String`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn rpc_server_new()` | Function provided by module |
+| `fn rpc_register(server, procedure_name: String, handler_fn_name: String)` | Function provided by module |
+| `fn rpc_create_request(procedure: String, params) -> String` | Function provided by module |
+| `fn rpc_create_response(req_id: String, result) -> String` | Function provided by module |
+| `fn rpc_create_error(req_id: String, code: Int, message: String) -> String` | Function provided by module |
 
-### `fn rpc_create_error(req_id: String, code: Int, message: String) -> String`
+---
+
+### Function Details
+
+#### `fn rpc_server_new()`
+
+Function provided by module
+
+#### `fn rpc_register(server, procedure_name: String, handler_fn_name: String)`
+
+Function provided by module
+
+#### `fn rpc_create_request(procedure: String, params) -> String`
+
+Function provided by module
+
+#### `fn rpc_create_response(req_id: String, result) -> String`
+
+Function provided by module
+
+#### `fn rpc_create_error(req_id: String, code: Int, message: String) -> String`
+
+Function provided by module
 

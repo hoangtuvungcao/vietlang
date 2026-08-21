@@ -1,10 +1,34 @@
 # Module `std.event_bus`
 
-## Exported Functions
+VietLang Event-Driven Pub/Sub Bus (std.event_bus)
 
-### `fn event_bus_new()`
+## Quickstart
 
-### `fn event_subscribe(bus, topic: String, subscriber_name: String)`
+```vietlang
+import std.event_bus
+```
 
-### `fn event_publish(bus, topic: String, payload)`
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn event_bus_new()` | Function provided by module |
+| `fn event_subscribe(bus, topic: String, subscriber_name: String)` | Function provided by module |
+| `fn event_publish(bus, topic: String, payload)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn event_bus_new()`
+
+Function provided by module
+
+#### `fn event_subscribe(bus, topic: String, subscriber_name: String)`
+
+Function provided by module
+
+#### `fn event_publish(bus, topic: String, payload)`
+
+Function provided by module
 

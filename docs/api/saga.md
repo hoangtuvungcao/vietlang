@@ -1,14 +1,39 @@
 # Module `std.saga`
 
-## Exported Functions
+VietLang Distributed SAGA Transaction Coordinator (std.saga)
 
-### `fn saga_new(transaction_name: String)`
+## Quickstart
 
-### `fn saga_add_step(saga, step_name: String, forward_action: String, compensate_action: String)`
+```vietlang
+import std.saga
+```
 
-### `fn saga_record_step_success(saga, step_name: String)`
+## Exported Functions Reference
 
-### `fn saga_compensate_all(saga)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn saga_new(transaction_name: String)` | Function provided by module |
+| `fn saga_add_step(saga, step_name: String, forward_action: String, compensate_action: String)` | Function provided by module |
+| `fn saga_record_step_success(saga, step_name: String)` | Function provided by module |
+| `fn saga_compensate_all(saga)` | When a step fails, trigger compensating rollback for all executed steps in reverse order |
+
+---
+
+### Function Details
+
+#### `fn saga_new(transaction_name: String)`
+
+Function provided by module
+
+#### `fn saga_add_step(saga, step_name: String, forward_action: String, compensate_action: String)`
+
+Function provided by module
+
+#### `fn saga_record_step_success(saga, step_name: String)`
+
+Function provided by module
+
+#### `fn saga_compensate_all(saga)`
 
 When a step fails, trigger compensating rollback for all executed steps in reverse order
 

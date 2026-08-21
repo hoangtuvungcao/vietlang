@@ -1,12 +1,39 @@
 # Module `std.config`
 
-## Exported Functions
+VietLang Configuration Loader (std.config)
 
-### `fn config_load(env_file_path: String = ".env")`
+## Quickstart
 
-### `fn config_get(cfg, key: String, default_val = none)`
+```vietlang
+import std.config
+```
 
-### `fn config_get_int(cfg, key: String, default_val: Int = 0) -> Int`
+## Exported Functions Reference
 
-### `fn config_get_bool(cfg, key: String, default_val: Bool = false) -> Bool`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn config_load(env_file_path: String = ".env")` | Function provided by module |
+| `fn config_get(cfg, key: String, default_val = none)` | Function provided by module |
+| `fn config_get_int(cfg, key: String, default_val: Int = 0) -> Int` | Function provided by module |
+| `fn config_get_bool(cfg, key: String, default_val: Bool = false) -> Bool` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn config_load(env_file_path: String = ".env")`
+
+Function provided by module
+
+#### `fn config_get(cfg, key: String, default_val = none)`
+
+Function provided by module
+
+#### `fn config_get_int(cfg, key: String, default_val: Int = 0) -> Int`
+
+Function provided by module
+
+#### `fn config_get_bool(cfg, key: String, default_val: Bool = false) -> Bool`
+
+Function provided by module
 

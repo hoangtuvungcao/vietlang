@@ -1,8 +1,29 @@
 # Module `std.sse`
 
-## Exported Functions
+VietLang Server-Sent Events (SSE) Real-Time Streaming (std.sse)
 
-### `fn sse_event_format(event_name: String, data_payload, id = none) -> String`
+## Quickstart
 
-### `fn sse_create_response(event_content: String)`
+```vietlang
+import std.sse
+```
+
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn sse_event_format(event_name: String, data_payload, id = none) -> String` | Function provided by module |
+| `fn sse_create_response(event_content: String)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn sse_event_format(event_name: String, data_payload, id = none) -> String`
+
+Function provided by module
+
+#### `fn sse_create_response(event_content: String)`
+
+Function provided by module
 

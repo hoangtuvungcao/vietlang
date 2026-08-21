@@ -1,14 +1,44 @@
 # Module `std.cache`
 
-## Exported Functions
+VietLang In-Memory & TTL Cache (std.cache)
 
-### `fn cache_new()`
+## Quickstart
 
-### `fn cache_set(c, key: String, val, ttl_seconds: Int = 0)`
+```vietlang
+import std.cache
+```
 
-### `fn cache_get(c, key: String, default_val = none)`
+## Exported Functions Reference
 
-### `fn cache_has(c, key: String) -> Bool`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn cache_new()` | Function provided by module |
+| `fn cache_set(c, key: String, val, ttl_seconds: Int = 0)` | Function provided by module |
+| `fn cache_get(c, key: String, default_val = none)` | Function provided by module |
+| `fn cache_has(c, key: String) -> Bool` | Function provided by module |
+| `fn cache_delete(c, key: String)` | Function provided by module |
 
-### `fn cache_delete(c, key: String)`
+---
+
+### Function Details
+
+#### `fn cache_new()`
+
+Function provided by module
+
+#### `fn cache_set(c, key: String, val, ttl_seconds: Int = 0)`
+
+Function provided by module
+
+#### `fn cache_get(c, key: String, default_val = none)`
+
+Function provided by module
+
+#### `fn cache_has(c, key: String) -> Bool`
+
+Function provided by module
+
+#### `fn cache_delete(c, key: String)`
+
+Function provided by module
 

@@ -1,12 +1,39 @@
 # Module `std.http_pipeline`
 
-## Exported Functions
+VietLang Enterprise HTTP Pipeline & Middleware Chain (std.http_pipeline)
 
-### `fn http_pipeline_new()`
+## Quickstart
 
-### `fn http_apply_security_headers(headers)`
+```vietlang
+import std.http_pipeline
+```
 
-### `fn http_check_ip_allowed(pipeline, client_ip: String) -> Bool`
+## Exported Functions Reference
 
-### `fn http_build_response(status_code: Int, body_data, headers = none)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn http_pipeline_new()` | Function provided by module |
+| `fn http_apply_security_headers(headers)` | Function provided by module |
+| `fn http_check_ip_allowed(pipeline, client_ip: String) -> Bool` | Function provided by module |
+| `fn http_build_response(status_code: Int, body_data, headers = none)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn http_pipeline_new()`
+
+Function provided by module
+
+#### `fn http_apply_security_headers(headers)`
+
+Function provided by module
+
+#### `fn http_check_ip_allowed(pipeline, client_ip: String) -> Bool`
+
+Function provided by module
+
+#### `fn http_build_response(status_code: Int, body_data, headers = none)`
+
+Function provided by module
 

@@ -1,10 +1,34 @@
 # Module `std.jwt`
 
-## Exported Functions
+VietLang JWT Library (std.jwt)
 
-### `fn jwt_create_header()`
+## Quickstart
 
-### `fn jwt_sign(payload_map, secret: String) -> String`
+```vietlang
+import std.jwt
+```
 
-### `fn jwt_verify(token: String, secret: String)`
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn jwt_create_header()` | Function provided by module |
+| `fn jwt_sign(payload_map, secret: String) -> String` | Function provided by module |
+| `fn jwt_verify(token: String, secret: String)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn jwt_create_header()`
+
+Function provided by module
+
+#### `fn jwt_sign(payload_map, secret: String) -> String`
+
+Function provided by module
+
+#### `fn jwt_verify(token: String, secret: String)`
+
+Function provided by module
 

@@ -3,6 +3,10 @@
 // Configurable Enterprise Sliding-Window Rate Limiter Engine
 // ========================================================================
 
+/// Khoi tao bo gioi han tan suat yeu cau (Rate Limiter)
+/// @param max_requests: Int - So luong request toi da cho phep trong 1 cua so thoi gian
+/// @param window_seconds: Int - Do dai cua so thoi gian (giay)
+/// @return Map - Rate limiter instance
 fn rate_limiter_new(max_requests: Int = 100, window_seconds: Int = 60) {
     let mut rl = map_new()
     rl = map_set(rl, "max_requests", max_requests)
@@ -12,12 +16,20 @@ fn rate_limiter_new(max_requests: Int = 100, window_seconds: Int = 60) {
     return rl
 }
 
+/// Them dia chi IP hoac API key vao danh sach trang bo qua rate limit
+/// @param rl: Map - Rate limiter instance
+/// @param ip: String - Dia chi IP hoac API key
+/// @return Map - Rate limiter instance cap nhat
 fn rate_limiter_whitelist(rl, ip: String) {
     let list = map_get(rl, "whitelist")
     let new_list = push(list, ip)
     return map_set(rl, "whitelist", new_list)
 }
 
+/// Kiem tra xem key co nam trong danh sach trang khong
+/// @param rl: Map - Rate limiter instance
+/// @param key: String - IP can kiem tra
+/// @return Bool - True neu duoc whitelist
 fn rate_limiter_is_whitelisted(rl, key: String) -> Bool {
     let list = map_get(rl, "whitelist")
     if list == none {
@@ -33,6 +45,10 @@ fn rate_limiter_is_whitelisted(rl, key: String) -> Bool {
     return false
 }
 
+/// Kiem tra va ghi nhan request theo thuat toan Sliding-Window
+/// @param rl: Map - Rate limiter instance
+/// @param key: String - IP hoac Token can kiem tra
+/// @return Map - Ket qua { allowed: Bool, remaining: Int, limiter: Map }
 fn rate_limiter_check(rl, key: String) {
     if rate_limiter_is_whitelisted(rl, key) {
         let mut allow_res = map_new()

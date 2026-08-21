@@ -1,10 +1,34 @@
 # Module `std.migration`
 
-## Exported Functions
+VietLang Database Migration Engine (std.migration)
 
-### `fn migration_engine_new()`
+## Quickstart
 
-### `fn migration_add_step(engine, name: String, up_sql: String, down_sql: String)`
+```vietlang
+import std.migration
+```
 
-### `fn migration_run_all(engine)`
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn migration_engine_new()` | Function provided by module |
+| `fn migration_add_step(engine, name: String, up_sql: String, down_sql: String)` | Function provided by module |
+| `fn migration_run_all(engine)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn migration_engine_new()`
+
+Function provided by module
+
+#### `fn migration_add_step(engine, name: String, up_sql: String, down_sql: String)`
+
+Function provided by module
+
+#### `fn migration_run_all(engine)`
+
+Function provided by module
 

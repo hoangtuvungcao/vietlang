@@ -1,14 +1,44 @@
 # Module `std.http_client`
 
-## Exported Functions
+VietLang Standard Library — Fluent HTTP Client (std.http_client)
 
-### `fn http_get(url: String, headers = map_new())`
+## Quickstart
 
-### `fn http_post(url: String, body_data, headers = map_new())`
+```vietlang
+import std.http_client
+```
 
-### `fn http_put(url: String, body_data, headers = map_new())`
+## Exported Functions Reference
 
-### `fn http_delete(url: String, headers = map_new())`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn http_get(url: String, headers = map_new())` | Function provided by module |
+| `fn http_post(url: String, body_data, headers = map_new())` | Function provided by module |
+| `fn http_put(url: String, body_data, headers = map_new())` | Function provided by module |
+| `fn http_delete(url: String, headers = map_new())` | Function provided by module |
+| `fn http_client_builder(base_url: String, default_headers = map_new())` | Function provided by module |
 
-### `fn http_client_builder(base_url: String, default_headers = map_new())`
+---
+
+### Function Details
+
+#### `fn http_get(url: String, headers = map_new())`
+
+Function provided by module
+
+#### `fn http_post(url: String, body_data, headers = map_new())`
+
+Function provided by module
+
+#### `fn http_put(url: String, body_data, headers = map_new())`
+
+Function provided by module
+
+#### `fn http_delete(url: String, headers = map_new())`
+
+Function provided by module
+
+#### `fn http_client_builder(base_url: String, default_headers = map_new())`
+
+Function provided by module
 

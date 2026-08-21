@@ -752,31 +752,59 @@ pub fn show_docs(module_name: &str) {
                     let mod_name = name.trim_end_matches(".vl");
                     let file_path = format!("std/{}.vl", mod_name);
                     if let Ok(content) = fs::read_to_string(&file_path) {
-                        let mut md = format!("# Module `std.{}`\n\n", mod_name);
-                        md.push_str("## Exported Functions\n\n");
+                        let mut header_desc = Vec::new();
+                        let mut functions = Vec::new();
                         let mut doc_buf = Vec::new();
+
                         for line in content.lines() {
                             let trimmed = line.trim();
-                            if trimmed.starts_with("///") || trimmed.starts_with("//") && !trimmed.contains("===") {
+                            if (trimmed.starts_with("// Module:") || trimmed.starts_with("// VietLang")) && !trimmed.contains("===") {
+                                header_desc.push(trimmed.trim_start_matches("//").trim().to_string());
+                            } else if trimmed.starts_with("///") || (trimmed.starts_with("//") && !trimmed.contains("===") && !trimmed.contains("Module:")) {
                                 doc_buf.push(trimmed.trim_start_matches("///").trim_start_matches("//").trim().to_string());
                             } else if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
-                                md.push_str(&format!("### `{}`\n\n", trimmed.trim_end_matches('{').trim()));
-                                if !doc_buf.is_empty() {
-                                    for d in &doc_buf {
-                                        md.push_str(&format!("{}\n\n", d));
-                                    }
-                                    doc_buf.clear();
-                                }
+                                let sig = trimmed.trim_end_matches('{').trim().to_string();
+                                let desc = if doc_buf.is_empty() {
+                                    "Function provided by module".to_string()
+                                } else {
+                                    doc_buf.join(" ")
+                                };
+                                functions.push((sig, desc));
+                                doc_buf.clear();
                             } else if trimmed.is_empty() {
                                 doc_buf.clear();
                             }
                         }
+
+                        let mut md = format!("# Module `std.{}`\n\n", mod_name);
+                        if !header_desc.is_empty() {
+                            for h in &header_desc {
+                                md.push_str(&format!("{}\n\n", h));
+                            }
+                        } else {
+                            md.push_str(&format!("Standard library module for high-throughput backend services in VietLang.\n\n"));
+                        }
+
+                        md.push_str("## Quickstart\n\n```vietlang\n");
+                        md.push_str(&format!("import std.{}\n```\n\n", mod_name));
+
+                        md.push_str("## Exported Functions Reference\n\n");
+                        md.push_str("| Function Signature | Description |\n");
+                        md.push_str("| :--- | :--- |\n");
+                        for (sig, desc) in &functions {
+                            md.push_str(&format!("| `{}` | {} |\n", sig, desc));
+                        }
+                        md.push_str("\n---\n\n### Function Details\n\n");
+                        for (sig, desc) in &functions {
+                            md.push_str(&format!("#### `{}`\n\n{}\n\n", sig, desc));
+                        }
+
                         let _ = fs::write(format!("docs/api/{}.md", mod_name), md);
                     }
                 }
             }
         }
-        println!("\x1b[32mSuccessfully generated documentation for all modules in docs/api/!\x1b[0m");
+        println!("\x1b[32mSuccessfully generated comprehensive documentation for all modules in docs/api/!\x1b[0m");
         return;
     }
 

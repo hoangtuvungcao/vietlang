@@ -1,16 +1,49 @@
 # Module `std.logger`
 
-## Exported Functions
+Module: std.logger
 
-### `fn logger_new(service_name: String = "vietlang_service", min_level: String = "INFO")`
+## Quickstart
 
-### `fn logger_format_entry(l, level: String, message: String, extra_map) -> String`
+```vietlang
+import std.logger
+```
 
-### `fn logger_info(l, message: String, extra_map = none) -> String`
+## Exported Functions Reference
 
-### `fn logger_warn(l, message: String, extra_map = none) -> String`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn logger_new(service_name: String = "vietlang_service", min_level: String = "INFO")` | Function provided by module |
+| `fn logger_format_entry(l, level: String, message: String, extra_map) -> String` | Function provided by module |
+| `fn logger_info(l, message: String, extra_map = none) -> String` | Function provided by module |
+| `fn logger_warn(l, message: String, extra_map = none) -> String` | Function provided by module |
+| `fn logger_error(l, message: String, error_msg: String = "", extra_map = none) -> String` | Function provided by module |
+| `fn logger_debug(l, message: String, extra_map = none) -> String` | Function provided by module |
 
-### `fn logger_error(l, message: String, error_msg: String = "", extra_map = none) -> String`
+---
 
-### `fn logger_debug(l, message: String, extra_map = none) -> String`
+### Function Details
+
+#### `fn logger_new(service_name: String = "vietlang_service", min_level: String = "INFO")`
+
+Function provided by module
+
+#### `fn logger_format_entry(l, level: String, message: String, extra_map) -> String`
+
+Function provided by module
+
+#### `fn logger_info(l, message: String, extra_map = none) -> String`
+
+Function provided by module
+
+#### `fn logger_warn(l, message: String, extra_map = none) -> String`
+
+Function provided by module
+
+#### `fn logger_error(l, message: String, error_msg: String = "", extra_map = none) -> String`
+
+Function provided by module
+
+#### `fn logger_debug(l, message: String, extra_map = none) -> String`
+
+Function provided by module
 

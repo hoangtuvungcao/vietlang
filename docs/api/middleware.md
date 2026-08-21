@@ -1,12 +1,39 @@
 # Module `std.middleware`
 
-## Exported Functions
+VietLang Middleware Pipeline & Security Guards (std.middleware)
 
-### `fn middleware_pipeline_new()`
+## Quickstart
 
-### `fn middleware_use(pipeline, handler_fn)`
+```vietlang
+import std.middleware
+```
 
-### `fn middleware_cors_headers(origin: String = "*")`
+## Exported Functions Reference
 
-### `fn middleware_logger(req)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn middleware_pipeline_new()` | Function provided by module |
+| `fn middleware_use(pipeline, handler_fn)` | Function provided by module |
+| `fn middleware_cors_headers(origin: String = "*")` | Function provided by module |
+| `fn middleware_logger(req)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn middleware_pipeline_new()`
+
+Function provided by module
+
+#### `fn middleware_use(pipeline, handler_fn)`
+
+Function provided by module
+
+#### `fn middleware_cors_headers(origin: String = "*")`
+
+Function provided by module
+
+#### `fn middleware_logger(req)`
+
+Function provided by module
 

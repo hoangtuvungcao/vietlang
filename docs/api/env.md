@@ -1,14 +1,44 @@
 # Module `std.env`
 
-## Exported Functions
+VietLang Enterprise Environment & Secrets Management (std.env)
 
-### `fn env_load_file(path: String = ".env")`
+## Quickstart
 
-### `fn env_get_str(key: String, default_val: String = "") -> String`
+```vietlang
+import std.env
+```
 
-### `fn env_get_int(key: String, default_val: Int = 0) -> Int`
+## Exported Functions Reference
 
-### `fn env_get_bool(key: String, default_val: Bool = false) -> Bool`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn env_load_file(path: String = ".env")` | Function provided by module |
+| `fn env_get_str(key: String, default_val: String = "") -> String` | Function provided by module |
+| `fn env_get_int(key: String, default_val: Int = 0) -> Int` | Function provided by module |
+| `fn env_get_bool(key: String, default_val: Bool = false) -> Bool` | Function provided by module |
+| `fn env_require(key: String) -> String` | Function provided by module |
 
-### `fn env_require(key: String) -> String`
+---
+
+### Function Details
+
+#### `fn env_load_file(path: String = ".env")`
+
+Function provided by module
+
+#### `fn env_get_str(key: String, default_val: String = "") -> String`
+
+Function provided by module
+
+#### `fn env_get_int(key: String, default_val: Int = 0) -> Int`
+
+Function provided by module
+
+#### `fn env_get_bool(key: String, default_val: Bool = false) -> Bool`
+
+Function provided by module
+
+#### `fn env_require(key: String) -> String`
+
+Function provided by module
 

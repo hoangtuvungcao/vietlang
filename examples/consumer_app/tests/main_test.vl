@@ -1,9 +1,0 @@
-import std.test
-
-suite("examples/consumer_app Unit Tests")
-
-test("Sanity test", fn() {
-    assert_eq(1 + 1, 2, "Sanity check failure")
-})
-
-test_summary()

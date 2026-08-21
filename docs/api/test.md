@@ -1,18 +1,54 @@
 # Module `std.test`
 
-## Exported Functions
+VietLang Standard Testing Framework (std.test)
 
-### `fn suite(name: String)`
+## Quickstart
 
-### `fn test(name: String, test_fn)`
+```vietlang
+import std.test
+```
 
-### `fn assert_eq(actual, expected, message: String = "")`
+## Exported Functions Reference
 
-### `fn assert_ne(actual, expected, message: String = "")`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn suite(name: String)` | Function provided by module |
+| `fn test(name: String, test_fn)` | Function provided by module |
+| `fn assert_eq(actual, expected, message: String = "")` | Function provided by module |
+| `fn assert_ne(actual, expected, message: String = "")` | Function provided by module |
+| `fn assert_true(cond: Bool, message: String = "Expected condition to be true")` | Function provided by module |
+| `fn assert_false(cond: Bool, message: String = "Expected condition to be false")` | Function provided by module |
+| `fn test_summary()` | Function provided by module |
 
-### `fn assert_true(cond: Bool, message: String = "Expected condition to be true")`
+---
 
-### `fn assert_false(cond: Bool, message: String = "Expected condition to be false")`
+### Function Details
 
-### `fn test_summary()`
+#### `fn suite(name: String)`
+
+Function provided by module
+
+#### `fn test(name: String, test_fn)`
+
+Function provided by module
+
+#### `fn assert_eq(actual, expected, message: String = "")`
+
+Function provided by module
+
+#### `fn assert_ne(actual, expected, message: String = "")`
+
+Function provided by module
+
+#### `fn assert_true(cond: Bool, message: String = "Expected condition to be true")`
+
+Function provided by module
+
+#### `fn assert_false(cond: Bool, message: String = "Expected condition to be false")`
+
+Function provided by module
+
+#### `fn test_summary()`
+
+Function provided by module
 

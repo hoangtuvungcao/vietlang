@@ -1,10 +1,34 @@
 # Module `std.cache_lru`
 
-## Exported Functions
+VietLang Least-Recently-Used (LRU) Cache (std.cache_lru)
 
-### `fn lru_cache_new(capacity: Int = 100)`
+## Quickstart
 
-### `fn lru_cache_put(cache, key: String, val)`
+```vietlang
+import std.cache_lru
+```
 
-### `fn lru_cache_get(cache, key: String, default_val = none)`
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn lru_cache_new(capacity: Int = 100)` | Function provided by module |
+| `fn lru_cache_put(cache, key: String, val)` | Function provided by module |
+| `fn lru_cache_get(cache, key: String, default_val = none)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn lru_cache_new(capacity: Int = 100)`
+
+Function provided by module
+
+#### `fn lru_cache_put(cache, key: String, val)`
+
+Function provided by module
+
+#### `fn lru_cache_get(cache, key: String, default_val = none)`
+
+Function provided by module
 

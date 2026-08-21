@@ -1,12 +1,39 @@
 # Module `std.queue`
 
-## Exported Functions
+Module: std.queue
 
-### `fn queue_new(name: String = "default_queue")`
+## Quickstart
 
-### `fn queue_push(q, job_type: String, payload_map)`
+```vietlang
+import std.queue
+```
 
-### `fn queue_size(q) -> Int`
+## Exported Functions Reference
 
-### `fn queue_pop(q)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn queue_new(name: String = "default_queue")` | Function provided by module |
+| `fn queue_push(q, job_type: String, payload_map)` | Function provided by module |
+| `fn queue_size(q) -> Int` | Function provided by module |
+| `fn queue_pop(q)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn queue_new(name: String = "default_queue")`
+
+Function provided by module
+
+#### `fn queue_push(q, job_type: String, payload_map)`
+
+Function provided by module
+
+#### `fn queue_size(q) -> Int`
+
+Function provided by module
+
+#### `fn queue_pop(q)`
+
+Function provided by module
 

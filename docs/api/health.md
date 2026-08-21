@@ -1,10 +1,34 @@
 # Module `std.health`
 
-## Exported Functions
+VietLang Kubernetes Health & Readiness Engine (std.health)
 
-### `fn health_checker_new(service_name: String = "vietlang_app")`
+## Quickstart
 
-### `fn health_add_check(hc, component_name: String, is_healthy: Bool)`
+```vietlang
+import std.health
+```
 
-### `fn health_get_report(hc)`
+## Exported Functions Reference
+
+| Function Signature | Description |
+| :--- | :--- |
+| `fn health_checker_new(service_name: String = "vietlang_app")` | Function provided by module |
+| `fn health_add_check(hc, component_name: String, is_healthy: Bool)` | Function provided by module |
+| `fn health_get_report(hc)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn health_checker_new(service_name: String = "vietlang_app")`
+
+Function provided by module
+
+#### `fn health_add_check(hc, component_name: String, is_healthy: Bool)`
+
+Function provided by module
+
+#### `fn health_get_report(hc)`
+
+Function provided by module
 

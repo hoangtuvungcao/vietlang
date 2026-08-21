@@ -1,12 +1,39 @@
 # Module `std.csv`
 
-## Exported Functions
+VietLang Standard Library — CSV Processing Engine (std.csv)
 
-### `fn csv_decode(csv_text: String)`
+## Quickstart
 
-### `fn csv_encode(rows: Array) -> String`
+```vietlang
+import std.csv
+```
 
-### `fn csv_read_file(file_path: String)`
+## Exported Functions Reference
 
-### `fn csv_write_file(file_path: String, rows: Array) -> Bool`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn csv_decode(csv_text: String)` | Function provided by module |
+| `fn csv_encode(rows: Array) -> String` | Function provided by module |
+| `fn csv_read_file(file_path: String)` | Function provided by module |
+| `fn csv_write_file(file_path: String, rows: Array) -> Bool` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn csv_decode(csv_text: String)`
+
+Function provided by module
+
+#### `fn csv_encode(rows: Array) -> String`
+
+Function provided by module
+
+#### `fn csv_read_file(file_path: String)`
+
+Function provided by module
+
+#### `fn csv_write_file(file_path: String, rows: Array) -> Bool`
+
+Function provided by module
 

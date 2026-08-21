@@ -1,24 +1,69 @@
 # Module `std.db_postgres`
 
-## Exported Functions
+VietLang PostgreSQL Driver & Connection Pool (std.db_postgres)
 
-### `fn postgres_parse_url(url: String)`
+## Quickstart
 
-### `fn postgres_connect(url: String)`
+```vietlang
+import std.db_postgres
+```
 
-### `fn postgres_exec(client, sql_query: String)`
+## Exported Functions Reference
 
-### `fn postgres_execute(client, sql_query: String, params = [])`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn postgres_parse_url(url: String)` | Function provided by module |
+| `fn postgres_connect(url: String)` | Function provided by module |
+| `fn postgres_exec(client, sql_query: String)` | Function provided by module |
+| `fn postgres_execute(client, sql_query: String, params = [])` | Function provided by module |
+| `fn postgres_query(client, query_sql: String, params = [])` | Function provided by module |
+| `fn postgres_begin_transaction(client)` | Function provided by module |
+| `fn postgres_commit(client)` | Function provided by module |
+| `fn postgres_rollback(client)` | Function provided by module |
+| `fn postgres_is_healthy(client) -> Bool` | Function provided by module |
+| `fn postgres_close(client)` | Function provided by module |
 
-### `fn postgres_query(client, query_sql: String, params = [])`
+---
 
-### `fn postgres_begin_transaction(client)`
+### Function Details
 
-### `fn postgres_commit(client)`
+#### `fn postgres_parse_url(url: String)`
 
-### `fn postgres_rollback(client)`
+Function provided by module
 
-### `fn postgres_is_healthy(client) -> Bool`
+#### `fn postgres_connect(url: String)`
 
-### `fn postgres_close(client)`
+Function provided by module
+
+#### `fn postgres_exec(client, sql_query: String)`
+
+Function provided by module
+
+#### `fn postgres_execute(client, sql_query: String, params = [])`
+
+Function provided by module
+
+#### `fn postgres_query(client, query_sql: String, params = [])`
+
+Function provided by module
+
+#### `fn postgres_begin_transaction(client)`
+
+Function provided by module
+
+#### `fn postgres_commit(client)`
+
+Function provided by module
+
+#### `fn postgres_rollback(client)`
+
+Function provided by module
+
+#### `fn postgres_is_healthy(client) -> Bool`
+
+Function provided by module
+
+#### `fn postgres_close(client)`
+
+Function provided by module
 

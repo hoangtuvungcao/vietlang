@@ -3,6 +3,11 @@
 // Enterprise REST API Pagination & Query Cursor Utility
 // ========================================================================
 
+/// Tao metadata phan trang cho REST API va Database
+/// @param page: Int - So thu tu trang hien tai (bat dau tu 1)
+/// @param page_size: Int - So luong phan tu tren moi trang (1-100)
+/// @param total_items: Int - Tong so ban ghi trong CSDL
+/// @return Map - Metadata bao gom offset, limit, total_pages, has_next, has_prev
 fn pagination_new(page: Int = 1, page_size: Int = 10, total_items: Int = 0) {
     let mut p = page
     if p < 1 {
@@ -40,6 +45,11 @@ fn pagination_new(page: Int = 1, page_size: Int = 10, total_items: Int = 0) {
     return meta
 }
 
+/// Cat mang du lieu theo trang va kich thuoc trang
+/// @param items_array: Array - Danh sach phan tu can cat
+/// @param page: Int - So trang
+/// @param page_size: Int - So phan tu moi trang
+/// @return Map - Chua danh sach items da cat va metadata pagination
 fn pagination_slice(items_array, page: Int = 1, page_size: Int = 10) {
     if items_array == none {
         let mut empty_res = map_new()

@@ -1,12 +1,39 @@
 # Module `std.cron`
 
-## Exported Functions
+VietLang Enterprise Job Scheduler & Cron Engine (std.cron)
 
-### `fn cron_scheduler_new()`
+## Quickstart
 
-### `fn cron_add_interval_job(scheduler, job_id: String, interval_seconds: Int, task_action: String)`
+```vietlang
+import std.cron
+```
 
-### `fn cron_should_run_job(job) -> Bool`
+## Exported Functions Reference
 
-### `fn cron_trigger_job(scheduler, job_id: String)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn cron_scheduler_new()` | Function provided by module |
+| `fn cron_add_interval_job(scheduler, job_id: String, interval_seconds: Int, task_action: String)` | Function provided by module |
+| `fn cron_should_run_job(job) -> Bool` | Function provided by module |
+| `fn cron_trigger_job(scheduler, job_id: String)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn cron_scheduler_new()`
+
+Function provided by module
+
+#### `fn cron_add_interval_job(scheduler, job_id: String, interval_seconds: Int, task_action: String)`
+
+Function provided by module
+
+#### `fn cron_should_run_job(job) -> Bool`
+
+Function provided by module
+
+#### `fn cron_trigger_job(scheduler, job_id: String)`
+
+Function provided by module
 

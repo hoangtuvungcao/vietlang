@@ -1,14 +1,44 @@
 # Module `std.ws`
 
-## Exported Functions
+Module: std.ws
 
-### `fn ws_init(endpoint: String = "/ws")`
+## Quickstart
 
-### `fn ws_emit(event_type: String, data_map)`
+```vietlang
+import std.ws
+```
 
-### `fn ws_send_text(message: String)`
+## Exported Functions Reference
 
-### `fn ws_room_new(name: String = "general")`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn ws_init(endpoint: String = "/ws")` | Function provided by module |
+| `fn ws_emit(event_type: String, data_map)` | Function provided by module |
+| `fn ws_send_text(message: String)` | Function provided by module |
+| `fn ws_room_new(name: String = "general")` | Function provided by module |
+| `fn ws_room_join(room, client_id: String)` | Function provided by module |
 
-### `fn ws_room_join(room, client_id: String)`
+---
+
+### Function Details
+
+#### `fn ws_init(endpoint: String = "/ws")`
+
+Function provided by module
+
+#### `fn ws_emit(event_type: String, data_map)`
+
+Function provided by module
+
+#### `fn ws_send_text(message: String)`
+
+Function provided by module
+
+#### `fn ws_room_new(name: String = "general")`
+
+Function provided by module
+
+#### `fn ws_room_join(room, client_id: String)`
+
+Function provided by module
 

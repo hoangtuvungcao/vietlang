@@ -1,24 +1,69 @@
 # Module `std.db_mysql`
 
-## Exported Functions
+VietLang MySQL Enterprise Driver (std.db_mysql)
 
-### `fn mysql_parse_dsn(dsn: String)`
+## Quickstart
 
-### `fn mysql_connect_pool(dsn: String)`
+```vietlang
+import std.db_mysql
+```
 
-### `fn mysql_exec(pool, sql_query: String)`
+## Exported Functions Reference
 
-### `fn mysql_execute(pool, sql_query: String, params = [])`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn mysql_parse_dsn(dsn: String)` | Function provided by module |
+| `fn mysql_connect_pool(dsn: String)` | Function provided by module |
+| `fn mysql_exec(pool, sql_query: String)` | Function provided by module |
+| `fn mysql_execute(pool, sql_query: String, params = [])` | Function provided by module |
+| `fn mysql_query(pool, sql_query: String, params = [])` | Function provided by module |
+| `fn mysql_begin_transaction(pool)` | Function provided by module |
+| `fn mysql_commit(pool)` | Function provided by module |
+| `fn mysql_rollback(pool)` | Function provided by module |
+| `fn mysql_ping(pool) -> Bool` | Function provided by module |
+| `fn mysql_close(pool)` | Function provided by module |
 
-### `fn mysql_query(pool, sql_query: String, params = [])`
+---
 
-### `fn mysql_begin_transaction(pool)`
+### Function Details
 
-### `fn mysql_commit(pool)`
+#### `fn mysql_parse_dsn(dsn: String)`
 
-### `fn mysql_rollback(pool)`
+Function provided by module
 
-### `fn mysql_ping(pool) -> Bool`
+#### `fn mysql_connect_pool(dsn: String)`
 
-### `fn mysql_close(pool)`
+Function provided by module
+
+#### `fn mysql_exec(pool, sql_query: String)`
+
+Function provided by module
+
+#### `fn mysql_execute(pool, sql_query: String, params = [])`
+
+Function provided by module
+
+#### `fn mysql_query(pool, sql_query: String, params = [])`
+
+Function provided by module
+
+#### `fn mysql_begin_transaction(pool)`
+
+Function provided by module
+
+#### `fn mysql_commit(pool)`
+
+Function provided by module
+
+#### `fn mysql_rollback(pool)`
+
+Function provided by module
+
+#### `fn mysql_ping(pool) -> Bool`
+
+Function provided by module
+
+#### `fn mysql_close(pool)`
+
+Function provided by module
 

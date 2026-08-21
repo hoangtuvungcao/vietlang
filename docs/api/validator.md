@@ -1,14 +1,44 @@
 # Module `std.validator`
 
-## Exported Functions
+VietLang Request & Schema Validator (std.validator)
 
-### `fn validator_new()`
+## Quickstart
 
-### `fn validator_add_rule(v, field: String, rule_name: String, param = none)`
+```vietlang
+import std.validator
+```
 
-### `fn is_valid_email(email_str: String) -> Bool`
+## Exported Functions Reference
 
-### `fn validate(v, data_map)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn validator_new()` | Function provided by module |
+| `fn validator_add_rule(v, field: String, rule_name: String, param = none)` | Function provided by module |
+| `fn is_valid_email(email_str: String) -> Bool` | Function provided by module |
+| `fn validate(v, data_map)` | Function provided by module |
+| `fn validator_validate(data_map, rules_map)` | Function provided by module |
 
-### `fn validator_validate(data_map, rules_map)`
+---
+
+### Function Details
+
+#### `fn validator_new()`
+
+Function provided by module
+
+#### `fn validator_add_rule(v, field: String, rule_name: String, param = none)`
+
+Function provided by module
+
+#### `fn is_valid_email(email_str: String) -> Bool`
+
+Function provided by module
+
+#### `fn validate(v, data_map)`
+
+Function provided by module
+
+#### `fn validator_validate(data_map, rules_map)`
+
+Function provided by module
 

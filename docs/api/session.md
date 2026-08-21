@@ -1,12 +1,39 @@
 # Module `std.session`
 
-## Exported Functions
+Module: std.session
 
-### `fn session_store_new()`
+## Quickstart
 
-### `fn session_create(store, user_id: Int, role: String, ttl_seconds: Int = 86400)`
+```vietlang
+import std.session
+```
 
-### `fn session_get(store, token: String)`
+## Exported Functions Reference
 
-### `fn session_destroy(store, token: String)`
+| Function Signature | Description |
+| :--- | :--- |
+| `fn session_store_new()` | Function provided by module |
+| `fn session_create(store, user_id: Int, role: String, ttl_seconds: Int = 86400)` | Function provided by module |
+| `fn session_get(store, token: String)` | Function provided by module |
+| `fn session_destroy(store, token: String)` | Function provided by module |
+
+---
+
+### Function Details
+
+#### `fn session_store_new()`
+
+Function provided by module
+
+#### `fn session_create(store, user_id: Int, role: String, ttl_seconds: Int = 86400)`
+
+Function provided by module
+
+#### `fn session_get(store, token: String)`
+
+Function provided by module
+
+#### `fn session_destroy(store, token: String)`
+
+Function provided by module
 
