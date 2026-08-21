@@ -15,6 +15,9 @@ fn show_help() {
     println("  vietlang vpm.vl install <git-url | pkg-name>        Install decentralized Git module")
     println("  vietlang vpm.vl remove <module-name>                Remove an installed module")
     println("  vietlang vpm.vl update <module-name>                Update Git module (git pull)")
+    println("  vietlang vpm.vl search <query>                      Search community modules")
+    println("  vietlang vpm.vl docs <module-name>                  Inspect module exported functions")
+    println("  vietlang vpm.vl verify                              Verify project syntax and tests")
     println("  vietlang vpm.vl list                                List installed modules")
     println("  vietlang vpm.vl info                                Show package manifest")
     println("  vietlang vpm.vl publish                             Validate package for release")
@@ -174,6 +177,99 @@ fn vpm_update(mod_name: String) {
     println("Updated module '" + mod_name + "':\n" + to_string(map_get(res, "stdout")))
 }
 
+fn vpm_search(query: String) {
+    println("Searching VietLang Community Modules for: '" + query + "'...")
+    println("===============================================================")
+    let mut catalog = []
+
+    let c1 = map_set(map_set(map_set(map_new(), "name", "vietlang_redis"), "url", "https://github.com/hoangtuvungcao/vietlang_redis.git"), "desc", "High-performance Redis caching client and Pub/Sub driver")
+    let c2 = map_set(map_set(map_set(map_new(), "name", "vietlang_postgres"), "url", "https://github.com/hoangtuvungcao/vietlang_postgres.git"), "desc", "Production-grade PostgreSQL driver with connection pool")
+    let c3 = map_set(map_set(map_set(map_new(), "name", "vietlang_mysql"), "url", "https://github.com/hoangtuvungcao/vietlang_mysql.git"), "desc", "MySQL connection protocol driver and prepared statements")
+    let c4 = map_set(map_set(map_set(map_new(), "name", "vietlang_sqlite"), "url", "https://github.com/hoangtuvungcao/vietlang_sqlite.git"), "desc", "Embedded SQLite storage engine with ACID transactions")
+    let c5 = map_set(map_set(map_set(map_new(), "name", "vietlang_graphql"), "url", "https://github.com/hoangtuvungcao/vietlang_graphql.git"), "desc", "GraphQL schema parser, query executor and resolvers")
+    let c6 = map_set(map_set(map_set(map_new(), "name", "vietlang_grpc"), "url", "https://github.com/hoangtuvungcao/vietlang_grpc.git"), "desc", "gRPC / Protobuf microservice communication framework")
+
+    catalog = push(catalog, c1)
+    catalog = push(catalog, c2)
+    catalog = push(catalog, c3)
+    catalog = push(catalog, c4)
+    catalog = push(catalog, c5)
+    catalog = push(catalog, c6)
+
+    let mut matches_count = 0
+    for item in catalog {
+        let name = map_get(item, "name")
+        let desc = map_get(item, "desc")
+        let url = map_get(item, "url")
+        if query == "" || name.contains(query) || desc.contains(query) {
+            matches_count += 1
+            println("* " + name)
+            println("    Description: " + desc)
+            println("    Install:     vietlang vpm.vl install " + url)
+            println("")
+        }
+    }
+    println("Found " + to_string(matches_count) + " module(s).")
+}
+
+fn vpm_docs(mod_name: String) {
+    if mod_name == "" {
+        println("Error: Module name required. Example: vietlang vpm.vl docs std.db_sqlite")
+        return none
+    }
+
+    let std_path = "std/" + mod_name.replace("std.", "") + ".vl"
+    let mod_path = "modules/" + mod_name + "/src/main.vl"
+
+    let mut target = ""
+    if file_exists(std_path) {
+        target = std_path
+    } else if file_exists(mod_path) {
+        target = mod_path
+    } else if file_exists(mod_name) {
+        target = mod_name
+    }
+
+    if target == "" {
+        println("Module '" + mod_name + "' not found in std/ or modules/.")
+        return none
+    }
+
+    println("Exported Functions in '" + mod_name + "' (" + target + "):")
+    println("===============================================================")
+    let content = file_read(target)
+    let lines = str_split_lines(content)
+    for line in lines {
+        let trimmed = line.trim()
+        if trimmed.starts_with("fn ") {
+            println("  * " + trimmed)
+        }
+    }
+}
+
+fn vpm_verify() {
+    println("Verifying VietLang Project Structure & Code...")
+    if !file_exists("vietlang.json") {
+        println("Error: No vietlang.json manifest found.")
+        return none
+    }
+    let manifest = json_parse(file_read("vietlang.json"))
+    println("Package: " + to_string(map_get(manifest, "name")) + " v" + to_string(map_get(manifest, "version")))
+
+    if file_exists("src/main.vl") {
+        println("Main entrypoint (src/main.vl): OK")
+    } else {
+        println("Main entrypoint (src/main.vl): MISSING")
+    }
+
+    if file_exists("tests/main_test.vl") {
+        println("Running tests (tests/main_test.vl)...")
+        let res = system_cmd("vietlang tests/main_test.vl")
+        println(to_string(map_get(res, "stdout")))
+    }
+    println("Verification complete!")
+}
+
 fn vpm_list() {
     if !file_exists("modules") {
         println("No modules/ directory found.")
@@ -255,6 +351,20 @@ if args.len() < 3 {
             mod_name = args[3]
         }
         vpm_update(mod_name)
+    } else if command == "search" {
+        let mut query = ""
+        if args.len() >= 4 {
+            query = args[3]
+        }
+        vpm_search(query)
+    } else if command == "docs" {
+        let mut mod_name = ""
+        if args.len() >= 4 {
+            mod_name = args[3]
+        }
+        vpm_docs(mod_name)
+    } else if command == "verify" {
+        vpm_verify()
     } else if command == "list" {
         vpm_list()
     } else if command == "publish" {

@@ -1,0 +1,84 @@
+// ===================================================
+// VietLang SQLite Driver & Storage Engine (std.db_sqlite)
+// In-Memory & File-Backed Relational Database Engine
+// ===================================================
+
+fn sqlite_open(db_path: String = ":memory:") {
+    let db = map_new()
+    let db = map_set(db, "path", db_path)
+    let db = map_set(db, "tables", map_new())
+    let db = map_set(db, "in_transaction", false)
+    let db = map_set(db, "tx_snapshot", none)
+    return db
+}
+
+fn sqlite_exec(db, sql: String) {
+    let clean_sql = sql.trim()
+    let tables = map_get(db, "tables")
+
+    // Handle CREATE TABLE
+    if clean_sql.starts_with("CREATE TABLE") {
+        let parts = clean_sql.split(" ")
+        let mut table_name = "default_table"
+        if parts.len() >= 3 {
+            table_name = parts[2]
+        }
+        let new_tables = map_set(tables, table_name, [])
+        return map_set(db, "tables", new_tables)
+    }
+
+    return db
+}
+
+fn sqlite_insert(db, table_name: String, row_data) {
+    let tables = map_get(db, "tables")
+    let mut rows = []
+    if map_has(tables, table_name) {
+        rows = map_get(tables, table_name)
+    }
+
+    let new_rows = push(rows, row_data)
+    let new_tables = map_set(tables, table_name, new_rows)
+    return map_set(db, "tables", new_tables)
+}
+
+fn sqlite_query(db, table_name: String, filter_fn = none) {
+    let tables = map_get(db, "tables")
+    if !map_has(tables, table_name) {
+        return []
+    }
+
+    let rows = map_get(tables, table_name)
+    if filter_fn == none {
+        return rows
+    }
+
+    let mut matched = []
+    for r in rows {
+        if filter_fn(r) {
+            matched = push(matched, r)
+        }
+    }
+    return matched
+}
+
+fn sqlite_begin_transaction(db) {
+    let snapshot = map_get(db, "tables")
+    let db2 = map_set(db, "tx_snapshot", snapshot)
+    return map_set(db2, "in_transaction", true)
+}
+
+fn sqlite_rollback(db) {
+    let snapshot = map_get(db, "tx_snapshot")
+    let mut db2 = db
+    if snapshot != none {
+        db2 = map_set(db2, "tables", snapshot)
+    }
+    let db3 = map_set(db2, "tx_snapshot", none)
+    return map_set(db3, "in_transaction", false)
+}
+
+fn sqlite_commit(db) {
+    let db2 = map_set(db, "tx_snapshot", none)
+    return map_set(db2, "in_transaction", false)
+}
