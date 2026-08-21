@@ -1,14 +1,18 @@
 {
   "name": "vietlang",
   "displayName": "VietLang - Backend Programming Language",
-  "description": "Official Visual Studio Code extension for VietLang: Syntax Highlighting, Custom File Icons (.vl), Code Snippets, Bracket Matching, and Language Support.",
-  "version": "0.1.1",
+  "description": "Official Visual Studio Code extension for VietLang: 1-Click Run, Real-Time Syntax Linter & Diagnostics, Custom File Icons (.vl), Code Snippets, Bracket Matching, and Language Support.",
+  "version": "0.1.2",
   "publisher": "hoangtuvungcao",
   "engines": {
     "vscode": "^1.75.0"
   },
   "license": "MIT",
   "icon": "images/icon.png",
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:vietlang"
+  ],
   "galleryBanner": {
     "color": "#064E3B",
     "theme": "dark"
@@ -29,11 +33,15 @@
     "database",
     "rest-api",
     "websocket",
+    "linter",
+    "run-code",
     "icon-theme"
   ],
   "categories": [
     "Programming Languages",
     "Snippets",
+    "Linters",
+    "Other",
     "Themes"
   ],
   "contributes": {
@@ -73,6 +81,77 @@
         "language": "vietlang",
         "path": "./snippets/vietlang.json"
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "vietlang.run",
+        "title": "VietLang: Run File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vietlang.check",
+        "title": "VietLang: Check Syntax & Diagnostics",
+        "icon": "$(check)"
+      },
+      {
+        "command": "vietlang.test",
+        "title": "VietLang: Run Tests",
+        "icon": "$(beaker)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vietlang.run",
+          "group": "navigation",
+          "when": "resourceExtname == .vl"
+        },
+        {
+          "command": "vietlang.check",
+          "group": "navigation",
+          "when": "resourceExtname == .vl"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "vietlang.run",
+          "group": "1_modification",
+          "when": "resourceExtname == .vl"
+        },
+        {
+          "command": "vietlang.check",
+          "group": "1_modification",
+          "when": "resourceExtname == .vl"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "vietlang.run",
+        "key": "f5",
+        "when": "editorLangId == vietlang"
+      },
+      {
+        "command": "vietlang.run",
+        "key": "ctrl+f5",
+        "when": "editorLangId == vietlang"
+      },
+      {
+        "command": "vietlang.check",
+        "key": "shift+f5",
+        "when": "editorLangId == vietlang"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "VietLang Configuration",
+      "properties": {
+        "vietlang.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the vietlang executable (defaults to ~/.vietlang/bin/vietlang or system PATH)."
+        }
+      }
+    }
   }
 }
