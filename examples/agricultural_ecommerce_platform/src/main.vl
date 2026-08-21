@@ -25,20 +25,27 @@ m = metrics_inc_counter(m, "database_connections_active", 1.0)
 let health_resp = api_dispatch_request(global_db, "GET", "/api/v1/health", map_new())
 println("[Health] Status: " + to_string(map_get(health_resp, "status_code")) + " OK")
 
-println("[Router] API Routes Registered:")
+println("[Router] Dynamic API Routes Registered:")
 println("  * GET  / (Frontend Single Page Application)")
 println("  * GET  /style.css (Design System & Stylesheet)")
 println("  * GET  /app.js (Frontend Client)")
 println("  * GET  /api/v1/health")
 println("  * GET  /api/v1/categories")
+println("  * GET  /api/v1/cooperatives")
+println("  * GET  /api/v1/vouchers")
 println("  * GET  /api/v1/products")
 println("  * POST /api/v1/orders/checkout")
+println("  * GET  /api/v1/orders/track")
 println("  * GET  /api/v1/admin/analytics")
 println("========================================================================")
 println("Nong San Viet Backend listening on http://0.0.0.0:9090")
 println("========================================================================")
 
-// 4. Start HTTP Server on 0.0.0.0:9090
+// 4. Start HTTP Server on 0.0.0.0:9090 with pure VietLang dynamic router callback
 http_listen("0.0.0.0:9090", fn(req) {
-    return "OK"
+    let method = to_string(map_get(req, "method"))
+    let path = to_string(map_get(req, "path"))
+    let body = map_get(req, "body")
+
+    return api_dispatch_request(global_db, method, path, map_new())
 })

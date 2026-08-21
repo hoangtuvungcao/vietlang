@@ -5,6 +5,8 @@ pub mod value;
 pub mod environment;
 
 use std::collections::{HashMap, HashSet};
+use std::net::TcpListener;
+use std::io::{BufRead, Read, Write};
 use crate::error::{VietError, VietResult, ErrorKind};
 use crate::lexer::token::Span;
 use crate::parser::ast::*;
@@ -1237,7 +1239,7 @@ impl Interpreter {
             "map_remove" => crate::stdlib::builtin_map_remove(args, span.line, span.column),
 
             // std.http
-            "http_listen" => crate::stdlib::builtin_http_listen(args, span.line, span.column),
+            "http_listen" => self.eval_http_listen(args, span),
 
             // std.db
             "db_query" => crate::stdlib::builtin_db_query(args, span.line, span.column),
@@ -1345,5 +1347,208 @@ impl Interpreter {
                 }
             }
         }
+    }
+
+    // ========================================
+    // Generic HTTP Server Engine
+    // ========================================
+
+    fn eval_http_listen(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
+        if args.is_empty() {
+            return Err(VietError::runtime_error("http_listen() takes 1+ arguments (port_or_addr, handler_fn)".into(), span.line, span.column));
+        }
+
+        let (bind_ip, port) = match &args[0] {
+            Value::Int(n) => ("0.0.0.0".to_string(), *n as u16),
+            Value::String(s) => {
+                if s.contains(':') {
+                    let parts: Vec<&str> = s.split(':').collect();
+                    (parts[0].to_string(), parts[1].parse::<u16>().unwrap_or(8080))
+                } else {
+                    ("0.0.0.0".to_string(), s.parse::<u16>().unwrap_or(8080))
+                }
+            }
+            _ => return Err(VietError::type_error("http_listen() port must be Int or String".into(), span.line, span.column)),
+        };
+
+        let handler = if args.len() >= 2 {
+            Some(args[1].clone())
+        } else {
+            None
+        };
+
+        let addr = format!("{}:{}", bind_ip, port);
+        eprintln!("\x1b[32mVietLang HTTP Server listening on http://{}:{}\x1b[0m", bind_ip, port);
+
+        let listener = TcpListener::bind(&addr).map_err(|e|
+            VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), span.line, span.column)
+        )?;
+
+        for stream in listener.incoming() {
+            match stream {
+                Ok(mut stream) => {
+                    let mut reader = std::io::BufReader::new(&stream);
+                    let mut request_line = String::new();
+                    let _ = reader.read_line(&mut request_line);
+
+                    let parts: Vec<&str> = request_line.trim().split_whitespace().collect();
+                    let method = parts.first().unwrap_or(&"GET").to_string();
+                    let full_path = parts.get(1).unwrap_or(&"/").to_string();
+
+                    let path_parts: Vec<&str> = full_path.split('?').collect();
+                    let path = path_parts[0].to_string();
+                    let query_str = path_parts.get(1).unwrap_or(&"").to_string();
+
+                    // Read headers
+                    let mut headers_map = HashMap::new();
+                    let mut content_length = 0usize;
+                    loop {
+                        let mut header_line = String::new();
+                        let _ = reader.read_line(&mut header_line);
+                        let header_line = header_line.trim().to_string();
+                        if header_line.is_empty() { break; }
+                        if let Some(pos) = header_line.find(':') {
+                            let key = header_line[..pos].trim().to_lowercase();
+                            let val = header_line[pos+1..].trim().to_string();
+                            if key == "content-length" {
+                                content_length = val.parse().unwrap_or(0);
+                            }
+                            headers_map.insert(key, Value::String(val));
+                        }
+                    }
+
+                    // Read body
+                    let mut body = String::new();
+                    if content_length > 0 {
+                        let mut buf = vec![0u8; content_length];
+                        let _ = reader.read_exact(&mut buf);
+                        body = String::from_utf8_lossy(&buf).to_string();
+                    }
+
+                    // CORS OPTIONS Preflight
+                    if method == "OPTIONS" {
+                        let preflight = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nConnection: close\r\n\r\n";
+                        let _ = stream.write_all(preflight.as_bytes());
+                        let _ = stream.flush();
+                        continue;
+                    }
+
+                    // Serve Static Files if exist in public folders
+                    let static_candidates = [
+                        format!("public{}", if path == "/" { "/index.html" } else { &path }),
+                        format!("examples/agricultural_ecommerce_platform/public{}", if path == "/" { "/index.html" } else { &path }),
+                    ];
+
+                    let mut served_static = false;
+                    if method == "GET" {
+                        for static_path in &static_candidates {
+                            if std::path::Path::new(static_path).exists() && std::path::Path::new(static_path).is_file() {
+                                if let Ok(content) = std::fs::read(static_path) {
+                                    let mime = if static_path.ends_with(".html") {
+                                        "text/html; charset=utf-8"
+                                    } else if static_path.ends_with(".css") {
+                                        "text/css; charset=utf-8"
+                                    } else if static_path.ends_with(".js") {
+                                        "application/javascript; charset=utf-8"
+                                    } else if static_path.ends_with(".json") {
+                                        "application/json; charset=utf-8"
+                                    } else {
+                                        "text/plain; charset=utf-8"
+                                    };
+
+                                    let response = format!(
+                                        "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n",
+                                        mime, content.len()
+                                    );
+                                    let _ = stream.write_all(response.as_bytes());
+                                    let _ = stream.write_all(&content);
+                                    let _ = stream.flush();
+                                    eprintln!("\x1b[36m[HTTP Static]\x1b[0m {} {} -> 200 ({})", method, path, mime);
+                                    served_static = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if served_static {
+                        continue;
+                    }
+
+                    // If user handler is provided, execute user's VietLang callback!
+                    let (status_code, content_type, response_body) = if let Some(ref h) = handler {
+                        let mut req_map = HashMap::new();
+                        req_map.insert("method".to_string(), Value::String(method.clone()));
+                        req_map.insert("path".to_string(), Value::String(path.clone()));
+                        req_map.insert("query".to_string(), Value::String(query_str));
+                        req_map.insert("headers".to_string(), Value::Struct { type_name: "Map".to_string(), fields: headers_map });
+                        req_map.insert("body".to_string(), Value::String(body));
+
+                        let req_val = Value::Struct { type_name: "Map".to_string(), fields: req_map };
+
+                        match self.call_function(h, &[req_val], span) {
+                            Ok(res_val) => {
+                                match &res_val {
+                                    Value::String(s) => {
+                                        let ct = if s.starts_with("<!DOCTYPE") || s.starts_with("<html") {
+                                            "text/html; charset=utf-8".to_string()
+                                        } else {
+                                            "application/json; charset=utf-8".to_string()
+                                        };
+                                        (200, ct, s.clone())
+                                    }
+                                    Value::Struct { fields: m, .. } => {
+                                        let code = if let Some(Value::Int(c)) = m.get("status_code") {
+                                            *c as usize
+                                        } else {
+                                            200
+                                        };
+                                        let ct = if let Some(Value::String(c)) = m.get("content_type") {
+                                            c.clone()
+                                        } else {
+                                            "application/json; charset=utf-8".to_string()
+                                        };
+                                        let b = if let Some(Value::String(body_val)) = m.get("body") {
+                                            body_val.clone()
+                                        } else {
+                                            match crate::stdlib::builtin_json_stringify(&[res_val.clone()], 0, 0) {
+                                                Ok(Value::String(s)) => s,
+                                                _ => format!("{}", res_val),
+                                            }
+                                        };
+                                        (code, ct, b)
+                                    }
+                                    other => {
+                                        let b = match crate::stdlib::builtin_json_stringify(&[other.clone()], 0, 0) {
+                                            Ok(Value::String(s)) => s,
+                                            _ => format!("{}", other),
+                                        };
+                                        (200, "application/json; charset=utf-8".to_string(), b)
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                (500, "application/json; charset=utf-8".to_string(), format!("{{\"error\":\"Internal Server Error: {}\"}}", e))
+                            }
+                        }
+                    } else {
+                        (200, "application/json; charset=utf-8".to_string(), format!("{{\"status\":\"OK\",\"path\":\"{}\",\"server\":\"VietLang/0.1.0\"}}", path))
+                    };
+
+                    let response = format!(
+                        "HTTP/1.1 {} OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n{}",
+                        status_code, content_type, response_body.len(), response_body
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    let _ = stream.flush();
+                    eprintln!("\x1b[36m[HTTP API]\x1b[0m {} {} -> {}", method, path, status_code);
+                }
+                Err(e) => {
+                    eprintln!("\x1b[31m[HTTP Error]\x1b[0m {}", e);
+                }
+            }
+        }
+
+        Ok(Value::None)
     }
 }
