@@ -6,18 +6,23 @@
 import std.db_sqlite
 import std.security
 
-fn db_init_and_migrate() {
-    let mut db = sqlite_open(":memory:")
+fn db_init_and_migrate(db_path: String = "examples/agricultural_ecommerce_platform/data/agricultural.sqlite") {
+    let mut db = sqlite_open(db_path)
 
-    // 1. Relational Schema Definition
-    db = sqlite_exec(db, "CREATE TABLE users (id INT, email TEXT, password_hash TEXT, name TEXT, phone TEXT, role TEXT, created_at INT)")
-    db = sqlite_exec(db, "CREATE TABLE categories (id INT, code TEXT, name TEXT, icon TEXT, description TEXT)")
-    db = sqlite_exec(db, "CREATE TABLE farm_cooperatives (id INT, name TEXT, location TEXT, cert TEXT, founded_year INT, contact TEXT, hectares INT, farmer_count INT)")
-    db = sqlite_exec(db, "CREATE TABLE products (id INT, category_id INT, coop_id INT, name TEXT, price INT, original_price INT, unit TEXT, stock INT, origin TEXT, region TEXT, cert TEXT, rating FLOAT, review_count INT, image_data TEXT, description TEXT, harvest_date TEXT)")
-    db = sqlite_exec(db, "CREATE TABLE vouchers (code TEXT, discount_type TEXT, discount_val INT, min_order INT, description TEXT, is_active BOOL)")
-    db = sqlite_exec(db, "CREATE TABLE orders (id TEXT, user_id INT, customer_name TEXT, phone TEXT, address TEXT, subtotal INT, discount INT, shipping_fee INT, total INT, payment_method TEXT, status TEXT, created_at INT)")
-    db = sqlite_exec(db, "CREATE TABLE order_items (id INT, order_id TEXT, product_id INT, product_name TEXT, unit_price INT, quantity INT, subtotal INT)")
-    db = sqlite_exec(db, "CREATE TABLE reviews (id INT, product_id INT, author_name TEXT, rating INT, comment TEXT, created_at INT)")
+    // 1. Relational Schema Definition (Real SQLite DDL)
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY, email TEXT, password_hash TEXT, name TEXT, phone TEXT, role TEXT, created_at INT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS categories (id INT PRIMARY KEY, code TEXT, name TEXT, icon TEXT, description TEXT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS farm_cooperatives (id INT PRIMARY KEY, name TEXT, location TEXT, cert TEXT, founded_year INT, contact TEXT, hectares INT, farmer_count INT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS products (id INT PRIMARY KEY, category_id INT, coop_id INT, name TEXT, price INT, original_price INT, unit TEXT, stock INT, origin TEXT, region TEXT, cert TEXT, rating FLOAT, review_count INT, image_data TEXT, description TEXT, harvest_date TEXT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS vouchers (code TEXT PRIMARY KEY, discount_type TEXT, discount_val INT, min_order INT, description TEXT, is_active BOOL);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, user_id INT, customer_name TEXT, phone TEXT, address TEXT, city TEXT, subtotal INT, discount INT, shipping_fee INT, total INT, payment_method TEXT, status TEXT, created_at INT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT, product_id INT, product_name TEXT, unit_price INT, quantity INT, subtotal INT);")
+    sqlite_exec(db, "CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INT, author_name TEXT, rating INT, comment TEXT, created_at INT);")
+
+    let p_count = sqlite_count(db, "products")
+    if p_count > 0 {
+        return db
+    }
 
     // 2. Seed Users
     let u1 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 1), "email", "admin@nongsanviet.vn"), "password_hash", security_hash_password("Admin@2026")), "name", "Tong Quan Tri"), "phone", "0901888999"), "role", "ADMIN"), "created_at", time_now())

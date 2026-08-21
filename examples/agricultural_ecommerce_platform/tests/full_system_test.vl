@@ -11,7 +11,7 @@ import examples.agricultural_ecommerce_platform.src.services.auth_service
 suite("Nong San Viet Enterprise Platform — System Integration Suite")
 
 test("1. Database, Categories, and Cooperative Seed Data", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     let resp_cat = api_dispatch_request(db, "GET", "/api/v1/categories", map_new())
     assert_eq(map_get(resp_cat, "status_code"), 200, "Lay danh muc phai tra ve 200")
     let cats = map_get(resp_cat, "data")
@@ -24,7 +24,7 @@ test("1. Database, Categories, and Cooperative Seed Data", fn() {
 })
 
 test("2. User Registration and Password Verification", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     let reg_res = auth_service_register(db, "Tran Van B", "tranvanb@gmail.com", "Secret@2026")
     assert_true(map_get(reg_res, "success"), "Dang ky tai khoan thanh cong")
 
@@ -35,7 +35,7 @@ test("2. User Registration and Password Verification", fn() {
 })
 
 test("3. Multi-Criteria Product Filtering (Region & Cert)", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     let filter_map = map_set(map_set(map_new(), "region", "Tay Nguyen"), "cert", "Organic USDA")
     let resp = api_dispatch_request(db, "GET", "/api/v1/products", filter_map)
     assert_eq(map_get(resp, "status_code"), 200, "Loc san pham thanh cong")
@@ -44,7 +44,7 @@ test("3. Multi-Criteria Product Filtering (Region & Cert)", fn() {
 })
 
 test("4. ACID Transaction Checkout with Voucher Discount and Free Shipping", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     
     // Order 10kg Gao ST25 (38,000 * 10 = 380,000 VND)
     let item1 = map_set(map_set(map_new(), "product_id", 101), "quantity", 10)
@@ -70,7 +70,7 @@ test("4. ACID Transaction Checkout with Voucher Discount and Free Shipping", fn(
 })
 
 test("5. Out-of-Stock Checkout Triggers ACID Rollback", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     
     // Product 103 (Sau Rieng) only has 85kg in stock. Requesting 1000kg must fail & rollback
     let item1 = map_set(map_set(map_new(), "product_id", 103), "quantity", 1000)
@@ -89,7 +89,7 @@ test("5. Out-of-Stock Checkout Triggers ACID Rollback", fn() {
 })
 
 test("6. Order Tracking by Phone Number", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     
     // Create an order
     let item1 = map_set(map_set(map_new(), "product_id", 104), "quantity", 1)
@@ -114,7 +114,7 @@ test("6. Order Tracking by Phone Number", fn() {
 })
 
 test("7. Admin Analytics and Low Stock Monitor", fn() {
-    let db = db_init_and_migrate()
+    let db = db_init_and_migrate(":memory:")
     let resp = api_dispatch_request(db, "GET", "/api/v1/admin/analytics", map_new())
     assert_eq(map_get(resp, "status_code"), 200, "Lay thong ke admin thanh cong")
     let data = map_get(resp, "data")

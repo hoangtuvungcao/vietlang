@@ -36,9 +36,7 @@ fn product_repo_get_all(db, category_id: Int = 0, query: String = "", max_price:
 }
 
 fn product_repo_get_by_id(db, id: Int) {
-    let list = sqlite_query(db, "products", fn(p) {
-        return map_get(p, "id") == id
-    })
+    let list = sqlite_query(db, "SELECT * FROM products WHERE id = ?;", [id])
     if list.len() > 0 {
         return list[0]
     }
@@ -54,15 +52,11 @@ fn product_repo_get_cooperatives(db) {
 }
 
 fn product_repo_get_vouchers(db) {
-    return sqlite_query(db, "vouchers", fn(v) {
-        return map_get(v, "is_active") == true
-    })
+    return sqlite_query(db, "SELECT * FROM vouchers WHERE is_active = 1 OR is_active = 'true';")
 }
 
 fn product_repo_get_voucher(db, code: String) {
-    let list = sqlite_query(db, "vouchers", fn(v) {
-        return map_get(v, "code") == code && map_get(v, "is_active") == true
-    })
+    let list = sqlite_query(db, "SELECT * FROM vouchers WHERE code = ?;", [code])
     if list.len() > 0 {
         return list[0]
     }
@@ -70,9 +64,7 @@ fn product_repo_get_voucher(db, code: String) {
 }
 
 fn product_repo_get_reviews(db, product_id: Int) {
-    return sqlite_query(db, "reviews", fn(r) {
-        return map_get(r, "product_id") == product_id
-    })
+    return sqlite_query(db, "SELECT * FROM reviews WHERE product_id = ? ORDER BY created_at DESC;", [product_id])
 }
 
 fn product_repo_add_review(db, review_map) {

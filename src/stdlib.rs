@@ -1454,3 +1454,249 @@ pub fn builtin_time_unix_ms(_args: &[Value], _line: usize, _col: usize) -> VietR
     Ok(Value::Int(ms))
 }
 
+// ============================================================
+// std.db_sqlite — Real File-Backed SQLite ACID Storage Engine
+// ============================================================
+
+use std::sync::Mutex;
+use rusqlite::{Connection, types::ValueRef};
+
+static SQLITE_REGISTRY: Mutex<Option<HashMap<usize, Connection>>> = Mutex::new(None);
+static SQLITE_ID_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+
+fn get_sqlite_conn<F, R>(id: usize, f: F) -> VietResult<R>
+where
+    F: FnOnce(&mut Connection) -> VietResult<R>,
+{
+    let mut guard = SQLITE_REGISTRY.lock().unwrap();
+    let map = guard.get_or_insert_with(HashMap::new);
+    if let Some(conn) = map.get_mut(&id) {
+        f(conn)
+    } else {
+        Err(VietError::runtime_error(format!("SQLite Connection #{} not found or closed", id), 0, 0))
+    }
+}
+
+pub fn builtin_sqlite_open(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    let path = if !args.is_empty() {
+        match &args[0] {
+            Value::String(s) => s.clone(),
+            _ => ":memory:".to_string(),
+        }
+    } else {
+        ":memory:".to_string()
+    };
+
+    if path != ":memory:" {
+        if let Some(parent) = std::path::Path::new(&path).parent() {
+            if !parent.as_os_str().is_empty() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+        }
+    }
+
+    let conn = if path == ":memory:" {
+        Connection::open_in_memory()
+    } else {
+        Connection::open(&path)
+    }.map_err(|e| VietError::runtime_error(format!("Cannot open SQLite database '{}': {}", path, e), line, col))?;
+
+    // Performance & ACID Pragmas
+    let _ = conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON;");
+
+    let id = SQLITE_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    {
+        let mut guard = SQLITE_REGISTRY.lock().unwrap();
+        let map = guard.get_or_insert_with(HashMap::new);
+        map.insert(id, conn);
+    }
+
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), Value::Int(id as i64));
+    fields.insert("path".to_string(), Value::String(path));
+    fields.insert("is_open".to_string(), Value::Bool(true));
+    fields.insert("engine".to_string(), Value::String("SQLite 3.x (Native Binary WAL)".to_string()));
+
+    Ok(Value::Struct {
+        type_name: "SqliteConn".to_string(),
+        fields,
+    })
+}
+
+pub fn builtin_sqlite_exec(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("sqlite_exec() takes 2 arguments (conn, sql)".into(), line, col));
+    }
+    let conn_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("sqlite_exec() invalid connection struct".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("sqlite_exec() expects connection".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("sqlite_exec() expects SQL string".into(), line, col)),
+    };
+
+    get_sqlite_conn(conn_id, |conn| {
+        conn.execute_batch(&sql).map_err(|e|
+            VietError::runtime_error(format!("SQLite exec error: {}", e), line, col)
+        )?;
+        Ok(Value::Bool(true))
+    })
+}
+
+pub fn builtin_sqlite_execute(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("sqlite_execute() takes 2+ arguments (conn, sql, [params])".into(), line, col));
+    }
+    let conn_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("sqlite_execute() invalid connection".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("sqlite_execute() expects connection".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("sqlite_execute() expects SQL string".into(), line, col)),
+    };
+
+    let params_vec: Vec<rusqlite::types::Value> = if args.len() >= 3 {
+        match &args[2] {
+            Value::Array(arr) => {
+                arr.iter().map(|v| match v {
+                    Value::Int(i) => rusqlite::types::Value::Integer(*i),
+                    Value::Float(f) => rusqlite::types::Value::Real(*f),
+                    Value::String(s) => rusqlite::types::Value::Text(s.clone()),
+                    Value::Bool(b) => rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
+                    Value::None => rusqlite::types::Value::Null,
+                    other => rusqlite::types::Value::Text(format!("{}", other)),
+                }).collect()
+            }
+            _ => vec![],
+        }
+    } else {
+        vec![]
+    };
+
+    get_sqlite_conn(conn_id, |conn| {
+        let params_slice: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let affected = conn.execute(&sql, params_slice.as_slice()).map_err(|e|
+            VietError::runtime_error(format!("SQLite execute error: {}", e), line, col)
+        )?;
+        Ok(Value::Int(affected as i64))
+    })
+}
+
+pub fn builtin_sqlite_query(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("sqlite_query() takes 2+ arguments (conn, sql, [params])".into(), line, col));
+    }
+    let conn_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("sqlite_query() invalid connection".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("sqlite_query() expects connection".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("sqlite_query() expects SQL string".into(), line, col)),
+    };
+
+    let params_vec: Vec<rusqlite::types::Value> = if args.len() >= 3 {
+        match &args[2] {
+            Value::Array(arr) => {
+                arr.iter().map(|v| match v {
+                    Value::Int(i) => rusqlite::types::Value::Integer(*i),
+                    Value::Float(f) => rusqlite::types::Value::Real(*f),
+                    Value::String(s) => rusqlite::types::Value::Text(s.clone()),
+                    Value::Bool(b) => rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
+                    Value::None => rusqlite::types::Value::Null,
+                    other => rusqlite::types::Value::Text(format!("{}", other)),
+                }).collect()
+            }
+            _ => vec![],
+        }
+    } else {
+        vec![]
+    };
+
+    get_sqlite_conn(conn_id, |conn| {
+        let params_slice: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let mut stmt = conn.prepare(&sql).map_err(|e|
+            VietError::runtime_error(format!("SQLite prepare error '{}': {}", sql, e), line, col)
+        )?;
+
+        let column_names: Vec<String> = stmt.column_names().into_iter().map(|s| s.to_string()).collect();
+
+        let rows = stmt.query_map(params_slice.as_slice(), |row| {
+            let mut row_map = HashMap::new();
+            for (idx, col_name) in column_names.iter().enumerate() {
+                let val_ref = row.get_ref(idx)?;
+                let vl_val = match val_ref {
+                    ValueRef::Null => Value::None,
+                    ValueRef::Integer(i) => Value::Int(i),
+                    ValueRef::Real(f) => Value::Float(f),
+                    ValueRef::Text(t) => Value::String(String::from_utf8_lossy(t).to_string()),
+                    ValueRef::Blob(b) => Value::String(String::from_utf8_lossy(b).to_string()),
+                };
+                row_map.insert(col_name.clone(), vl_val);
+            }
+            Ok(Value::Struct {
+                type_name: "Map".to_string(),
+                fields: row_map,
+            })
+        }).map_err(|e| VietError::runtime_error(format!("SQLite query error: {}", e), line, col))?;
+
+        let mut results = Vec::new();
+        for r in rows {
+            if let Ok(row_val) = r {
+                results.push(row_val);
+            }
+        }
+
+        Ok(Value::Array(results))
+    })
+}
+
+pub fn builtin_sqlite_close(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Ok(Value::Bool(false));
+    }
+    let conn_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Ok(Value::Bool(false));
+            }
+        }
+        _ => return Ok(Value::Bool(false)),
+    };
+
+    let mut guard = SQLITE_REGISTRY.lock().unwrap();
+    if let Some(map) = guard.as_mut() {
+        let removed = map.remove(&conn_id).is_some();
+        Ok(Value::Bool(removed))
+    } else {
+        Ok(Value::Bool(false))
+    }
+}
+
+

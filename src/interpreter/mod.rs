@@ -108,9 +108,19 @@ impl Interpreter {
             // std.http
             ("http_listen", None),
 
-            // std.db
+            // std.db & std.db_sqlite (Real Binary SQLite)
             ("db_query", None),
             ("db_table", Some(1)),
+            ("sqlite_open", None),
+            ("sqlite_exec", Some(2)),
+            ("sqlite_execute", None),
+            ("sqlite_query", None),
+            ("sqlite_close", Some(1)),
+            ("builtin_sqlite_open", None),
+            ("builtin_sqlite_exec", Some(2)),
+            ("builtin_sqlite_execute", None),
+            ("builtin_sqlite_query", None),
+            ("builtin_sqlite_close", Some(1)),
 
             // Concurrency
             ("spawn", None),
@@ -1298,6 +1308,11 @@ impl Interpreter {
             "crypto_random_hex" => crate::stdlib::builtin_crypto_random_hex(args, span.line, span.column),
             "uuid_v4" => crate::stdlib::builtin_uuid_v4(args, span.line, span.column),
             "time_unix_ms" => crate::stdlib::builtin_time_unix_ms(args, span.line, span.column),
+            "sqlite_open" | "builtin_sqlite_open" => crate::stdlib::builtin_sqlite_open(args, span.line, span.column),
+            "sqlite_exec" | "builtin_sqlite_exec" => crate::stdlib::builtin_sqlite_exec(args, span.line, span.column),
+            "sqlite_execute" | "builtin_sqlite_execute" => crate::stdlib::builtin_sqlite_execute(args, span.line, span.column),
+            "sqlite_query" | "builtin_sqlite_query" => crate::stdlib::builtin_sqlite_query(args, span.line, span.column),
+            "sqlite_close" | "builtin_sqlite_close" => crate::stdlib::builtin_sqlite_close(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

@@ -1,149 +1,171 @@
-// ===================================================
-// VietLang SQLite Driver & Storage Engine (std.db_sqlite)
-// In-Memory & File-Backed Relational Database Engine
-// ===================================================
+// ========================================================================
+// VietLang Production-Grade SQLite Driver & Storage Engine (std.db_sqlite)
+// Real Binary File-Backed ACID Relational Database with WAL Mode
+// ========================================================================
 
-fn sqlite_open(db_path: String = ":memory:") {
-    let db = map_new()
-    let db = map_set(db, "path", db_path)
-    let db = map_set(db, "tables", map_new())
-    let db = map_set(db, "in_transaction", false)
-    let db = map_set(db, "tx_snapshot", none)
-    return db
+fn sqlite_open(db_path: String = "data/database.sqlite") {
+    return builtin_sqlite_open(db_path)
 }
 
-fn sqlite_exec(db, sql: String) {
-    let clean_sql = sql.trim()
-    let tables = map_get(db, "tables")
+fn sqlite_exec(conn, sql: String) {
+    builtin_sqlite_exec(conn, sql)
+    return conn
+}
 
-    // Handle CREATE TABLE
-    if clean_sql.starts_with("CREATE TABLE") {
-        let parts = clean_sql.split(" ")
-        let mut table_name = "default_table"
-        if parts.len() >= 3 {
-            table_name = parts[2]
+fn sqlite_execute(conn, sql: String, params = []) {
+    return builtin_sqlite_execute(conn, sql, params)
+}
+
+fn sqlite_query(conn, sql_or_table: String, params_or_filter = []) {
+    let s = sql_or_table.trim()
+    if s.starts_with("SELECT ") || s.starts_with("select ") || s.starts_with("PRAGMA ") || s.starts_with("pragma ") || s.starts_with("EXPLAIN ") {
+        return builtin_sqlite_query(conn, sql_or_table, params_or_filter)
+    }
+
+    // It is a table name lookup:
+    let sql = "SELECT * FROM " + sql_or_table + ";"
+    let rows = builtin_sqlite_query(conn, sql, [])
+    if type_of(params_or_filter) == "Function" {
+        let mut matched = []
+        for r in rows {
+            if params_or_filter(r) {
+                matched = push(matched, r)
+            }
         }
-        let new_tables = map_set(tables, table_name, [])
-        return map_set(db, "tables", new_tables)
+        return matched
     }
-
-    return db
+    return rows
 }
 
-fn sqlite_insert(db, table_name: String, row_data) {
-    let tables = map_get(db, "tables")
-    let mut rows = []
-    if map_has(tables, table_name) {
-        rows = map_get(tables, table_name)
-    }
-
-    let new_rows = push(rows, row_data)
-    let new_tables = map_set(tables, table_name, new_rows)
-    return map_set(db, "tables", new_tables)
+fn sqlite_close(conn) {
+    return builtin_sqlite_close(conn)
 }
 
-fn sqlite_query(db, table_name: String, filter_fn = none) {
-    let tables = map_get(db, "tables")
-    if !map_has(tables, table_name) {
-        return []
-    }
-
-    let rows = map_get(tables, table_name)
-    if filter_fn == none {
-        return rows
-    }
-
-    let mut matched = []
-    for r in rows {
-        if filter_fn(r) {
-            matched = push(matched, r)
-        }
-    }
-    return matched
+fn sqlite_begin_transaction(conn) {
+    builtin_sqlite_exec(conn, "BEGIN TRANSACTION;")
+    return conn
 }
 
-fn sqlite_begin_transaction(db) {
-    let snapshot = map_get(db, "tables")
-    let db2 = map_set(db, "tx_snapshot", snapshot)
-    return map_set(db2, "in_transaction", true)
+fn sqlite_commit(conn) {
+    builtin_sqlite_exec(conn, "COMMIT;")
+    return conn
 }
 
-fn sqlite_rollback(db) {
-    let snapshot = map_get(db, "tx_snapshot")
-    let mut db2 = db
-    if snapshot != none {
-        db2 = map_set(db2, "tables", snapshot)
-    }
-    let db3 = map_set(db2, "tx_snapshot", none)
-    return map_set(db3, "in_transaction", false)
+fn sqlite_rollback(conn) {
+    builtin_sqlite_exec(conn, "ROLLBACK;")
+    return conn
 }
 
-fn sqlite_commit(db) {
-    let db2 = map_set(db, "tx_snapshot", none)
-    return map_set(db2, "in_transaction", false)
-}
-
-fn sqlite_update(db, table_name: String, predicate_fn, update_fn) {
-    let tables = map_get(db, "tables")
-    if !map_has(tables, table_name) {
-        return db
+fn sqlite_insert(conn, table_name: String, row_data) {
+    let keys = map_keys(row_data)
+    if keys.len() == 0 {
+        return 0
     }
 
-    let rows = map_get(tables, table_name)
-    let mut new_rows = []
-    for r in rows {
-        if predicate_fn(r) {
-            let updated = update_fn(r)
-            new_rows = push(new_rows, updated)
+    let mut cols_str = ""
+    let mut placeholders_str = ""
+    let mut vals = []
+
+    let mut i = 0
+    while i < keys.len() {
+        let k = keys[i]
+        let v = map_get(row_data, k)
+        vals = push(vals, v)
+
+        if i == 0 {
+            cols_str = cols_str + k
+            placeholders_str = placeholders_str + "?"
         } else {
-            new_rows = push(new_rows, r)
+            cols_str = cols_str + ", " + k
+            placeholders_str = placeholders_str + ", ?"
         }
+        i = i + 1
     }
 
-    let new_tables = map_set(tables, table_name, new_rows)
-    return map_set(db, "tables", new_tables)
+    let sql = "INSERT OR REPLACE INTO " + table_name + " (" + cols_str + ") VALUES (" + placeholders_str + ");"
+    sqlite_execute(conn, sql, vals)
+    return conn
 }
 
-fn sqlite_delete(db, table_name: String, predicate_fn) {
-    let tables = map_get(db, "tables")
-    if !map_has(tables, table_name) {
-        return db
+fn sqlite_update(conn, table_name: String, predicate_fn_or_id, update_fn_or_map) {
+    if type_of(predicate_fn_or_id) == "Int" || type_of(predicate_fn_or_id) == "String" {
+        let id_val = predicate_fn_or_id
+        let keys = map_keys(update_fn_or_map)
+        let mut set_str = ""
+        let mut vals = []
+        let mut i = 0
+        while i < keys.len() {
+            let k = keys[i]
+            let v = map_get(update_fn_or_map, k)
+            vals = push(vals, v)
+            if i == 0 {
+                set_str = set_str + k + " = ?"
+            } else {
+                set_str = set_str + ", " + k + " = ?"
+            }
+            i = i + 1
+        }
+        vals = push(vals, id_val)
+        let sql = "UPDATE " + table_name + " SET " + set_str + " WHERE id = ?;"
+        sqlite_execute(conn, sql, vals)
+        return conn
     }
 
-    let rows = map_get(tables, table_name)
-    let mut new_rows = []
+    // Dynamic callback update
+    let rows = sqlite_query(conn, "SELECT * FROM " + table_name + ";", [])
     for r in rows {
-        if !predicate_fn(r) {
-            new_rows = push(new_rows, r)
+        if predicate_fn_or_id(r) {
+            let updated = update_fn_or_map(r)
+            sqlite_insert(conn, table_name, updated)
         }
     }
-
-    let new_tables = map_set(tables, table_name, new_rows)
-    return map_set(db, "tables", new_tables)
+    return conn
 }
 
-fn sqlite_count(db, table_name: String, predicate_fn = none) {
-    let rows = sqlite_query(db, table_name, predicate_fn)
-    return rows.len()
+fn sqlite_delete(conn, table_name: String, predicate_fn_or_id) {
+    if type_of(predicate_fn_or_id) == "Int" || type_of(predicate_fn_or_id) == "String" {
+        let sql = "DELETE FROM " + table_name + " WHERE id = ?;"
+        sqlite_execute(conn, sql, [predicate_fn_or_id])
+        return conn
+    }
+
+    let rows = sqlite_query(conn, "SELECT * FROM " + table_name + ";", [])
+    for r in rows {
+        if predicate_fn_or_id(r) {
+            let id = map_get(r, "id")
+            sqlite_execute(conn, "DELETE FROM " + table_name + " WHERE id = ?;", [id])
+        }
+    }
+    return conn
 }
 
-fn sqlite_find_by_id(db, table_name: String, id) {
-    let matches = sqlite_query(db, table_name, fn(row) {
-        return map_get(row, "id") == id
-    })
-    if matches.len() > 0 {
-        return matches[0]
+fn sqlite_find_by_id(conn, table_name: String, id) {
+    let sql = "SELECT * FROM " + table_name + " WHERE id = ? LIMIT 1;"
+    let rows = sqlite_query(conn, sql, [id])
+    if rows.len() > 0 {
+        return rows[0]
     }
     return none
 }
 
-fn sqlite_aggregate(db, table_name: String, initial_val, acc_fn) {
-    let rows = sqlite_query(db, table_name, none)
+fn sqlite_count(conn, table_name: String, where_clause: String = "") {
+    let mut sql = "SELECT COUNT(*) as count FROM " + table_name
+    if where_clause != "" {
+        sql = sql + " WHERE " + where_clause
+    }
+    let rows = builtin_sqlite_query(conn, sql, [])
+    if rows.len() > 0 {
+        let r = rows[0]
+        return map_get(r, "count")
+    }
+    return 0
+}
+
+fn sqlite_aggregate(conn, table_name: String, initial_val, acc_fn) {
+    let rows = sqlite_query(conn, table_name, none)
     let mut acc = initial_val
     for r in rows {
         acc = acc_fn(acc, r)
     }
     return acc
 }
-
-
