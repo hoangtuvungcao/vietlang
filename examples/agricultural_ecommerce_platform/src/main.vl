@@ -1,6 +1,7 @@
 // ========================================================================
 // Nong San Viet (VietCleanAgri) Enterprise Backend Platform
 // Main Application Bootstrap & HTTP/2 REST Server
+// Dynamic Runtime Configuration via .env & config.json
 // ========================================================================
 
 import std.http_router
@@ -11,24 +12,94 @@ import std.ws
 import examples.agricultural_ecommerce_platform.src.config.database
 import examples.agricultural_ecommerce_platform.src.routes.api_router
 
+// ------------------------------------------------------------------------
+// Dynamic Configuration Loader (.env, config.json, and OS Environment)
+// ------------------------------------------------------------------------
+fn load_app_config() {
+    let mut cfg = map_new()
+    cfg = map_set(cfg, "port", 9090)
+    cfg = map_set(cfg, "workers", 500)
+    cfg = map_set(cfg, "db_path", "examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
+    cfg = map_set(cfg, "public_dir", "examples/agricultural_ecommerce_platform/public")
+
+    // 1. Try reading config.json if present in CWD or app dir
+    try {
+        let json_raw = file_read("config.json")
+        if json_raw != "" {
+            let parsed = json_parse(json_raw)
+            if map_has(parsed, "port") { cfg = map_set(cfg, "port", to_int(map_get(parsed, "port"))) }
+            if map_has(parsed, "db_path") { cfg = map_set(cfg, "db_path", to_string(map_get(parsed, "db_path"))) }
+            if map_has(parsed, "public_dir") { cfg = map_set(cfg, "public_dir", to_string(map_get(parsed, "public_dir"))) }
+            if map_has(parsed, "workers") { cfg = map_set(cfg, "workers", to_int(map_get(parsed, "workers"))) }
+        }
+    } catch err {}
+
+    // 2. Try reading .env file if present
+    try {
+        let env_raw = file_read(".env")
+        if env_raw != "" {
+            let lines = str_split_lines(env_raw)
+            for line in lines {
+                let l = trim(line)
+                if l != "" && !starts_with(l, "#") && contains(l, "=") {
+                    let parts = l.split("=")
+                    if len(parts) >= 2 {
+                        let k = trim(parts[0])
+                        let v = trim(parts[1])
+                        if k == "PORT" { cfg = map_set(cfg, "port", to_int(v)) }
+                        if k == "DATABASE_PATH" || k == "DB_PATH" { cfg = map_set(cfg, "db_path", v) }
+                        if k == "PUBLIC_DIR" { cfg = map_set(cfg, "public_dir", v) }
+                        if k == "WORKERS" { cfg = map_set(cfg, "workers", to_int(v)) }
+                    }
+                }
+            }
+        }
+    } catch err {}
+
+    // 3. Override with OS Environment variables if set
+    let env_port = env_get("PORT")
+    if env_port != "" && env_port != none && env_port != "none" {
+        cfg = map_set(cfg, "port", to_int(env_port))
+    }
+    let env_db = env_get("DATABASE_PATH")
+    if env_db != "" && env_db != none && env_db != "none" {
+        cfg = map_set(cfg, "db_path", to_string(env_db))
+    }
+    let env_pub = env_get("PUBLIC_DIR")
+    if env_pub != "" && env_pub != none && env_pub != "none" {
+        cfg = map_set(cfg, "public_dir", to_string(env_pub))
+    }
+
+    return cfg
+}
+
+let app_config = load_app_config()
+let port = to_int(map_get(app_config, "port"))
+let workers = to_int(map_get(app_config, "workers"))
+let db_path = to_string(map_get(app_config, "db_path"))
+let public_dir = to_string(map_get(app_config, "public_dir"))
+
 println("========================================================================")
 println("Nong San Viet Enterprise Platform — Starting High-Performance Services...")
 println("========================================================================")
+println("[Config] Listening Port: " + to_string(port))
+println("[Config] Database Path:  " + db_path)
+println("[Config] Static Assets:  " + public_dir)
 
 // 1. Explicitly enable real-time WebSocket on endpoint /ws
 ws_init("/ws")
 println("[WebSocket] RFC 6455 Real-Time Engine Initialized on /ws")
 
 // 2. Initialize SQLite Database & Schema Migrations
-let mut global_db = db_init_and_migrate("examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
-println("[Database] SQLite Relational File Initialized: data/agricultural.sqlite")
+let mut global_db = db_init_and_migrate(db_path)
+println("[Database] SQLite Relational File Initialized: " + db_path)
 
-// 2. Metrics & Observability Counters
+// 3. Metrics & Observability Counters
 let mut m = metrics_registry_new("nong_san_viet")
 m = metrics_inc_counter(m, "http_requests_total", 1.0)
 m = metrics_inc_counter(m, "database_connections_active", 1.0)
 
-// 3. Verify Health Probe
+// 4. Verify Health Probe
 let health_resp = api_dispatch_request(global_db, "GET", "/api/v1/health", map_new())
 println("[Health] Status: " + to_string(map_get(health_resp, "status_code")) + " OK")
 
@@ -51,11 +122,11 @@ println("  * POST /api/v1/orders/checkout")
 println("  * GET  /api/v1/orders/track")
 println("  * GET  /api/v1/admin/analytics")
 println("========================================================================")
-println("Nong San Viet Backend listening on http://0.0.0.0:9090 [HTTP/1.1, HTTP/2, HTTP/3 Alt-Svc]")
+println("Nong San Viet Backend listening on http://0.0.0.0:" + to_string(port) + " [HTTP/1.1, HTTP/2, HTTP/3 Alt-Svc]")
 println("========================================================================")
 
-// 4. Multi-Protocol High-Throughput Server Configuration
-let server_config = http2_server_config(9090, 500)
+// 5. Multi-Protocol High-Throughput Server Configuration
+let server_config = http2_server_config(port, workers)
 
 http_listen(server_config, fn(req) {
     let method = to_string(map_get(req, "method"))
@@ -64,7 +135,7 @@ http_listen(server_config, fn(req) {
 
     // 1. Serve Static Assets via Pure VietLang std.http_router
     if method == "GET" || method == "HEAD" {
-        let static_file = http_serve_static("examples/agricultural_ecommerce_platform/public", path)
+        let static_file = http_serve_static(public_dir, path)
         if static_file != none {
             return static_file
         }

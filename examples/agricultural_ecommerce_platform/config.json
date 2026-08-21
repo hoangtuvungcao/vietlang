@@ -1,0 +1,6 @@
+{
+  "port": 9090,
+  "workers": 500,
+  "db_path": "examples/agricultural_ecommerce_platform/data/agricultural.sqlite",
+  "public_dir": "examples/agricultural_ecommerce_platform/public"
+}
