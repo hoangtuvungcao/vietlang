@@ -114,6 +114,9 @@ const addProductForm = document.getElementById('addProductForm');
 // 1. Authentication & Role-Based Access Control (RBAC)
 // ========================================================================
 function renderUserAuthUI() {
+  const topAdminLink = document.getElementById('topAdminLink');
+  const topAuthLink = document.getElementById('topAuthLink');
+
   if (state.currentUser) {
     if (openAuthBtn) openAuthBtn.style.display = 'none';
     if (userProfileBadge) {
@@ -128,9 +131,22 @@ function renderUserAuthUI() {
         navUserRole.className = 'cert-badge cert-organic';
       }
     }
+    // Strict display: Only show admin button if role is ADMIN!
+    if (topAdminLink) {
+      topAdminLink.style.display = state.currentUser.role === 'ADMIN' ? 'inline-flex' : 'none';
+    }
+    if (topAuthLink) {
+      topAuthLink.innerHTML = `👤 <strong>${state.currentUser.name}</strong> (${state.currentUser.role})`;
+      topAuthLink.href = state.currentUser.role === 'ADMIN' ? '/admin' : '/auth';
+    }
   } else {
     if (openAuthBtn) openAuthBtn.style.display = 'block';
     if (userProfileBadge) userProfileBadge.style.display = 'none';
+    if (topAdminLink) topAdminLink.style.display = 'none';
+    if (topAuthLink) {
+      topAuthLink.innerHTML = `👤 Đăng Nhập / Đăng Ký`;
+      topAuthLink.href = '/auth';
+    }
   }
 }
 
@@ -820,6 +836,7 @@ if (checkoutForm) {
     showToast('Lỗi kết nối tới máy chủ VietLang: ' + err.message, 'error');
   }
 });
+}
 
 // VietQR Modal
 function showVietQRModal(order) {
@@ -1243,4 +1260,3 @@ function initWebSocket() {
 initFlashSaleTimer();
 fetchInitialData();
 initWebSocket();
-
