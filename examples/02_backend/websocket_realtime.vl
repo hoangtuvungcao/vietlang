@@ -1,0 +1,19 @@
+// ========================================================================
+// VietLang Example: 02_backend/websocket_realtime.vl
+// Full-Duplex Real-Time WebSocket Server
+// ========================================================================
+
+import std.websocket
+
+let port = 8088
+println("========================================================================")
+println("VietLang Real-Time WebSocket Server listening on ws://0.0.0.0:" + to_string(port))
+println("========================================================================")
+
+ws_listen(port, fn(msg, client_id) {
+    println("[WS] Nhận tin từ Client #" + to_string(client_id) + ": " + msg)
+    
+    // Echo back with server timestamp
+    let reply = "Echo from VietLang Server [Timestamp: " + to_string(time_now()) + "] -> " + msg
+    ws_send(client_id, reply)
+})

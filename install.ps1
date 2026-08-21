@@ -12,7 +12,7 @@ $BinDir = Join-Path $VietLangHome "bin"
 $StdDir = Join-Path $VietLangHome "std"
 
 Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║       VietLang Windows Official Installer v$Version         ║" -ForegroundColor Cyan
+Write-Host "║       VietLang Windows Official Installer v$Version        ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 
 # Create directories

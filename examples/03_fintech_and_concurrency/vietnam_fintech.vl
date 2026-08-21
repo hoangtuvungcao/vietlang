@@ -1,0 +1,39 @@
+// ========================================================================
+// VietLang Example: 03_fintech_and_concurrency/vietnam_fintech.vl
+// Multi-Channel Fintech: VietQR Napas 247, VNPay 2.1.0, MoMo & Zalo ZNS
+// ========================================================================
+
+import std.vietqr
+import std.vnpay
+import std.momo
+import std.zalo
+
+println("========================================================================")
+println("VietLang Vietnam Fintech Ecosystem Demonstration")
+println("========================================================================")
+
+// 1. VietQR Napas 247
+println("\n[1] Tạo mã VietQR Napas 247:")
+let qr_res = vietqr_create_payment("MB", "0901234567", 500000, "Thanh toan don hang #VN99")
+println("  - Ngân hàng:       MBBank (Mã BIN: " + vietqr_get_bank_bin("MB") + ")")
+println("  - Số tài khoản:    " + to_string(map_get(qr_res, "account_no")))
+println("  - Link ảnh QR:     " + to_string(map_get(qr_res, "qr_url")))
+
+// 2. VNPay 2.1.0 Gateway URL with HMAC-SHA512
+println("\n[2] Khởi tạo URL Cổng thanh toán VNPay 2.1.0 (HMAC-SHA512):")
+let vnp_client = vnpay_client("VIETLANG_TMN", "VIETLANG_HASH_SECRET_KEY_512", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+let vnp_url = vnpay_create_payment_url(vnp_client, 1001, 1500000, "Nap tien vi dien tu", "https://gateway.vn/return", "127.0.0.1")
+println("  - VNPay URL:       " + vnp_url)
+
+// 3. MoMo E-Wallet HMAC-SHA256 Payload
+println("\n[3] Ký số giao dịch Ví MoMo (HMAC-SHA256):")
+let momo = momo_client("MOMO_PARTNER", "MOMO_ACCESS_KEY", "MOMO_SECRET_KEY", "https://payment.momo.vn/v2/gateway/api/create")
+let momo_payload = momo_create_payment_payload(momo, 1002, 250000, "Don hang MoMo", "https://site.vn/return", "https://site.vn/ipn", "")
+println("  - MoMo Signature:  " + to_string(map_get(momo_payload, "signature")))
+
+// 4. Zalo OA & ZNS Notification
+println("\n[4] Chuẩn hóa số điện thoại & tạo tin nhắn Zalo ZNS:")
+let normalized_phone = zalo_normalize_phone("0987654321")
+println("  - Số điện thoại chuẩn hóa: " + normalized_phone)
+let zns_payload = zalo_create_zns_payload(normalized_phone, "ZNS_ORDER_CONFIRM", map_new(), "TRK_001")
+println("  - ZNS Payload:             " + to_string(zns_payload))

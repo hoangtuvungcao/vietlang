@@ -1,0 +1,27 @@
+{
+  "name": "nong_san_viet_platform",
+  "version": "2.0.0",
+  "author": "hoangtuvungcao",
+  "repository": "https://github.com/hoangtuvungcao/nong_san_viet_platform.git",
+  "type": "api",
+  "description": "Full-Stack Enterprise Agricultural Produce E-Commerce Platform with SQLite ACID Transactions, JWT RBAC, and Modern Web UI",
+  "main": "src/main.vl",
+  "scripts": {
+    "start": "vietlang run src/main.vl",
+    "dev": "PORT=9090 vietlang run src/main.vl",
+    "build": "vietlang build src/main.vl -o nong_san_viet_app",
+    "build:win": "vietlang build src/main.vl -o nong_san_viet_app.exe --target windows",
+    "test": "vietlang check src/main.vl"
+  },
+  "dependencies": {
+    "sqlite": "1.0.0",
+    "auth": "3.0.0",
+    "jwt": "1.0.0",
+    "http_router": "1.0.0",
+    "validator": "1.0.0",
+    "security": "1.0.0",
+    "metrics": "1.0.0",
+    "cache_lru": "1.0.0"
+  },
+  "license": "MIT"
+}

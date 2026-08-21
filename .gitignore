@@ -1,18 +1,33 @@
-# Build artifacts
+# Rust build artifacts
 /target/
 *.swp
 *.swo
 
-# IDE
+# Standalone Compiled Binaries
+*.exe
+*_app
+*_service
+viet_finance_app
+viet_fintech_terminal
+nong_san_viet_app
+
+# SQLite & Persistent Data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# IDE & Editor files
 .idea/
 .vscode/
 *.iml
 .vs/
 
-# OS
+# OS Metadata
 .DS_Store
 Thumbs.db
 
-# VietLang temp files
+# VietLang temporary & logs
 *.vl.bak
 /tmp/
+*.log

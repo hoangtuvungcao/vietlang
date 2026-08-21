@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tra Cứu Tiến Độ Đơn Hàng CSDL — Nông Sản Việt (VietLang Enterprise)</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .track-page-container {
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+    .track-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      box-shadow: var(--shadow-elevated);
+    }
+    .timeline-step {
+      display: flex;
+      gap: 16px;
+      padding-bottom: 24px;
+      position: relative;
+    }
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: rgba(16, 185, 129, 0.3);
+    }
+    .timeline-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 2px solid var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--color-primary-light);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-container">
+      <div class="top-bar-left">
+        <span>🌱 Nông sản sạch từ 6+ Hợp Tác Xã đạt chuẩn OCOP 4-5 Sao & VietGAP</span>
+        <span style="opacity: 0.4;">|</span>
+        <span>Hotline: <strong style="color: #A7F3D0;">1900 6868</strong></span>
+      </div>
+      <div class="top-bar-right">
+        <a href="/" class="top-nav-btn">🛒 Cửa Hàng</a>
+        <a href="/docs" target="_blank" class="top-nav-btn">📖 API Docs</a>
+        <a href="/admin" class="top-nav-btn admin-btn" id="topAdminLink" style="display: none;">👑 Quản Trị Hệ Thống</a>
+        <a href="/auth" class="top-nav-btn" id="topAuthLink">👤 Tài Khoản</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Navigation Header -->
+  <header class="main-header">
+    <div class="header-container">
+      <a href="/" class="nav-brand">
+        <div class="brand-logo-mark">NV</div>
+        <div class="brand-text-wrap">
+          <span class="brand-title">NÔNG SẢN VIỆT</span>
+          <span class="brand-tagline">TRA CỨU VẬN ĐƠN & TIẾN ĐỘ GIAO HÀNG</span>
+        </div>
+      </a>
+      <a href="/" class="btn btn-secondary btn-sm">Quay Lại Mua Sắm</a>
+    </div>
+  </header>
+
+  <!-- Track Order Main Content -->
+  <main class="track-page-container">
+    <div class="track-card">
+      <h1 style="font-size: 24px; font-weight: 800; color: #FFFFFF; margin-bottom: 8px;">Tra Cứu Đơn Hàng CSDL Thời Gian Thực</h1>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">Nhập số điện thoại đặt hàng để truy xuất toàn bộ lịch sử đơn hàng và hành trình vận chuyển.</p>
+
+      <div class="track-input-wrap" style="margin-bottom: 32px;">
+        <input type="text" id="trackInputPage" class="form-input" placeholder="Nhập số điện thoại (VD: 0988776655, 0912345678)..." style="font-size: 15px; padding: 12px 18px;">
+        <button class="btn btn-primary" onclick="handleTrackOrderPage()" style="padding: 12px 24px; font-size: 14px; white-space: nowrap;">🔍 Tra Cứu Ngay</button>
+      </div>
+
+      <!-- Quick Demo Numbers -->
+      <div style="background: var(--bg-surface-elevated); padding: 14px 18px; border-radius: var(--radius-sm); margin-bottom: 28px; font-size: 13px; color: var(--text-muted);">
+        <strong style="color: var(--color-primary-light);">💡 Số điện thoại mẫu đã có đơn trong CSDL:</strong>
+        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="setTrackPhone('0988776655')">📞 0988776655 (Nguyễn Thị Mai)</button>
+          <button class="btn btn-secondary btn-sm" onclick="setTrackPhone('0912345678')">📞 0912345678 (Trần Văn Bảo)</button>
+        </div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="trackResultPage" style="display: none;">
+        <div id="trackOrderList"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Popup -->
+  <div id="toastPopup" class="toast-popup"></div>
+
+  <footer class="footer">
+    <div style="max-width: 1360px; margin: 0 auto; text-align: center; font-size: 13px; color: var(--text-muted);">
+      Nông Sản Việt © 2026 — Vận hành trên nền tảng VietLang Backend siêu tốc & an toàn.
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+  <script>
+    function setTrackPhone(phone) {
+      document.getElementById('trackInputPage').value = phone;
+      handleTrackOrderPage();
+    }
+
+    async function handleTrackOrderPage() {
+      const phone = document.getElementById('trackInputPage').value.trim();
+      if (!phone) {
+        showToast('Vui lòng nhập số điện thoại đặt hàng!', 'error');
+        return;
+      }
+
+      showToast(`Đang truy vấn CSDL cho số [${phone}]...`, 'info');
+      try {
+        const res = await fetch(`/api/v1/orders/track?phone=${encodeURIComponent(phone)}`);
+        const json = await res.json();
+
+        const container = document.getElementById('trackOrderList');
+        const resArea = document.getElementById('trackResultPage');
+        resArea.style.display = 'block';
+
+        if (!res.ok || !json.data || json.data.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center; padding: 32px; background: var(--bg-surface-elevated); border-radius: var(--radius-sm);">
+              <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #FFFFFF;">Không tìm thấy đơn hàng nào!</h3>
+              <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Chưa có đơn hàng nào gắn với số điện thoại ${phone}.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = json.data.map(o => `
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 24px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <span style="font-size: 12px; color: var(--text-muted);">Mã đơn hàng:</span>
+                <strong style="font-size: 16px; color: var(--color-primary-light); margin-left: 6px;">${o.order_code}</strong>
+              </div>
+              <span class="cert-badge" style="background: rgba(16,185,129,0.2); color: #10B981; font-size: 12px; padding: 4px 10px;">
+                ✓ ${o.status || 'Đang Giao Hàng'}
+              </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; font-size: 13px; margin-bottom: 20px;">
+              <div>Khách Hàng: <strong style="color:#FFF;">${o.customer_name}</strong></div>
+              <div>Số Điện Thoại: <strong style="color:#FFF;">${o.phone}</strong></div>
+              <div>Thanh Toán: <strong style="color:#FFF;">${o.payment_method}</strong></div>
+              <div>Địa Chỉ: <strong style="color:#FFF;">${o.address}, ${o.city}</strong></div>
+            </div>
+
+            <!-- Timeline -->
+            <div style="margin: 20px 0;">
+              <div class="timeline-step">
+                <div class="timeline-icon">✓</div>
+                <div>
+                  <div style="font-weight: 700; color: #FFF; font-size: 14px;">Đã Tiếp Nhận & Xác Nhận Đơn Hàng CSDL</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Ghi nhận thành công vào bảng orders chuẩn ACID</div>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <div class="timeline-icon">🌿</div>
+                <div>
+                  <div style="font-weight: 700; color: #FFF; font-size: 14px;">Hợp Tác Xã Đang Đóng Gói Lô Nông Sản</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Kiểm định an toàn thực phẩm VietGAP / OCOP</div>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <div class="timeline-icon" style="border-color: var(--color-gold); color: var(--color-gold);">🚚</div>
+                <div>
+                  <div style="font-weight: 700; color: var(--color-gold-light); font-size: 14px;">Đang Vận Chuyển Hỏa Tốc</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Đang trên xe chuyên dụng bảo quản lạnh tới ${o.city}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; font-size: 15px;">
+              <span>Tổng Thanh Toán:</span>
+              <strong style="font-size: 18px; color: var(--color-primary-light);">${formatVND(o.total_amount)}</strong>
+            </div>
+          </div>
+        `).join('');
+
+        showToast(`Tìm thấy ${json.data.length} đơn hàng!`);
+      } catch (err) {
+        showToast('Lỗi tra cứu: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

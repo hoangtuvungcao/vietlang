@@ -1,0 +1,125 @@
+// ========================================================================
+// Integration & System Test Suite for Agricultural Platform
+// Tests: Auth, Catalog, Cooperatives, Vouchers, Tracking, ACID Checkout
+// ========================================================================
+
+import std.test
+import examples.agricultural_ecommerce_platform.src.config.database
+import examples.agricultural_ecommerce_platform.src.routes.api_router
+import examples.agricultural_ecommerce_platform.src.services.auth_service
+
+suite("Nong San Viet Enterprise Platform — System Integration Suite")
+
+test("1. Database, Categories, and Cooperative Seed Data", fn() {
+    let db = db_init_and_migrate(":memory:")
+    let resp_cat = api_dispatch_request(db, "GET", "/api/v1/categories", map_new())
+    assert_eq(map_get(resp_cat, "status_code"), 200, "Lay danh muc phai tra ve 200")
+    let cats = map_get(resp_cat, "data")
+    assert_eq(cats.len(), 6, "Phai co dung 6 danh muc nong san")
+
+    let resp_coop = api_dispatch_request(db, "GET", "/api/v1/cooperatives", map_new())
+    assert_eq(map_get(resp_coop, "status_code"), 200, "Lay danh sach HTX phai tra ve 200")
+    let coops = map_get(resp_coop, "data")
+    assert_eq(coops.len(), 6, "Phai co dung 6 Hop tac xa nong nghiep lien ket")
+})
+
+test("2. User Registration and Password Verification", fn() {
+    let db = db_init_and_migrate(":memory:")
+    let reg_res = auth_service_register(db, "Tran Van B", "tranvanb@gmail.com", "Secret@2026")
+    assert_true(map_get(reg_res, "success"), "Dang ky tai khoan thanh cong")
+
+    let updated_db = map_get(reg_res, "db")
+    let login_res = auth_service_login(updated_db, "tranvanb@gmail.com", "Secret@2026")
+    assert_true(map_get(login_res, "success"), "Dang nhap tai khoan thanh cong")
+    assert_true(map_has(login_res, "token"), "Phai cap JWT Token hop le")
+})
+
+test("3. Multi-Criteria Product Filtering (Region & Cert)", fn() {
+    let db = db_init_and_migrate(":memory:")
+    let filter_map = map_set(map_set(map_new(), "region", "Tay Nguyen"), "cert", "Organic USDA")
+    let resp = api_dispatch_request(db, "GET", "/api/v1/products", filter_map)
+    assert_eq(map_get(resp, "status_code"), 200, "Loc san pham thanh cong")
+    let prods = map_get(resp, "data")
+    assert_true(prods.len() >= 2, "Tay Nguyen phai co it nhat 2 san pham Organic USDA (Ca Phe & Mac Ca)")
+})
+
+test("4. ACID Transaction Checkout with Voucher Discount and Free Shipping", fn() {
+    let db = db_init_and_migrate(":memory:")
+    
+    // Order 10kg Gao ST25 (38,000 * 10 = 380,000 VND)
+    let item1 = map_set(map_set(map_new(), "product_id", 101), "quantity", 10)
+    let mut items = []
+    items = items.push(item1)
+
+    let mut body = map_new()
+    body = map_set(body, "user_id", 2)
+    body = map_set(body, "customer_name", "Nguyen Van An")
+    body = map_set(body, "phone", "0901234567")
+    body = map_set(body, "address", "123 Le Loi, Quan 1, TP.HCM")
+    body = map_set(body, "payment_method", "VIETQR")
+    body = map_set(body, "items", items)
+    body = map_set(body, "voucher", "NONGSANVIET20") // 20% discount on 380,000 -> 76,000 discount -> 304,000 total
+
+    let resp = api_dispatch_request(db, "POST", "/api/v1/orders/checkout", body)
+    assert_eq(map_get(resp, "status_code"), 201, "Dat hang thanh cong phai tra ve 201")
+    let order_data = map_get(resp, "data")
+    assert_eq(map_get(order_data, "subtotal"), 380000, "Subtotal phai la 380.000 VND")
+    assert_eq(map_get(order_data, "discount"), 76000, "Giam gia 20% phai la 76.000 VND")
+    assert_eq(map_get(order_data, "shipping_fee"), 0, "Don tren 150k phai duoc mien phi ship")
+    assert_eq(map_get(order_data, "total"), 304000, "Total sau giam phai la 304.000 VND")
+})
+
+test("5. Out-of-Stock Checkout Triggers ACID Rollback", fn() {
+    let db = db_init_and_migrate(":memory:")
+    
+    // Product 103 (Sau Rieng) only has 85kg in stock. Requesting 1000kg must fail & rollback
+    let item1 = map_set(map_set(map_new(), "product_id", 103), "quantity", 1000)
+    let mut items = []
+    items = items.push(item1)
+
+    let mut body = map_new()
+    body = map_set(body, "user_id", 2)
+    body = map_set(body, "customer_name", "Le Thi C")
+    body = map_set(body, "phone", "0987654321")
+    body = map_set(body, "address", "Da Nang")
+    body = map_set(body, "items", items)
+
+    let resp = api_dispatch_request(db, "POST", "/api/v1/orders/checkout", body)
+    assert_eq(map_get(resp, "status_code"), 400, "Het hang phai tra ve loi 400")
+})
+
+test("6. Order Tracking by Phone Number", fn() {
+    let db = db_init_and_migrate(":memory:")
+    
+    // Create an order
+    let item1 = map_set(map_set(map_new(), "product_id", 104), "quantity", 1)
+    let mut items = []
+    items = items.push(item1)
+
+    let mut body = map_new()
+    body = map_set(body, "user_id", 2)
+    body = map_set(body, "customer_name", "Hoang Thi D")
+    body = map_set(body, "phone", "0911223344")
+    body = map_set(body, "address", "Can Tho")
+    body = map_set(body, "items", items)
+    let order_res = api_dispatch_request(db, "POST", "/api/v1/orders/checkout", body)
+    let updated_db = map_get(map_get(order_res, "data"), "db")
+
+    // Track order by phone
+    let track_body = map_set(map_new(), "query", "0911223344")
+    let track_res = api_dispatch_request(updated_db, "GET", "/api/v1/orders/track", track_body)
+    assert_eq(map_get(track_res, "status_code"), 200, "Tra cuu don hang thanh cong")
+    let list = map_get(track_res, "data")
+    assert_eq(list.len(), 1, "Phai tim thay dung 1 don hang theo so dien thoai")
+})
+
+test("7. Admin Analytics and Low Stock Monitor", fn() {
+    let db = db_init_and_migrate(":memory:")
+    let resp = api_dispatch_request(db, "GET", "/api/v1/admin/analytics", map_new())
+    assert_eq(map_get(resp, "status_code"), 200, "Lay thong ke admin thanh cong")
+    let data = map_get(resp, "data")
+    assert_eq(map_get(data, "total_products"), 24, "Tong cong 24 san pham nong san")
+    assert_true(map_get(data, "low_stock_count") > 0, "Phai phat hien cac san pham ton kho thap (< 100)")
+})
+
+test_summary()

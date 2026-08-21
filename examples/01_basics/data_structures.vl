@@ -1,0 +1,38 @@
+// ========================================================================
+// VietLang Example: 01_basics/data_structures.vl
+// Arrays, Maps, Structs and Data Modeling
+// ========================================================================
+
+// 1. Struct Definition
+struct Developer {
+    id: Int,
+    name: String,
+    skills: Array,
+    is_lead: Bool,
+}
+
+let dev = Developer {
+    id: 101,
+    name: "Lê Hoàng Nam",
+    skills: ["VietLang", "Rust", "SQLite", "HTTP/2"],
+    is_lead: true,
+}
+
+println("Developer: " + dev.name + " (ID: " + to_string(dev.id) + ")")
+println("Kỹ năng chính: " + to_string(dev.skills))
+
+// 2. Dynamic Array Operations
+let mut numbers = [10, 20, 30, 40]
+numbers = push(numbers, 50)
+println("Mảng số nguyên: " + to_string(numbers) + " (Độ dài: " + to_string(len(numbers)) + ")")
+
+// 3. Key-Value Map Operations
+let mut config = map_new()
+config = map_set(config, "environment", "production")
+config = map_set(config, "max_connections", 50000)
+config = map_set(config, "timeout_sec", 30)
+
+println("Config Map: " + to_string(config))
+if map_has(config, "environment") {
+    println("Môi trường triển khai: " + to_string(map_get(config, "environment")))
+}

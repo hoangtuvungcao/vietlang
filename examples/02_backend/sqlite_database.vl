@@ -1,0 +1,28 @@
+// ========================================================================
+// VietLang Example: 02_backend/sqlite_database.vl
+// SQLite Database ACID Operations, Tables & Queries
+// ========================================================================
+
+import std.db_sqlite
+
+let db_path = "sample_test.sqlite"
+let db = sqlite_open(db_path)
+
+println("1. Tạo bảng dữ liệu người dùng (Users Table)...")
+sqlite_exec(db, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, email TEXT, balance INTEGER, created_at INTEGER)")
+
+println("2. Chèn bản ghi dữ liệu (ACID Insert)...")
+sqlite_exec(db, "INSERT OR IGNORE INTO users (username, email, balance, created_at) VALUES ('trong_dev', 'trong@vietlang.org', 5000000, " + to_string(time_now()) + ")")
+sqlite_exec(db, "INSERT OR IGNORE INTO users (username, email, balance, created_at) VALUES ('linh_fintech', 'linh@vietlang.org', 12500000, " + to_string(time_now()) + ")")
+
+println("3. Truy vấn danh sách người dùng (Query Rows)...")
+let users = sqlite_query(db, "SELECT id, username, email, balance FROM users ORDER BY id ASC")
+for u in users {
+    let uid = to_string(map_get(u, "id"))
+    let uname = to_string(map_get(u, "username"))
+    let ubal = to_string(map_get(u, "balance")) + " VND"
+    println("  ● User #" + uid + ": " + uname + " | Số dư: " + ubal)
+}
+
+file_delete(db_path)
+println("4. Đã hoàn tất thử nghiệm CSDL SQLite.")

@@ -1,0 +1,32 @@
+// ========================================================================
+// Module: repositories/order_repo.vl
+// Data Access Object for Orders & Order Items in SQLite
+// ========================================================================
+
+import std.db_sqlite
+
+fn order_repo_get_all(db) {
+    return sqlite_query(db, "orders")
+}
+
+fn order_repo_get_by_id(db, id: Int) {
+    let orders = sqlite_query(db, "orders", fn(o) {
+        return map_get(o, "id") == id
+    })
+    if orders.len() == 0 {
+        return map_new()
+    }
+    let order = orders[0]
+    let items = sqlite_query(db, "order_items", fn(it) {
+        return map_get(it, "order_id") == id
+    })
+    return map_set(order, "items", items)
+}
+
+fn order_repo_insert_order(db, order_map) {
+    return sqlite_insert(db, "orders", order_map)
+}
+
+fn order_repo_insert_item(db, item_map) {
+    return sqlite_insert(db, "order_items", item_map)
+}

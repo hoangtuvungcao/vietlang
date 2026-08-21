@@ -1,0 +1,30 @@
+// ========================================================================
+// VietLang Example: 01_basics/file_and_json.vl
+// File I/O, JSON Serialization and Parsing
+// ========================================================================
+
+import std.json
+
+// 1. JSON Stringify & Parse
+let mut payload = map_new()
+payload = map_set(payload, "service", "VietLang Gateway")
+payload = map_set(payload, "version", "1.0.0")
+payload = map_set(payload, "status", "HEALTHY")
+payload = map_set(payload, "workers", 200)
+
+let json_str = json_stringify(payload, true)
+println("JSON Output:\n" + json_str)
+
+let parsed = json_parse(json_str)
+println("Parsed Service Name: " + to_string(map_get(parsed, "service")))
+
+// 2. File Write & Read
+let test_file = "data_sample.txt"
+file_write(test_file, "VietLang: Ngôn ngữ lập trình Backend hiệu năng cao cho kỹ sư Việt Nam.\nThời gian: " + to_string(time_now()))
+
+if file_exists(test_file) {
+    let content = file_read(test_file)
+    println("\nNội dung đọc từ file '" + test_file + "':\n" + content)
+    file_delete(test_file)
+    println("Đã dọn dẹp file tạm thành công.")
+}

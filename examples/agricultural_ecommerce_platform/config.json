@@ -1,6 +1,0 @@
-{
-  "port": 9090,
-  "workers": 500,
-  "db_path": "data/agricultural.sqlite",
-  "public_dir": "public"
-}

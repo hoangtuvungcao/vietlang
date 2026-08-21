@@ -354,67 +354,28 @@ vietlang --vm examples/bytecode_vm_demo.vl
 
 ## Project Structure
 
-```
+```text
 vietlang/
-├── src/
-│   ├── main.rs              # CLI, REPL, Compiler & Subcommand Dispatcher
-│   ├── pm.rs                # Package Manager, Central Registry & DocGen
-│   ├── error.rs             # Error types & control flow signals
-│   ├── stdlib.rs            # Built-in native standard library & CSP channels
-│   ├── lexer/               # Lexer & Token definitions
-│   ├── parser/              # Parser & AST definitions
-│   ├── interpreter/         # Tree-walking interpreter & environment
-│   └── vm/                  # Bytecode VM & compiler (OpCode stack machine)
-├── registry/                # Central Community Package Registry
-│   ├── shards/              # GitOps decentralized shard catalog
-│   └── index.json           # Unified Community Package Catalog
-├── std/                     # 54 Pure VietLang Standard Libraries (Zero-Cost Modularity)
-│   ├── vietqr.vl            # Napas 247 VietQR standard for 50+ banks
-│   ├── vnpay.vl             # VNPay 2.1.0 gateway with HMAC-SHA512
-│   ├── momo.vl              # MoMo E-Wallet with HMAC-SHA256 signature
-│   ├── zalo.vl              # Zalo OA & ZNS customer notification service
-│   ├── concurrency.vl       # WorkerPool and parallel_map execution
-│   ├── pagination.vl        # REST API pagination & query slicing
-│   ├── email.vl             # Generic transactional email builder
-│   ├── otp.vl               # 6-digit OTP generation & 2FA verification
-│   ├── file_storage.vl      # MIME validator & safe file utilities
-│   ├── ws.vl                # Opt-in WebSocket RFC 6455
-│   ├── rate_limiter.vl      # Sliding-window rate limiter
-│   ├── logger.vl            # Structured JSON logger
-│   ├── session.vl           # High-performance session store
-│   ├── queue.vl             # Async background job queue
-│   ├── db_sqlite.vl         # In-memory & file-backed SQLite relational engine
-│   ├── db_mysql.vl          # MySQL protocol and connection pool
-│   ├── db_postgres.vl       # PostgreSQL client and schema tools
-│   ├── multipart.vl         # Multipart form-data & file upload parser
-│   ├── saga.vl              # Distributed SAGA transaction coordinator
-│   ├── retry.vl             # Exponential backoff retry engine
-│   ├── kv_store.vl          # Redis-level in-memory KV engine
-│   ├── stream.vl            # Kafka-level partitioned stream broker
-│   ├── http_pipeline.vl     # Onion middleware & security headers
-│   ├── jwt.vl               # JWT signing & RBAC verification
-│   ├── http_router.vl       # Web router & framework
-│   └── ...                  # 54 modules total
-├── bootstrap/               # Self-Hosting Compiler in VietLang
-│   ├── lexer.vl             # Self-hosted lexer
-│   └── parser.vl            # Self-hosted parser
-├── examples/                # Real-World Enterprise Backend Demos
-│   ├── agricultural_ecommerce_platform/ # Nông Sản Việt (Clean Architecture, Multi-Page, ACID)
-│   ├── fintech_and_concurrency_test.vl  # VietQR, VNPay, MoMo, Zalo & Parallel Map Test
-│   ├── native_concurrency_demo.vl       # Channel Streaming & Goroutines Test
-│   ├── enterprise_ecosystem_demo.vl     # 14 Framework Integration Tests
-│   └── multi_database_demo.vl           # SQLite, MySQL, Postgres Relational Tests
-├── docs/                    # Complete documentation
-│   ├── api/                 # Auto-generated API docs for all 54 modules
-│   ├── standard-library-ecosystem.md
-│   ├── getting-started.md
-│   ├── language-reference.md
-│   ├── stdlib-reference.md
-│   ├── backend-cookbook.md
-│   └── community-module-guide.md
-├── Makefile
-├── CONTRIBUTING.md
-└── LICENSE
+├── src/                     # Core Rust Engine (Parser, Lexer, Interpreter, VM, Package Manager)
+├── std/                     # 55 Standard Library Modules (VietQR, VNPay, MoMo, Zalo, Concurrency, SQLite, GUI)
+├── registry/                # Central Community Package Registry & GitOps Shards
+├── bootstrap/               # Self-Hosting Compiler (Lexer & Parser written in VietLang)
+├── examples/                # Curated Showcase Examples & Full Applications
+│   ├── 01_basics/           # Core Syntax, Structs, Arrays, Maps, File I/O & JSON
+│   │   ├── hello_world.vl
+│   │   ├── data_structures.vl
+│   │   └── file_and_json.vl
+│   ├── 02_backend/          # Backend Services, SQLite Database, HTTP/2 REST API & WebSockets
+│   │   ├── sqlite_database.vl
+│   │   ├── http_rest_api.vl
+│   │   └── websocket_realtime.vl
+│   ├── 03_fintech_and_concurrency/ # Multi-Channel Fintech & Concurrency Thread Pool
+│   │   ├── vietnam_fintech.vl
+│   │   └── concurrency_csp.vl
+│   └── 04_full_apps/        # Production-Grade Complete Full-Stack Projects
+│       ├── agricultural_ecommerce/ # Nông Sản Việt (Clean Architecture E-Commerce Platform)
+│       └── viet_fintech_gateway/   # VietFintech Payment Gateway Microservice
+└── docs/                    # Architecture guides, API reference & Developer tutorials
 ```
 
 ## Building and Testing

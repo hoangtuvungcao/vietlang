@@ -1,0 +1,32 @@
+// ========================================================================
+// VietLang Example: 03_fintech_and_concurrency/concurrency_csp.vl
+// CSP Concurrency: Green Threads, Safe Channels & Parallel Worker Pool
+// ========================================================================
+
+import std.concurrency
+
+println("========================================================================")
+println("VietLang CSP Concurrency & Multi-Threading Engine")
+println("========================================================================")
+
+// 1. Thread-safe Channel Communication
+let ch = channel_new(5)
+
+spawn(fn() {
+    println("[Worker Thread] Đang xử lý tính toán trong nền...")
+    sleep_ms(100)
+    channel_send(ch, "RESULT_SUCCESS_FROM_WORKER")
+})
+
+let received = channel_recv(ch)
+println("[Main Thread] Nhận kết quả từ Channel: " + received)
+
+// 2. High-Level Parallel Map across Worker Pool
+println("\n--- Chạy tính toán song song với parallel_map ---")
+let numbers = [10, 20, 30, 40, 50, 60, 70, 80]
+let squared = parallel_map(numbers, fn(n) {
+    return n * n
+})
+
+println("Đầu vào:           " + to_string(numbers))
+println("Kết quả song song: " + to_string(squared))

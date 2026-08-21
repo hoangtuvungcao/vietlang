@@ -1,0 +1,265 @@
+// ========================================================================
+// Module: routes/api_router.vl
+// Unified Enterprise REST API Dispatcher (Auth, RBAC, Catalog, Orders, Admin)
+// ========================================================================
+
+import examples.agricultural_ecommerce_platform.src.repositories.product_repo
+import examples.agricultural_ecommerce_platform.src.repositories.order_repo
+import examples.agricultural_ecommerce_platform.src.services.order_service
+import examples.agricultural_ecommerce_platform.src.services.auth_service
+import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
+import std.db_sqlite
+import std.openapi
+import std.sse
+import std.csv
+import std.logger
+import std.session
+import std.queue
+
+fn api_response(status_code: Int, data, message: String = "OK") {
+    let mut resp = map_new()
+    resp = map_set(resp, "status_code", status_code)
+    resp = map_set(resp, "data", data)
+    resp = map_set(resp, "message", message)
+    return resp
+}
+
+fn api_error(status_code: Int, error_msg: String) {
+    let mut resp = map_new()
+    resp = map_set(resp, "status_code", status_code)
+    resp = map_set(resp, "error", error_msg)
+    return resp
+}
+
+fn api_dispatch_request(db, method: String, path: String, body_map) {
+    // 1. System Health
+    if method == "GET" && path == "/api/v1/health" {
+        let mut health_data = map_new()
+        health_data = map_set(health_data, "status", "HEALTHY")
+        health_data = map_set(health_data, "uptime", time_now())
+        health_data = map_set(health_data, "engine", "VietLang Native Relational Engine")
+        health_data = map_set(health_data, "version", "0.1.0-enterprise")
+        return api_response(200, health_data, "System Operational")
+    }
+
+    // 2. OpenAPI 3.0 Documentation
+    if method == "GET" && path == "/api/v1/swagger.json" {
+        let mut spec = openapi_spec_new("Nong San Viet Enterprise Platform API", "1.0.0", "San Thuong Mai Dien Tu Nong San & OCOP Quoc Gia (VietLang Powered)")
+        spec = openapi_add_path(spec, "/api/v1/health", "GET", "Kiem tra trang thai he thong", ["System"])
+        spec = openapi_add_path(spec, "/api/v1/auth/register", "POST", "Dang ky tai khoan nguoi dung", ["Authentication"])
+        spec = openapi_add_path(spec, "/api/v1/auth/login", "POST", "Dang nhap & cap JWT Token kem phan quyen", ["Authentication"])
+        spec = openapi_add_path(spec, "/api/v1/categories", "GET", "Danh sach danh muc nong san", ["Catalog"])
+        spec = openapi_add_path(spec, "/api/v1/products", "GET", "Tra cuu & loc san pham da tieu chi", ["Catalog"])
+        spec = openapi_add_path(spec, "/api/v1/vouchers", "GET", "Danh sach ma giam gia & khuyen mai", ["Vouchers"])
+        spec = openapi_add_path(spec, "/api/v1/cooperatives", "GET", "Mang luoi Hop tac xa lien ket", ["Cooperatives"])
+        spec = openapi_add_path(spec, "/api/v1/orders/checkout", "POST", "Dat hang giao dich ACID", ["Orders"])
+        spec = openapi_add_path(spec, "/api/v1/orders/track", "GET", "Tra cuu don hang theo SDT", ["Orders"])
+        spec = openapi_add_path(spec, "/api/v1/admin/analytics", "GET", "Bao cao thong ke tong quan", ["Admin"])
+        spec = openapi_add_path(spec, "/api/v1/admin/users", "GET", "Quan ly danh sach nguoi dung & phan quyen", ["Admin"])
+        spec = openapi_add_path(spec, "/api/v1/admin/products", "POST", "Them nong san moi vao CSDL", ["Admin"])
+
+        let mut resp = map_new()
+        resp = map_set(resp, "status_code", 200)
+        resp = map_set(resp, "content_type", "application/json; charset=utf-8")
+        resp = map_set(resp, "body", json_stringify(spec))
+        return resp
+    }
+
+    // 3. SSE Live Events Push
+    if method == "GET" && path == "/api/v1/live/events" {
+        let ev = sse_event_format("order_placed", "Khach hang tai Soc Trang vua dat 10kg Gao ST25!", time_now())
+        return sse_create_response(ev)
+    }
+
+    // 4. User Authentication Endpoints (Register & Login)
+    if method == "POST" && path == "/api/v1/auth/register" {
+        let name = to_string(map_get(body_map, "name"))
+        let email = to_string(map_get(body_map, "email"))
+        let mut phone = ""
+        if map_has(body_map, "phone") {
+            phone = to_string(map_get(body_map, "phone"))
+        }
+        let password = to_string(map_get(body_map, "password"))
+        let mut role = "CUSTOMER"
+        if map_has(body_map, "role") {
+            role = to_string(map_get(body_map, "role"))
+        }
+
+        let res = auth_service_register(db, name, email, phone, password, role)
+        if map_has(res, "error") {
+            return api_error(400, to_string(map_get(res, "error")))
+        }
+
+        ws_broadcast("{\"type\":\"user_registered\",\"user_name\":\"" + name + "\",\"role\":\"" + role + "\",\"timestamp\":" + to_string(time_now()) + "}")
+        return api_response(201, res, "Dang ky tai khoan thanh cong!")
+    }
+
+    if method == "POST" && path == "/api/v1/auth/login" {
+        let email = to_string(map_get(body_map, "email"))
+        let password = to_string(map_get(body_map, "password"))
+
+        let res = auth_service_login(db, email, password)
+        if map_has(res, "error") {
+            return api_error(401, to_string(map_get(res, "error")))
+        }
+        return api_response(200, res, "Dang nhap he thong thanh cong!")
+    }
+
+    // 5. Catalog & Cooperatives
+    if method == "GET" && path == "/api/v1/categories" {
+        let cats = product_repo_get_categories(db)
+        return api_response(200, cats, "Lay danh muc thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/vouchers" {
+        let vouchers = product_repo_get_vouchers(db)
+        return api_response(200, vouchers, "Lay danh sach ma giam gia thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/cooperatives" {
+        let coops = product_repo_get_cooperatives(db)
+        return api_response(200, coops, "Lay danh sach HTX thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/products" {
+        let mut cat_id = 0
+        if map_has(body_map, "category_id") {
+            cat_id = map_get(body_map, "category_id")
+        }
+        let mut q = ""
+        if map_has(body_map, "query") {
+            q = to_string(map_get(body_map, "query"))
+        }
+        let mut max_p = 0
+        if map_has(body_map, "max_price") {
+            max_p = map_get(body_map, "max_price")
+        }
+        let mut region = ""
+        if map_has(body_map, "region") {
+            region = to_string(map_get(body_map, "region"))
+        }
+        let mut cert = ""
+        if map_has(body_map, "cert") {
+            cert = to_string(map_get(body_map, "cert"))
+        }
+
+        let prods = product_repo_get_all(db, cat_id, q, max_p, region, cert)
+        return api_response(200, prods, "Lay danh sach san pham thanh cong")
+    }
+
+    // 6. Admin Management & RBAC Endpoints
+    if method == "GET" && path == "/api/v1/admin/analytics" {
+        let analytics = handle_admin_analytics(db)
+        return api_response(200, analytics, "Thong ke admin")
+    }
+
+    if method == "GET" && path == "/api/v1/admin/users" {
+        let users = auth_service_get_all_users(db)
+        return api_response(200, users, "Lay danh sach nguoi dung thanh cong")
+    }
+
+    if method == "POST" && path == "/api/v1/admin/products" {
+        let prod_id = time_now() % 1000000
+        let name = to_string(map_get(body_map, "name"))
+        let cat_id = map_get(body_map, "category_id")
+        let coop_id = map_get(body_map, "coop_id")
+        let price = map_get(body_map, "price")
+        let orig_price = map_get(body_map, "original_price")
+        let unit = to_string(map_get(body_map, "unit"))
+        let stock = map_get(body_map, "stock")
+        let origin = to_string(map_get(body_map, "origin"))
+        let region = to_string(map_get(body_map, "region"))
+        let cert = to_string(map_get(body_map, "cert"))
+        let desc = to_string(map_get(body_map, "description"))
+        let harvest = to_string(map_get(body_map, "harvest_date"))
+
+        sqlite_execute(db, "INSERT INTO products (id, category_id, coop_id, name, price, original_price, unit, stock, origin, region, cert, rating, review_count, image_data, description, harvest_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 5.0, 0, '', ?, ?);", [prod_id, cat_id, coop_id, name, price, orig_price, unit, stock, origin, region, cert, desc, harvest])
+
+        let mut res = map_new()
+        res = map_set(res, "id", prod_id)
+        res = map_set(res, "name", name)
+
+        ws_broadcast("{\"type\":\"product_created\",\"product_name\":\"" + name + "\",\"price\":" + to_string(price) + ",\"timestamp\":" + to_string(time_now()) + "}")
+        return api_response(201, res, "Them nong san moi vao he thong thanh cong!")
+    }
+
+    if method == "POST" && path == "/api/v1/admin/products/delete" {
+        let prod_id = map_get(body_map, "product_id")
+        sqlite_execute(db, "DELETE FROM products WHERE id = ?;", [prod_id])
+        return api_response(200, map_set(map_new(), "deleted_id", prod_id), "Xoa nong san khoi CSDL thanh cong!")
+    }
+
+    if method == "POST" && path == "/api/v1/admin/restock" {
+        let prod_id = map_get(body_map, "product_id")
+        let amount = map_get(body_map, "amount")
+        sqlite_execute(db, "UPDATE products SET stock = stock + ? WHERE id = ?;", [amount, prod_id])
+
+        ws_broadcast("{\"type\":\"stock_updated\",\"product_id\":" + to_string(prod_id) + ",\"amount\":" + to_string(amount) + ",\"timestamp\":" + to_string(time_now()) + "}")
+        return api_response(200, map_set(map_new(), "product_id", prod_id), "Nhap hang thanh cong")
+    }
+
+    // 7. Order Tracking & Checkout
+    if method == "GET" && path == "/api/v1/orders/track" {
+        let mut q = ""
+        if map_has(body_map, "query") {
+            q = to_string(map_get(body_map, "query"))
+        }
+        let orders = order_service_track_order(db, q)
+        return api_response(200, orders, "Tra cuu don hang thanh cong")
+    }
+
+    if method == "POST" && path == "/api/v1/orders/checkout" {
+        let mut user_id = 0
+        if map_has(body_map, "user_id") {
+            user_id = map_get(body_map, "user_id")
+        }
+        if user_id <= 0 {
+            return api_error(401, "Yeu cau dang nhap tai khoan de dat hang va bao toan du lieu CSDL!")
+        }
+        let customer_name = to_string(map_get(body_map, "customer_name"))
+        let phone = to_string(map_get(body_map, "phone"))
+        let address = to_string(map_get(body_map, "address"))
+        let mut city = "TP. Ho Chi Minh"
+        if map_has(body_map, "city") {
+            city = to_string(map_get(body_map, "city"))
+        }
+        let mut pay_method = "COD"
+        if map_has(body_map, "payment_method") {
+            pay_method = to_string(map_get(body_map, "payment_method"))
+        }
+        let items = map_get(body_map, "items")
+        let mut voucher = ""
+        if map_has(body_map, "voucher") {
+            voucher = to_string(map_get(body_map, "voucher"))
+        }
+        
+        let res = order_service_checkout(db, user_id, customer_name, phone, address, city, pay_method, items, voucher)
+        if map_has(res, "error") {
+            return api_error(400, to_string(map_get(res, "error")))
+        }
+
+        ws_broadcast("{\"type\":\"order_placed\",\"customer_name\":\"" + customer_name + "\",\"city\":\"" + city + "\",\"total\":" + to_string(map_get(res, "total")) + ",\"timestamp\":" + to_string(time_now()) + "}")
+        return api_response(201, res, "Dat hang thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/admin/export_csv" {
+        let headers = ["ID", "Customer", "Phone", "Address", "Payment", "Total", "Status"]
+        let orders = order_service_track_order(db, "")
+        let mut rows = []
+        let mut i = 0
+        while i < len(orders) {
+            let o = orders[i]
+            let r = [to_string(map_get(o, "id")), to_string(map_get(o, "customer_name")), to_string(map_get(o, "phone")), to_string(map_get(o, "address")), to_string(map_get(o, "payment_method")), to_string(map_get(o, "total")), to_string(map_get(o, "status"))]
+            rows = push(rows, r)
+            i = i + 1
+        }
+        let csv_content = csv_encode(headers, rows)
+        let mut resp = map_new()
+        resp = map_set(resp, "status_code", 200)
+        resp = map_set(resp, "content_type", "text/csv; charset=utf-8")
+        resp = map_set(resp, "body", csv_content)
+        return resp
+    }
+
+    return api_error(404, "Endpoint not found: " + method + " " + path)
+}

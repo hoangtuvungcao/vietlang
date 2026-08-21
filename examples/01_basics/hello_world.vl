@@ -1,0 +1,38 @@
+// ========================================================================
+// VietLang Example: 01_basics/hello_world.vl
+// Core Language Syntax, Variables, Control Flow & Functions
+// ========================================================================
+
+println("Xin chào Việt Nam! Chào mừng đến với ngôn ngữ lập trình VietLang.")
+
+// 1. Variables & Types
+let name: String = "Nguyễn Văn Trọng"
+let mut score: Int = 95
+let rating: Float = 4.95
+let is_active: Bool = true
+
+println("Lập trình viên: " + name + " | Điểm số: " + to_string(score) + " | Rating: " + to_string(rating))
+
+// 2. Control Flow & Match Expression
+if score >= 90 {
+    println("Xếp loại: Xuất sắc (Grade: A+)")
+} else {
+    println("Xếp loại: Khá")
+}
+
+let role = "ADMIN"
+let permission = match role {
+    "ADMIN" => "Toàn quyền hệ thống (Root Access)",
+    "DEV" => "Quyền lập trình viên",
+    _ => "Quyền người dùng thông thường",
+}
+println("Phân quyền: " + permission)
+
+// 3. Loops (While & For-in)
+println("\n--- Đếm ngược khởi động hệ thống ---")
+let mut countdown = 3
+while countdown > 0 {
+    println("T - " + to_string(countdown) + "s...")
+    countdown -= 1
+}
+println("🚀 Hệ thống VietLang đã sẵn sàng!")
