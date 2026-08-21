@@ -507,6 +507,78 @@ http_listen(server_config, fn(req) {
 
 ---
 
+## 5.1 Database Ecosystem & Storage Adapters
+
+VietLang provides native connection pooling and asynchronous drivers for 8 database ecosystems:
+
+### Relational & Embedded Databases
+- **`std.db_sqlite`**: File-backed ACID relational database in WAL mode with immediate transactions.
+  ```rust
+  import std.db_sqlite
+  let db = sqlite_open("data/app.sqlite")
+  sqlite_execute(db, "INSERT INTO users (name) VALUES (?)", ["Lan"])
+  let rows = sqlite_query(db, "SELECT * FROM users")
+  sqlite_close(db)
+  ```
+- **`std.db_postgres`**: Async SQLx PostgreSQL pool with parameter binding and advisory migration locks.
+  ```rust
+  import std.db_postgres
+  let pool = postgres_connect("postgres://user:pass@localhost/db")
+  let rows = postgres_query(pool, "SELECT * FROM users WHERE active = $1", [true])
+  postgres_close(pool)
+  ```
+- **`std.db_mysql`**: Async SQLx MySQL / MariaDB connection pool with bounded workers.
+  ```rust
+  import std.db_mysql
+  let pool = mysql_connect("mysql://user:pass@localhost/db")
+  let count = mysql_execute(pool, "UPDATE users SET status = ? WHERE id = ?", ["active", 1])
+  mysql_close(pool)
+  ```
+
+### NoSQL, Cache, Search & Analytics Adapters
+- **`std.db_mongodb`**: Native MongoDB async client with BSON conversion, CRUD, and Aggregation pipeline.
+  ```rust
+  import std.db_mongodb
+  let conn = mongo_connect("mongodb://localhost:27017", "my_db")
+  let id = mongo_insert(conn, "users", doc)
+  let user = mongo_find_one(conn, "users", filter)
+  mongo_close(conn)
+  ```
+- **`std.db_redis`**: Native async Redis connection pool with string, list, hash, and Pub/Sub primitives.
+  ```rust
+  import std.db_redis
+  let r = redis_connect("redis://localhost:6379")
+  redis_set(r, "session:123", "user_data", 3600)
+  let val = redis_get(r, "session:123")
+  redis_close(r)
+  ```
+- **`std.db_clickhouse`**: Native ClickHouse HTTP analytics engine for high-throughput OLAP and timeseries.
+  ```rust
+  import std.db_clickhouse
+  let ch = clickhouse_connect("localhost", 8123, "default", "default", "")
+  let stats = clickhouse_query(ch, "SELECT count(), avg(amount) FROM transactions", [])
+  clickhouse_close(ch)
+  ```
+- **`std.db_cassandra`**: Native ScyllaDB/Cassandra CQL cluster session for distributed wide-column storage.
+  ```rust
+  import std.db_cassandra
+  let session = cassandra_connect(["127.0.0.1:9042"], "my_keyspace")
+  let rows = cassandra_query(session, "SELECT * FROM timeline WHERE user_id = ?", ["u100"])
+  cassandra_close(session)
+  ```
+- **`std.db_elasticsearch`**: Native Elasticsearch / OpenSearch REST client for full-text search DSL and indexing.
+  ```rust
+  import std.db_elasticsearch
+  let es = elastic_connect("http://localhost:9200", "")
+  let results = elastic_search(es, "products", "smart phone", 10, 0)
+  elastic_close(es)
+  ```
+
+### Fail-Explicit Contract
+Unimplemented driver paths, disabled legacy administrative operations, or unbacked dynamic conversions **fail explicitly with a descriptive `VietError`** rather than returning dummy data or masking errors.
+
+---
+
 ## 6. Top 10 Golden Rules for AI Agents Writing VietLang
 
 1. **Mutability**: Always declare variables that will be reassigned with `let mut`.

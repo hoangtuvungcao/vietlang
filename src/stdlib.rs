@@ -10,6 +10,7 @@
 //! - std.io: File I/O
 //! - std.cache: In-memory caching
 //! - std.collections: HashMap, Set
+#![allow(dead_code, unused_variables)]
 
 use crate::error::{VietError, VietResult};
 use crate::interpreter::value::Value;

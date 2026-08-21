@@ -172,6 +172,54 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 - `postgres_query(client, query_sql: String, params = none) -> Map`: Executes SQL query.
 - `postgres_is_healthy(client) -> Bool`: Probes PostgreSQL connection health.
 
+### `std.db_mongodb` (Native MongoDB Client & Aggregation Engine)
+- `mongo_connect(uri: String, db_name: String = "vietlang") -> Map`: Async MongoDB connection.
+- `mongo_find(conn, collection: String, filter = null, options = null) -> Array`: Finds matching documents.
+- `mongo_find_one(conn, collection: String, filter = null) -> Map`: Finds single document.
+- `mongo_insert(conn, collection: String, doc = null) -> String`: Inserts document, returns ID.
+- `mongo_insert_many(conn, collection: String, docs = []) -> Int`: Bulk insert.
+- `mongo_update_one(conn, collection: String, filter = null, update = null) -> Int`: Updates single document.
+- `mongo_delete_one(conn, collection: String, filter = null) -> Int`: Deletes single document.
+- `mongo_aggregate(conn, collection: String, pipeline = []) -> Array`: Aggregation pipeline.
+- `mongo_close(conn) -> Bool`: Closes MongoDB connection.
+
+### `std.db_redis` (Native Async Redis Pool & Primitives)
+- `redis_connect(url: String = "redis://localhost:6379") -> Map`: Connects to Redis pool.
+- `redis_set(conn, key: String, value, ttl_seconds: Int = 0) -> Bool`: Sets key-value with optional TTL.
+- `redis_get(conn, key: String) -> String`: Gets string value by key.
+- `redis_del(conn, keys) -> Int`: Deletes key(s).
+- `redis_exists(conn, key: String) -> Bool`: Checks key existence.
+- `redis_incr(conn, key: String) -> Int`: Atomically increments integer counter.
+- `redis_lpush(conn, key: String, values = []) -> Int`: Left-pushes to list.
+- `redis_rpush(conn, key: String, values = []) -> Int`: Right-pushes to list.
+- `redis_lrange(conn, key: String, start: Int = 0, stop: Int = -1) -> Array`: Slices list range.
+- `redis_hset(conn, key: String, field: String, value) -> Int`: Sets hash field.
+- `redis_hget(conn, key: String, field: String) -> String`: Gets hash field value.
+- `redis_publish(conn, channel: String, message: String) -> Int`: Publishes message to channel.
+- `redis_close(conn) -> Bool`: Drains connection pool.
+
+### `std.db_clickhouse` (Native ClickHouse Analytics Engine)
+- `clickhouse_connect(host: String = "localhost", port: Int = 8123, database: String = "default", user: String = "default", password: String = "") -> Map`: HTTP client connection.
+- `clickhouse_query(conn, sql: String, params = []) -> Array`: Executes SELECT query and returns rows.
+- `clickhouse_execute(conn, sql: String) -> Bool`: Executes DDL / maintenance statement.
+- `clickhouse_close(conn) -> Bool`: Closes connection.
+
+### `std.db_cassandra` (ScyllaDB / Cassandra CQL Driver)
+- `cassandra_connect(hosts = ["127.0.0.1:9042"], keyspace: String = "") -> Map`: Connects to cluster.
+- `cassandra_query(conn, cql: String, params = []) -> Array`: Executes CQL query.
+- `cassandra_execute(conn, cql: String, params = []) -> Bool`: Executes CQL statement.
+- `cassandra_close(conn) -> Bool`: Closes session.
+
+### `std.db_elasticsearch` (Elasticsearch & OpenSearch REST Client)
+- `elastic_connect(url: String = "http://localhost:9200", api_key: String = "") -> Map`: Connects to cluster.
+- `elastic_search(conn, index: String, query_str: String, size: Int = 10, from_offset: Int = 0) -> Map`: Full-text search.
+- `elastic_index(conn, index: String, id: String, doc = null) -> Bool`: Indexes a document.
+- `elastic_get(conn, index: String, id: String) -> Map`: Retrieves a document by ID.
+- `elastic_delete(conn, index: String, id: String) -> Bool`: Deletes a document.
+- `elastic_create_index(conn, index: String, body = null) -> Bool`: Creates index with mappings.
+- `elastic_delete_index(conn, index: String) -> Bool`: Deletes index.
+- `elastic_close(conn) -> Bool`: Closes client.
+
 ### `std.sql_builder`
 - `sql_query_new(table: String) -> Map`: Initializes SQL builder.
 - `sql_select(q, columns: Array) -> Map`: Sets SELECT columns.

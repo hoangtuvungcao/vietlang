@@ -1,5 +1,6 @@
 //! Unified async database runtime for VietLang.
 //! Supports: PostgreSQL, MySQL, SQLite, MongoDB, Redis, ClickHouse, Cassandra/ScyllaDB, Elasticsearch.
+#![allow(dead_code)]
 
 use std::{
     collections::HashMap,
@@ -551,8 +552,6 @@ pub fn mongo_create_index(args: &[Value], line: usize, col: usize) -> VietResult
 }
 
 pub fn mongo_list_collections(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
-    use futures_util::TryStreamExt;
-
     let id = pool_id(args.first(), line, col)?;
     with_pool(id, line, col, |pool| {
         let Pool::Mongo(client, db_name) = pool else {
@@ -560,7 +559,7 @@ pub fn mongo_list_collections(args: &[Value], line: usize, col: usize) -> VietRe
         };
         let rt = runtime(line, col)?;
         let names: Vec<Value> = rt.block_on(async {
-            let mut cursor = client.database(db_name).list_collection_names().await?;
+            let cursor = client.database(db_name).list_collection_names().await?;
             Ok::<Vec<String>, mongodb::error::Error>(cursor)
         }).map_err(|e| VietError::runtime_error(format!("MongoDB list_collections failed: {}", e), line, col))?
           .into_iter().map(Value::String).collect();
