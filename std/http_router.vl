@@ -40,6 +40,10 @@ fn http_serve_static(public_dir: String, req_path: String) {
     let mut file_path = public_dir + req_path
     if req_path == "/" || req_path == "" {
         file_path = public_dir + "/index.html"
+    } else {
+        if file_exists(file_path + ".html") {
+            file_path = file_path + ".html"
+        }
     }
 
     if file_exists(file_path) {

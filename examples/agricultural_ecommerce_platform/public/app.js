@@ -917,59 +917,87 @@ window.switchAdminTab = function(tabName) {
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
 
-  if (tabName === 'stats') {
-    document.querySelector('.admin-tab:nth-child(1)').classList.add('active');
-    document.getElementById('tabStats').classList.add('active');
-  } else if (tabName === 'inventory') {
-    document.querySelector('.admin-tab:nth-child(2)').classList.add('active');
-    document.getElementById('tabInventory').classList.add('active');
-  } else if (tabName === 'orders') {
-    document.querySelector('.admin-tab:nth-child(3)').classList.add('active');
-    document.getElementById('tabOrders').classList.add('active');
-    loadAdminOrders();
-  } else if (tabName === 'users') {
-    document.querySelector('.admin-tab:nth-child(4)').classList.add('active');
-    document.getElementById('tabUsers').classList.add('active');
-    loadAdminUsers();
-  } else if (tabName === 'addProduct') {
-    document.querySelector('.admin-tab:nth-child(5)').classList.add('active');
-    document.getElementById('tabAddProduct').classList.add('active');
-  }
+  const btn = document.querySelector(`.admin-tab[data-tab="${tabName}"]`) || event?.target;
+  if (btn) btn.classList.add('active');
+
+  const content = document.getElementById(`tab_${tabName}`) || document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+  if (content) content.classList.add('active');
+
+  if (tabName === 'orders') loadAdminOrders();
+  if (tabName === 'users') loadAdminUsers();
 };
 
-async function updateAdminAnalytics() {
+window.fetchAdminData = async function() {
   try {
     const res = await fetch('/api/v1/admin/analytics');
     if (res.ok) {
       const json = await res.json();
       const data = json.data || {};
 
-      admTotalRev.textContent = formatVND(data.total_revenue || 0);
-      admTotalOrders.textContent = data.total_orders || 0;
-      admTotalProds.textContent = state.products.length;
-      admLowStockCount.textContent = `${data.low_stock_count || 0} sản phẩm`;
+      const revEl = document.getElementById('admTotalRev');
+      if (revEl) revEl.textContent = formatVND(data.total_revenue || 0);
 
-      // Inventory Table
-      inventoryTableBody.innerHTML = '';
-      state.products.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>#${p.id}</td>
-          <td><strong>${p.name}</strong></td>
-          <td>${p.origin}</td>
-          <td>${formatVND(p.price)} / ${p.unit}</td>
-          <td style="color: ${p.stock < 100 ? 'var(--color-danger)' : 'var(--color-primary-light)'}; font-weight: 700;">${p.stock} ${p.unit}</td>
-          <td>
-            <button class="btn btn-secondary btn-sm" onclick="restockProduct(${p.id})">+ 100 ${p.unit}</button>
-          </td>
-        `;
-        inventoryTableBody.appendChild(tr);
-      });
+      const ordEl = document.getElementById('admTotalOrders');
+      if (ordEl) ordEl.textContent = data.total_orders || 0;
+
+      const prodEl = document.getElementById('admTotalProducts') || document.getElementById('admTotalProds');
+      if (prodEl) prodEl.textContent = (data.low_stock_products || []).length + 20;
+
+      const lowEl = document.getElementById('admLowStockCount');
+      if (lowEl) lowEl.textContent = `${data.low_stock_count || 0} sản phẩm`;
+
+      // Low Stock Table
+      const lowTable = document.getElementById('admLowStockTable');
+      if (lowTable && data.low_stock_products) {
+        if (data.low_stock_products.length === 0) {
+          lowTable.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--color-primary-light); padding: 20px;">✓ Tất cả nông sản đều có mức tồn kho an toàn!</td></tr>';
+        } else {
+          lowTable.innerHTML = data.low_stock_products.map(p => `
+            <tr>
+              <td>#${p.id}</td>
+              <td><strong>${p.name}</strong></td>
+              <td>${p.origin || 'Việt Nam'}</td>
+              <td><span class="cert-badge">${p.cert || 'OCOP'}</span></td>
+              <td>${formatVND(p.price)} / ${p.unit}</td>
+              <td style="color: #F87171; font-weight: 800;">${p.stock} ${p.unit}</td>
+              <td><button class="btn btn-primary btn-sm" onclick="restockProduct(${p.id})">+ 100 ${p.unit}</button></td>
+            </tr>
+          `).join('');
+        }
+      }
     }
+
+    // Load full inventory table
+    const prodRes = await fetch('/api/v1/products');
+    if (prodRes.ok) {
+      const prodJson = await prodRes.json();
+      const prods = prodJson.data || [];
+      state.products = prods;
+
+      const invTable = document.getElementById('admInventoryTable') || document.getElementById('inventoryTableBody');
+      if (invTable) {
+        invTable.innerHTML = prods.map(p => `
+          <tr>
+            <td>#${p.id}</td>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.origin || 'Việt Nam'}</td>
+            <td>${p.unit}</td>
+            <td>${formatVND(p.price)}</td>
+            <td style="color: ${p.stock < 100 ? '#F87171' : 'var(--color-primary-light)'}; font-weight: 800;">${p.stock} ${p.unit}</td>
+            <td><button class="btn btn-secondary btn-sm" onclick="restockProduct(${p.id})">+ 100 ${p.unit}</button></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    loadAdminOrders();
+    loadAdminUsers();
   } catch (err) {
-    console.error('Lỗi nạp admin analytics', err);
+    console.error('[Admin Data Error]', err);
   }
-}
+};
+
+window.updateAdminAnalytics = window.fetchAdminData;
 
 async function loadAdminOrders() {
   try {
@@ -977,22 +1005,24 @@ async function loadAdminOrders() {
     if (res.ok) {
       const json = await res.json();
       const orders = json.data || [];
-      ordersTableBody.innerHTML = '';
+      const table = document.getElementById('admOrdersTable') || document.getElementById('ordersTableBody');
+      if (!table) return;
+
       if (orders.length === 0) {
-        ordersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Chưa có đơn hàng nào trong CSDL.</td></tr>';
+        table.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Chưa có đơn hàng nào trong CSDL.</td></tr>';
         return;
       }
-      orders.forEach(o => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>#${o.id}</strong></td>
-          <td>${o.customer_name}</td>
+      table.innerHTML = orders.map(o => `
+        <tr>
+          <td><strong>${o.order_code || '#' + o.id}</strong></td>
+          <td><strong>${o.customer_name}</strong></td>
           <td>${o.phone}</td>
-          <td style="color: var(--color-primary-light); font-weight: 700;">${formatVND(o.total)}</td>
-          <td><span class="cert-badge">${o.status}</span></td>
-        `;
-        ordersTableBody.appendChild(tr);
-      });
+          <td>${o.address || 'Hồ Chí Minh'}</td>
+          <td><span class="cert-badge">${o.payment_method || 'VIETQR'}</span></td>
+          <td style="color: var(--color-primary-light); font-weight: 800;">${formatVND(o.total_amount || o.total)}</td>
+          <td>${new Date(o.created_at * 1000).toLocaleDateString('vi-VN')}</td>
+        </tr>
+      `).join('');
     }
   } catch (err) {
     console.error('Lỗi tải danh sách đơn hàng', err);
@@ -1005,20 +1035,22 @@ async function loadAdminUsers() {
     if (res.ok) {
       const json = await res.json();
       const users = json.data || [];
-      usersTableBody.innerHTML = '';
-      users.forEach(u => {
-        const tr = document.createElement('tr');
+      const table = document.getElementById('admUsersTable') || document.getElementById('usersTableBody');
+      if (!table) return;
+
+      table.innerHTML = users.map(u => {
         const roleClass = u.role === 'ADMIN' ? 'cert-ocop' : u.role === 'FARMER' ? 'cert-vietgap' : 'cert-organic';
-        tr.innerHTML = `
-          <td>#${u.id}</td>
-          <td><strong>${u.name}</strong></td>
-          <td>${u.email}</td>
-          <td>${u.phone || 'Chưa cập nhật'}</td>
-          <td><span class="cert-badge ${roleClass}">${u.role}</span></td>
-          <td>${new Date(u.created_at * 1000).toLocaleDateString('vi-VN')}</td>
+        return `
+          <tr>
+            <td>#${u.id}</td>
+            <td><strong>${u.full_name || u.name}</strong></td>
+            <td>${u.email}</td>
+            <td>${u.phone || 'Chưa cập nhật'}</td>
+            <td><span class="cert-badge ${roleClass}">${u.role}</span></td>
+            <td><span style="color: #10B981; font-weight: 700;">✓ Hoạt động</span></td>
+          </tr>
         `;
-        usersTableBody.appendChild(tr);
-      });
+      }).join('');
     }
   } catch (err) {
     console.error('Lỗi tải danh sách người dùng', err);

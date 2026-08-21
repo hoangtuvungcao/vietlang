@@ -14,17 +14,18 @@
   <!-- Top Announcement Bar -->
   <div class="top-bar">
     <div class="top-bar-container">
-      <div class="top-bar-left" style="display: flex; align-items: center; gap: 10px;">
-        <span class="top-bar-badge" id="wsLiveStatus" style="background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.4); display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 11px;">
+      <div class="top-bar-left">
+        <span class="top-bar-badge" id="wsLiveStatus">
           <span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;"></span> WEBSOCKET LIVE
         </span>
         <span class="top-bar-badge">HTTP/2 · HTTP/3 READY</span>
         <span>Hạ tầng Backend đa giao thức · Lưu trữ CSDL chuẩn ACID</span>
       </div>
       <div class="top-bar-right">
-        <button class="top-nav-btn" id="navDocsBtn" onclick="window.open('/docs', '_blank')">Swagger API Docs</button>
-        <button class="top-nav-btn" id="navTrackOrderBtn">Tra Cứu Đơn Hàng</button>
-        <button class="top-nav-btn admin-btn" id="navAdminBtn">Quản Trị Hệ Thống</button>
+        <a href="/track" class="top-nav-btn">📦 Tra Cứu Đơn Hàng</a>
+        <a href="/admin" class="top-nav-btn admin-btn">👑 Quản Trị Hệ Thống</a>
+        <a href="/docs" target="_blank" class="top-nav-btn">📖 Swagger Docs</a>
+        <a href="/auth" class="top-nav-btn">👤 Đăng Nhập</a>
       </div>
     </div>
   </div>
@@ -50,7 +51,7 @@
       <!-- User Profile / Auth Area & Cart -->
       <div class="header-actions" style="display: flex; align-items: center; gap: 12px;">
         <div id="authNavArea">
-          <button class="btn btn-secondary btn-sm" id="openAuthBtn" style="padding: 8px 14px;">Đăng Nhập / Đăng Ký</button>
+          <a href="/auth" class="btn btn-secondary btn-sm" id="openAuthBtn" style="padding: 8px 14px;">Đăng Nhập / Đăng Ký</a>
           <div id="userProfileBadge" style="display: none; align-items: center; gap: 8px; background: var(--bg-surface-elevated); padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
             <div style="font-size: 13px;">
               <div style="font-weight: 700; color: var(--color-primary-light);" id="navUserName">Khách Hàng</div>
@@ -395,207 +396,8 @@
     </div>
   </div>
 
-  <!-- Order Tracking Modal -->
-  <div class="modal-backdrop" id="trackModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title">Tra Cứu Tiến Độ Đơn Hàng CSDL</h3>
-        <button class="modal-close" onclick="closeTrackModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="track-input-wrap">
-          <input type="text" id="trackInput" class="form-input" placeholder="Nhập số điện thoại hoặc mã đơn (VD: 0901234567 hoặc 903375)">
-          <button class="btn btn-primary" id="doTrackBtn" style="white-space: nowrap;">Tra Cứu</button>
-        </div>
-        <div id="trackResultBox" class="track-result-box" style="margin-top: 20px;">
-          <!-- Dynamically injected -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Admin & RBAC Protected Modal -->
-  <div class="modal-backdrop" id="adminModal">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <h3 class="modal-title">Cổng Quản Trị Hệ Thống Nông Sản</h3>
-          <span class="cert-badge cert-ocop" id="adminRoleBadge">ADMIN ACCESS</span>
-        </div>
-        <button class="modal-close" onclick="closeAdminModal()">&times;</button>
-      </div>
-
-      <div class="admin-tabs-nav">
-        <button class="admin-tab active" onclick="switchAdminTab('stats')">📊 Thống Kê</button>
-        <button class="admin-tab" onclick="switchAdminTab('inventory')">📦 Quản Lý Kho</button>
-        <button class="admin-tab" onclick="switchAdminTab('orders')">🛒 Đơn Hàng</button>
-        <button class="admin-tab" onclick="switchAdminTab('users')">👥 Người Dùng & Phân Quyền</button>
-        <button class="admin-tab" onclick="switchAdminTab('addProduct')">➕ Thêm Nông Sản Mới</button>
-      </div>
-
-      <div class="admin-body">
-        <!-- Tab 1: Stats -->
-        <div id="tabStats" class="admin-tab-content active">
-          <div class="stats-cards-grid">
-            <div class="stat-card">
-              <span class="stat-title">Tổng Doanh Thu</span>
-              <span class="stat-number" id="admTotalRev">0 VNĐ</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-title">Tổng Số Đơn Hàng</span>
-              <span class="stat-number" id="admTotalOrders">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-title">Sản Phẩm Trong Hệ Thống</span>
-              <span class="stat-number" id="admTotalProds">24</span>
-            </div>
-            <div class="stat-card alert">
-              <span class="stat-title">Cảnh Báo Tồn Kho Thấp</span>
-              <span class="stat-number" id="admLowStockCount">0</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Inventory -->
-        <div id="tabInventory" class="admin-tab-content">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Mã</th>
-                  <th>Tên Nông Sản</th>
-                  <th>Nguồn Gốc</th>
-                  <th>Giá Bán</th>
-                  <th>Tồn Kho</th>
-                  <th>Hành Động</th>
-                </tr>
-              </thead>
-              <tbody id="inventoryTableBody">
-                <!-- Dynamically injected -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab 3: Orders -->
-        <div id="tabOrders" class="admin-tab-content">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Mã Đơn</th>
-                  <th>Khách Hàng</th>
-                  <th>Số ĐT</th>
-                  <th>Tổng Tiền</th>
-                  <th>Trạng Thái</th>
-                </tr>
-              </thead>
-              <tbody id="ordersTableBody">
-                <!-- Dynamically injected -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab 4: Users & RBAC -->
-        <div id="tabUsers" class="admin-tab-content">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Mã ID</th>
-                  <th>Họ và Tên</th>
-                  <th>Email</th>
-                  <th>Số Điện Thoại</th>
-                  <th>Vai Trò (Role)</th>
-                  <th>Ngày Tạo</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody">
-                <!-- Dynamically injected -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab 5: Add Product Form -->
-        <div id="tabAddProduct" class="admin-tab-content">
-          <form id="addProductForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label">Tên Nông Sản Mới *</label>
-              <input type="text" class="form-input" id="newProdName" placeholder="VD: Gạo Lứt Huyết Rồng Hữu Cơ" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Danh Mục *</label>
-              <select class="form-input" id="newProdCategory">
-                <option value="1">Gạo & Lương Thực</option>
-                <option value="2">Trái Cây Đặc Sản</option>
-                <option value="3">Cà Phê & Trà Cao Cấp</option>
-                <option value="4">Rau Củ Quả Hữu Cơ</option>
-                <option value="5">Hạt Dinh Dưỡng & Ngũ Cốc</option>
-                <option value="6">Gia Vị & Mật Ong Tự Nhiên</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Hợp Tác Xã Sản Xuất *</label>
-              <select class="form-input" id="newProdCoop">
-                <option value="1">HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên</option>
-                <option value="2">HTX Cây Ăn Trái Hòa Lộc</option>
-                <option value="3">HTX Cà Phê Đặc Sản Cư M'gar</option>
-                <option value="4">HTX Rau Củ Sạch Cầu Đất Farm</option>
-                <option value="5">HTX Nông Sản Lục Ngạn Bắc Giang</option>
-                <option value="6">HTX Nước Mắm & Gia Vị Đảo Ngọc</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Giá Bán (VNĐ) *</label>
-              <input type="number" class="form-input" id="newProdPrice" placeholder="50000" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Giá Gốc Niêm Yết (VNĐ) *</label>
-              <input type="number" class="form-input" id="newProdOrigPrice" placeholder="65000" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Đơn Vị Tính *</label>
-              <input type="text" class="form-input" id="newProdUnit" placeholder="kg hoặc hộp 500g" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Số Lượng Nhập Kho Ban Đầu *</label>
-              <input type="number" class="form-input" id="newProdStock" placeholder="200" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Vùng Miền *</label>
-              <select class="form-input" id="newProdRegion">
-                <option value="Mien Tay">Đồng Bằng Sông Cửu Long</option>
-                <option value="Tay Nguyen">Tây Nguyên</option>
-                <option value="Mien Bac">Miền Bắc</option>
-                <option value="Mien Trung">Miền Trung</option>
-                <option value="Dong Nam Bo">Đông Nam Bộ</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Chứng Nhận Chất Lượng *</label>
-              <select class="form-input" id="newProdCert">
-                <option value="OCOP 5 Sao">OCOP 5 Sao</option>
-                <option value="OCOP 4 Sao">OCOP 4 Sao</option>
-                <option value="VietGAP">VietGAP</option>
-                <option value="Organic USDA">Organic USDA</option>
-                <option value="GlobalGAP">GlobalGAP</option>
-              </select>
-            </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label">Mô Tả Sản Phẩm *</label>
-              <textarea class="form-input" id="newProdDesc" rows="3" placeholder="Đặc điểm, thổ nhưỡng, hương vị..." required></textarea>
-            </div>
-            <div style="grid-column: 1 / -1;">
-              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">Lưu Nông Sản Vào CSDL SQLite / MySQL</button>
-            </div>
-          </form>
-        </div>
-
-      </div>
-    </div>
-  </div>
+  <!-- Toast Popup -->
+  <div id="toastPopup" class="toast-popup"></div>
 
   <!-- Footer -->
   <footer class="footer">
