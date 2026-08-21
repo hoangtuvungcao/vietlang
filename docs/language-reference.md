@@ -1,347 +1,229 @@
 # VietLang Language Reference
 
+Exhaustive language syntax, semantic specification, and type system reference for VietLang.
+
+Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
+
+---
+
 ## Table of Contents
 
-1. [Types](#types)
-2. [Variables](#variables)
-3. [Operators](#operators)
-4. [Functions](#functions)
-5. [Control Flow](#control-flow)
-6. [Data Structures](#data-structures)
-7. [Pattern Matching](#pattern-matching)
-8. [Error Handling](#error-handling)
-9. [Modules & Imports](#modules--imports)
-10. [Concurrency](#concurrency)
-11. [Comments](#comments)
+1. [Type System](#1-type-system)
+2. [Variables & Mutability](#2-variables--mutability)
+3. [Operators & Compound Expressions](#3-operators--compound-expressions)
+4. [Functions & Closures](#4-functions--closures)
+5. [Control Flow & Jump Signals](#5-control-flow--jump-signals)
+6. [Error Handling (`try / catch`, `throw`)](#6-error-handling)
+7. [Data Structures (Struct, Map, Array)](#7-data-structures)
+8. [Pattern Matching (`match`)](#8-pattern-matching)
+9. [Module System & Git Packages](#9-module-system--git-packages)
+10. [Virtual Machine Execution (`--vm`)](#10-virtual-machine-execution)
 
 ---
 
-## Types
+## 1. Type System
 
 ### Primitive Types
+- `Int`: 64-bit signed integer (`let count: Int = 42`)
+- `Float`: 64-bit IEEE-754 floating-point (`let price: Float = 99.95`)
+- `String`: UTF-8 immutable string (`let greeting: String = "Xin chào!"`)
+- `Bool`: Boolean truth values (`true`, `false`)
+- `None`: Representation of no value (`none`)
 
-| Type | Description | Example |
-|:---|:---|:---|
-| `Int` | 64-bit integer | `42`, `-7`, `1_000_000` |
-| `Float` | 64-bit float | `3.14`, `-0.5` |
-| `String` | UTF-8 string | `"hello"`, `"line\n"` |
-| `Bool` | Boolean | `true`, `false` |
-| `None` | Null value | `none` |
+### Composite & Collection Types
+- `Array`: Homogeneous/heterogeneous dynamic array (`let items = [1, 2, 3]`)
+- `Map`: Key-value hash map (`let user = map_set(map_new(), "id", 1)`)
+- `Struct`: User-defined compound structure (`struct User { name: String, age: Int }`)
+- `Function`: First-class callable closure (`let fn_val = fn(x) { x * 2 }`)
 
-### Composite Types
+---
 
-| Type | Description | Example |
-|:---|:---|:---|
-| `Array` | Dynamic array | `[1, 2, 3]` |
-| `Struct` | Named fields | `User { name: "Trong" }` |
-| `Enum` | Sum type | `Ok(42)`, `Err("fail")` |
-| `Map` | Key-value map | `map_new()` |
-| `Range` | Integer range | `1..10` |
-| `Function` | First-class func | `fn(x) { x * 2 }` |
+## 2. Variables & Mutability
 
-### Type Annotations
+Variables in VietLang are immutable by default:
+```rust
+let server_name = "AuthService" // Immutable
+// server_name = "Other"        // Compile / Runtime Error
+
+let mut request_count = 0        // Mutable
+request_count += 1               // OK
+```
+
+Variable naming convention:
+- Always use `snake_case` for variables and function names (`user_id`, `process_order`).
+- `PascalCase` is reserved for Struct and Type declarations (`UserSession`, `HttpPipeline`).
+
+---
+
+## 3. Operators & Compound Expressions
+
+### Arithmetic & Compound Assignment
+- Addition / Concatenation: `+`, `+=`
+- Subtraction: `-`, `-=`
+- Multiplication: `*`, `*=`
+- Division: `/`, `/=`
+- Modulo: `%`, `%=`
 
 ```rust
-let x: Int = 42
-let name: String = "hello"
-let items: [Int] = [1, 2, 3]       // Array type
-let maybe: ?String = none           // Nullable
-let f: fn(Int, Int) -> Int = add    // Function type
+let mut total = 100
+total += 25  // total is now 125
+total *= 2   // total is now 250
+```
+
+### Logical & Short-Circuit Operators
+- `&&`: Short-circuit logical AND (if left is false, right is not evaluated)
+- `||`: Short-circuit logical OR (if left is true, right is not evaluated)
+- `!`: Logical NOT
+
+```rust
+if client_ip != "" && ip_in_cidr(client_ip, "10.0.0.0/8") {
+    // Right operand only evaluated if client_ip is non-empty
+}
+```
+
+### Comparison Operators
+- `==`, `!=`, `<`, `<=`, `>`, `>=`
+
+---
+
+## 4. Functions & Closures
+
+Functions support default arguments, explicit type annotations, and first-class higher-order passing:
+
+```rust
+// Standard function with default parameter
+fn build_endpoint(base: String, port: Int = 8080) -> String {
+    return base + ":" + to_string(port)
+}
+
+// Higher-order function / Closure
+fn apply_twice(val: Int, operation) -> Int {
+    return operation(operation(val))
+}
+
+let result = apply_twice(5, fn(x) { x + 10 }) // Returns 25
 ```
 
 ---
 
-## Variables
+## 5. Control Flow & Jump Signals
 
+### Conditional Statements
+In VietLang, `if` is a statement:
 ```rust
-let name = "VietLang"       // Immutable (default)
-let mut counter = 0         // Mutable
-let pi: Float = 3.14159    // With type annotation
-
-counter = counter + 1       // OK (mutable)
-// name = "other"           // ERROR: cannot assign to immutable
-```
-
----
-
-## Operators
-
-### Arithmetic
-| Op | Description | Example |
-|:---|:---|:---|
-| `+` | Add / String concat | `1 + 2`, `"a" + "b"` |
-| `-` | Subtract | `5 - 3` |
-| `*` | Multiply / String repeat | `3 * 4`, `"ab" * 3` |
-| `/` | Divide | `10 / 3` |
-| `%` | Modulo | `10 % 3` |
-
-### Comparison
-| Op | Description |
-|:---|:---|
-| `==` | Equal |
-| `!=` | Not equal |
-| `<` | Less than |
-| `>` | Greater than |
-| `<=` | Less or equal |
-| `>=` | Greater or equal |
-
-### Logical
-| Op | Description |
-|:---|:---|
-| `&&` | Logical AND |
-| `\|\|` | Logical OR |
-| `!` | Logical NOT |
-
-### Other
-| Op | Description | Example |
-|:---|:---|:---|
-| `..` | Range | `1..10` |
-| `.` | Field access | `user.name` |
-| `[]` | Index | `arr[0]` |
-| `->` | Return type | `fn() -> Int` |
-| `=>` | Match arm | `1 => "one"` |
-
----
-
-## Functions
-
-```rust
-// Basic function
-fn add(a: Int, b: Int) -> Int {
-    return a + b
-}
-
-// No return type
-fn greet(name: String) {
-    println("Hello, " + name)
-}
-
-// Default parameters
-fn connect(host: String, port: Int = 8080) {
-    println("Connecting to " + host + ":" + to_string(port))
-}
-
-// Lambda / Anonymous function
-let double = fn(x) { return x * 2 }
-
-// Higher-order functions
-let nums = [1, 2, 3, 4, 5]
-let doubled = nums.map(fn(x) { return x * 2 })
-let evens = nums.filter(fn(x) { return x % 2 == 0 })
-let sum = nums.reduce(fn(acc, x) { return acc + x }, 0)
-
-// Recursion
-fn factorial(n: Int) -> Int {
-    if n <= 1 { return 1 }
-    return n * factorial(n - 1)
+let mut role = "guest"
+if is_admin {
+    role = "administrator"
+} else if is_manager {
+    role = "manager"
 }
 ```
 
----
-
-## Control Flow
-
-### If / Else
-
-```rust
-if condition {
-    // ...
-} else if other_condition {
-    // ...
-} else {
-    // ...
-}
-```
-
-### While Loop
-
+### While & For Loops
 ```rust
 let mut i = 0
 while i < 10 {
-    println(to_string(i))
-    i = i + 1
-}
-```
-
-### For Loop
-
-```rust
-// Range-based
-for i in 0..10 {
-    println(to_string(i))
+    i += 1
+    if i == 5 { continue }
+    if i == 8 { break }
 }
 
-// Array iteration
-for item in items {
-    process(item)
-}
-
-// String iteration
-for ch in "hello".chars() {
-    print(ch)
-}
-```
-
-### Break & Continue
-
-```rust
-for i in 0..100 {
-    if i % 2 == 0 { continue }
-    if i > 20 { break }
-    println(to_string(i))
+for item in ["alpha", "beta", "gamma"] {
+    println(item)
 }
 ```
 
 ---
 
-## Data Structures
+## 6. Error Handling
 
-### Struct
+VietLang provides native `try / catch` blocks and `throw`:
 
+```rust
+try {
+    if payload.len() == 0 {
+        throw("Empty payload received")
+    }
+} catch err {
+    println("Caught error: " + to_string(err))
+}
+```
+
+---
+
+## 7. Data Structures
+
+### Structs
 ```rust
 struct User {
+    id: Int,
     name: String,
-    email: String,
-    age: Int
+    email: String
 }
 
-// Instantiation
-let user = User {
+let u = User {
+    id: 101,
     name: "Trong",
-    email: "trong@vietlang.dev",
-    age: 25
+    email: "trong@example.com"
 }
 
-// Field access
-println(user.name)
+let user_name = u.name
 ```
 
-### Enum
-
+### Map Collections
 ```rust
-enum Color {
-    Red,
-    Green,
-    Blue,
-    Custom(Int, Int, Int)
-}
+let mut session = map_new()
+session = map_set(session, "token", "jwt_xyz_789")
+session = map_set(session, "user_id", 101)
 
-enum Result {
-    Ok(value),
-    Err(message)
-}
-```
-
-### Impl (Methods)
-
-```rust
-impl User {
-    pub fn display(self) {
-        println(self.name + " <" + self.email + ">")
-    }
-
-    pub fn is_adult(self) -> Bool {
-        return self.age >= 18
-    }
-}
-```
-
-### Map (HashMap)
-
-```rust
-let config = map_new()
-let config = map_set(config, "host", "localhost")
-let config = map_set(config, "port", 8080)
-
-let host = map_get(config, "host")
-let has_port = map_has(config, "port")
-let keys = map_keys(config)
-```
-
----
-
-## Pattern Matching
-
-```rust
-let result = match value {
-    0 => "zero",
-    1 => "one",
-    n => "number: " + to_string(n),    // variable binding
-    _ => "unknown"                      // wildcard
-}
-
-// Enum matching
-match result {
-    Ok(value) => println("Success: " + to_string(value)),
-    Err(msg) => println("Error: " + msg)
+if map_has(session, "token") {
+    let token = map_get(session, "token")
 }
 ```
 
 ---
 
-## Error Handling
+## 8. Pattern Matching
+
+Match expressions provide exhaustive branch dispatch:
 
 ```rust
-// Result type pattern
-enum Result {
-    Ok(value),
-    Err(message)
+let status_code = 200
+
+let message = match status_code {
+    200 => "OK",
+    201 => "Created",
+    400 => "Bad Request",
+    401 => "Unauthorized",
+    404 => "Not Found",
+    500 => "Internal Server Error",
+    _ => "Unknown Status"
 }
-
-fn divide(a: Float, b: Float) -> Result {
-    if b == 0.0 {
-        return Err("Division by zero")
-    }
-    return Ok(a / b)
-}
-
-// Assertions
-assert(1 + 1 == 2)
-assert(name != "", "Name cannot be empty")
 ```
 
 ---
 
-## Modules & Imports
+## 9. Module System & Git Packages
+
+Modules are resolved across 4 hierarchic paths:
+1. Relative local directory (`./my_submodule.vl`)
+2. Standard library directory (`std/*.vl`)
+3. Community modules directory (`modules/*`)
+4. Package entrypoint (`modules/*/src/main.vl`)
 
 ```rust
-import models.user
-import services.auth
-import std.http
+import std.security
+import std.http_pipeline
+import std.kv_store
 ```
 
 ---
 
-## Concurrency
+## 10. Virtual Machine Execution (`--vm`)
 
-```rust
-// Channels
-let ch = channel(100)
+VietLang includes a stack-based Bytecode Virtual Machine for high-throughput execution:
 
-// Spawn lightweight tasks
-spawn(process_task)
-
-// Thread-safe shared state
-let counter = mutex_new(0)
+```bash
+# Execute via Bytecode VM
+vietlang --vm my_script.vl
 ```
-
----
-
-## Comments
-
-```rust
-// Single-line comment
-
-/* 
-   Multi-line
-   block comment
-*/
-
-/* Nested /* comments */ are supported */
-```
-
----
-
-## Built-in Functions
-
-See [Standard Library Reference](stdlib-reference.md) for complete API documentation.
