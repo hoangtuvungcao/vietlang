@@ -1,13 +1,15 @@
 // ========================================================================
 // Nông Sản Việt — Enterprise Frontend Single Page Application (VietLang Powered)
-// 100% Pure SQLite Relational REST API Client — No Mock / Fake Data
+// 100% Pure Relational REST API Client + Full Auth & RBAC Permissions
 // ========================================================================
 
 const state = {
+  currentUser: JSON.parse(localStorage.getItem('nsv_user') || 'null'),
   categories: [],
   cooperatives: [],
   vouchers: [],
   products: [],
+  users: [],
   selectedCategory: 0,
   selectedRegion: "",
   selectedCert: "",
@@ -74,6 +76,17 @@ const openCheckoutBtn = document.getElementById('openCheckoutBtn');
 const voucherInput = document.getElementById('voucherInput');
 const applyVoucherBtn = document.getElementById('applyVoucherBtn');
 
+const authModal = document.getElementById('authModal');
+const openAuthBtn = document.getElementById('openAuthBtn');
+const userProfileBadge = document.getElementById('userProfileBadge');
+const navUserName = document.getElementById('navUserName');
+const navUserRole = document.getElementById('navUserRole');
+const logoutBtn = document.getElementById('logoutBtn');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const tabLoginBtn = document.getElementById('tabLoginBtn');
+const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+
 const productDetailModal = document.getElementById('productDetailModal');
 const modalDetailContent = document.getElementById('modalDetailContent');
 
@@ -94,14 +107,161 @@ const admTotalProds = document.getElementById('admTotalProds');
 const admLowStockCount = document.getElementById('admLowStockCount');
 const inventoryTableBody = document.getElementById('inventoryTableBody');
 const ordersTableBody = document.getElementById('ordersTableBody');
+const usersTableBody = document.getElementById('usersTableBody');
+const addProductForm = document.getElementById('addProductForm');
 
 // ========================================================================
-// 1. Initial Data Fetching from Pure VietLang SQLite REST Backend
+// 1. Authentication & Role-Based Access Control (RBAC)
+// ========================================================================
+function renderUserAuthUI() {
+  if (state.currentUser) {
+    if (openAuthBtn) openAuthBtn.style.display = 'none';
+    if (userProfileBadge) {
+      userProfileBadge.style.display = 'flex';
+      navUserName.textContent = state.currentUser.name || 'Người Dùng';
+      navUserRole.textContent = state.currentUser.role || 'CUSTOMER';
+      if (state.currentUser.role === 'ADMIN') {
+        navUserRole.className = 'cert-badge cert-ocop';
+      } else if (state.currentUser.role === 'FARMER') {
+        navUserRole.className = 'cert-badge cert-vietgap';
+      } else {
+        navUserRole.className = 'cert-badge cert-organic';
+      }
+    }
+  } else {
+    if (openAuthBtn) openAuthBtn.style.display = 'block';
+    if (userProfileBadge) userProfileBadge.style.display = 'none';
+  }
+}
+
+if (openAuthBtn) {
+  openAuthBtn.addEventListener('click', () => {
+    authModal.classList.add('open');
+  });
+}
+
+window.closeAuthModal = function() {
+  if (authModal) authModal.classList.remove('open');
+};
+
+window.switchAuthTab = function(tab) {
+  if (tab === 'login') {
+    tabLoginBtn.className = 'btn btn-primary btn-sm';
+    tabRegisterBtn.className = 'btn btn-secondary btn-sm';
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+    document.getElementById('authModalTitle').textContent = 'Đăng Nhập Tài Khoản';
+  } else {
+    tabLoginBtn.className = 'btn btn-secondary btn-sm';
+    tabRegisterBtn.className = 'btn btn-primary btn-sm';
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'Đăng Ký Tài Khoản Mới';
+  }
+};
+
+window.quickLogin = function(email, password) {
+  document.getElementById('loginEmail').value = email;
+  document.getElementById('loginPassword').value = password;
+  loginForm.dispatchEvent(new Event('submit'));
+};
+
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    showToast('Đang xác thực thông tin đăng nhập...', 'info');
+
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status_code >= 400) {
+        showToast(result.error || 'Đăng nhập thất bại!', 'error');
+        return;
+      }
+
+      const u = result.data.user;
+      u.token = result.data.token;
+      state.currentUser = u;
+      localStorage.setItem('nsv_user', JSON.stringify(u));
+
+      renderUserAuthUI();
+      closeAuthModal();
+      showToast(`Chào mừng [${u.name}] (Vai trò: ${u.role}) đăng nhập thành công!`);
+
+    } catch (err) {
+      showToast('Lỗi kết nối tới máy chủ: ' + err.message, 'error');
+    }
+  });
+}
+
+if (registerForm) {
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const role = document.getElementById('regRole').value;
+
+    showToast('Đang đăng ký tài khoản vào CSDL...', 'info');
+
+    try {
+      const res = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, password, role })
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status_code >= 400) {
+        showToast(result.error || 'Đăng ký thất bại!', 'error');
+        return;
+      }
+
+      const u = result.data.user;
+      u.token = result.data.token;
+      state.currentUser = u;
+      localStorage.setItem('nsv_user', JSON.stringify(u));
+
+      renderUserAuthUI();
+      closeAuthModal();
+      showToast(`Tạo tài khoản thành công! Quyền hạn: ${u.role}`);
+
+    } catch (err) {
+      showToast('Lỗi kết nối: ' + err.message, 'error');
+    }
+  });
+}
+
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    state.currentUser = null;
+    localStorage.removeItem('nsv_user');
+    renderUserAuthUI();
+    showToast('Đã đăng xuất khỏi hệ thống!');
+  });
+}
+
+// ========================================================================
+// 2. Initial Data Fetching from Pure VietLang Relational Backend
 // ========================================================================
 async function fetchInitialData() {
   try {
-    // 1. Fetch Categories
-    const catRes = await fetch('/api/v1/categories');
+    const [catRes, coopRes, vRes, prodRes] = await Promise.all([
+      fetch('/api/v1/categories'),
+      fetch('/api/v1/cooperatives'),
+      fetch('/api/v1/vouchers'),
+      fetch('/api/v1/products')
+    ]);
+
     if (catRes.ok) {
       const catJson = await catRes.json();
       if (catJson && catJson.data) {
@@ -110,8 +270,6 @@ async function fetchInitialData() {
       }
     }
 
-    // 2. Fetch Cooperatives
-    const coopRes = await fetch('/api/v1/cooperatives');
     if (coopRes.ok) {
       const coopJson = await coopRes.json();
       if (coopJson && coopJson.data) {
@@ -120,8 +278,6 @@ async function fetchInitialData() {
       }
     }
 
-    // 3. Fetch Vouchers
-    const vRes = await fetch('/api/v1/vouchers');
     if (vRes.ok) {
       const vJson = await vRes.json();
       if (vJson && vJson.data) {
@@ -129,24 +285,18 @@ async function fetchInitialData() {
       }
     }
 
-    // 4. Fetch Products
-    const prodRes = await fetch('/api/v1/products');
     if (prodRes.ok) {
       const prodJson = await prodRes.json();
       if (prodJson && prodJson.data) {
         state.products = prodJson.data;
         renderProducts();
         renderFlashSale();
-        console.log(`[VietLang SQLite] 100% Real Database Loaded: ${state.products.length} products, ${state.cooperatives.length} cooperatives.`);
       }
     }
 
-    // 5. Fetch Admin Analytics
-    updateAdminAnalytics();
-
+    renderUserAuthUI();
   } catch (err) {
     console.error('[VietLang Backend Error]', err);
-    showToast('Lỗi kết nối tới máy chủ VietLang SQLite: ' + err.message, 'error');
   }
 }
 
@@ -155,7 +305,6 @@ function renderCategoryTabs() {
   if (!categoryTabs) return;
   categoryTabs.innerHTML = '';
 
-  // All Category
   const allBtn = document.createElement('button');
   allBtn.className = `category-tab ${state.selectedCategory === 0 ? 'active' : ''}`;
   allBtn.innerHTML = '<span>Tất Cả Nông Sản</span>';
@@ -182,34 +331,26 @@ function renderCategoryTabs() {
 }
 
 // ========================================================================
-// 2. Products Grid Rendering
+// 3. Products Grid Rendering
 // ========================================================================
 function renderProducts() {
   if (!productsGrid) return;
   let list = [...state.products];
 
-  // Category Filter
   if (state.selectedCategory > 0) {
     list = list.filter(p => p.category_id === state.selectedCategory);
   }
-
-  // Region Filter
   if (state.selectedRegion) {
     list = list.filter(p => (p.region || '').toLowerCase().includes(state.selectedRegion.toLowerCase()));
   }
-
-  // Cert Filter
   if (state.selectedCert) {
     list = list.filter(p => (p.cert || '').toLowerCase().includes(state.selectedCert.toLowerCase()));
   }
-
-  // Search Filter
   if (state.searchQuery.trim() !== '') {
     const q = state.searchQuery.toLowerCase();
     list = list.filter(p => (p.name || '').toLowerCase().includes(q) || (p.origin || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
   }
 
-  // Sorting
   if (state.sortBy === 'price_asc') {
     list.sort((a, b) => a.price - b.price);
   } else if (state.sortBy === 'price_desc') {
@@ -331,7 +472,7 @@ function renderCooperatives() {
   });
 }
 
-// Flash Sale Digital Timer
+// Flash Sale Timer
 function initFlashSaleTimer() {
   let secondsLeft = 14 * 3600 + 42 * 60 + 19;
   const hoursEl = document.getElementById('flashHours');
@@ -353,7 +494,7 @@ function initFlashSaleTimer() {
 }
 
 // ========================================================================
-// 3. Cart Management Mechanics
+// 4. Cart Mechanics
 // ========================================================================
 window.toggleCart = function() {
   cartDrawer.classList.toggle('open');
@@ -367,7 +508,7 @@ window.addToCart = function(productId) {
   if (!prod) return;
 
   if (prod.stock <= 0) {
-    showToast(`Sản phẩm [${prod.name}] tạm thời hết hàng trong kho SQLite!`, 'error');
+    showToast(`Sản phẩm [${prod.name}] tạm thời hết hàng!`, 'error');
     return;
   }
 
@@ -493,19 +634,15 @@ applyVoucherBtn.addEventListener('click', () => {
   showToast(`Áp dụng mã [${code}] thành công!`);
 });
 
-// ========================================================================
-// 4. Filter & Search Event Listeners
-// ========================================================================
+// Filters
 regionSelect.addEventListener('change', (e) => {
   state.selectedRegion = e.target.value;
   renderProducts();
 });
-
 certSelect.addEventListener('change', (e) => {
   state.selectedCert = e.target.value;
   renderProducts();
 });
-
 sortSelect.addEventListener('change', (e) => {
   state.sortBy = e.target.value;
   renderProducts();
@@ -520,9 +657,7 @@ searchInput.addEventListener('keyup', (e) => {
   if (e.key === 'Enter') handleSearch();
 });
 
-// ========================================================================
-// 5. Product Detail Modal & Reviews
-// ========================================================================
+// Product Detail Modal
 window.openProductDetail = async function(productId) {
   const prod = state.products.find(p => p.id === productId);
   if (!prod) return;
@@ -551,7 +686,7 @@ window.openProductDetail = async function(productId) {
         <div style="background: var(--bg-surface); padding: 12px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px;">
           <div>🌾 <strong>Xuất xứ:</strong> ${prod.origin}</div>
           <div style="margin-top: 4px;">📅 <strong>Thời vụ thu hoạch:</strong> ${prod.harvest_date}</div>
-          <div style="margin-top: 4px;">📦 <strong>Tồn kho SQLite:</strong> ${prod.stock} ${prod.unit}</div>
+          <div style="margin-top: 4px;">📦 <strong>Tồn kho CSDL:</strong> ${prod.stock} ${prod.unit}</div>
         </div>
         <button class="btn btn-primary" style="width: 100%; padding: 14px;" onclick="addToCart(${prod.id}); closeProductDetail();">+ Thêm Vào Giỏ Hàng</button>
       </div>
@@ -566,7 +701,7 @@ window.closeProductDetail = function() {
 };
 
 // ========================================================================
-// 6. Real 100% SQLite Checkout Transaction (POST /api/v1/orders/checkout)
+// 5. Checkout Transaction (POST /api/v1/orders/checkout)
 // ========================================================================
 openCheckoutBtn.addEventListener('click', () => {
   const { total } = calculateCartTotals();
@@ -574,6 +709,13 @@ openCheckoutBtn.addEventListener('click', () => {
     showToast('Giỏ hàng trống!', 'error');
     return;
   }
+
+  // Pre-fill user profile if logged in
+  if (state.currentUser) {
+    document.getElementById('custName').value = state.currentUser.name || '';
+    document.getElementById('custPhone').value = state.currentUser.phone || '';
+  }
+
   toggleCart();
   checkoutModal.classList.add('open');
 });
@@ -592,7 +734,7 @@ checkoutForm.addEventListener('submit', async (e) => {
   const payment_method = document.getElementById('paymentMethod').value;
 
   const checkoutPayload = {
-    user_id: 2,
+    user_id: state.currentUser ? state.currentUser.id : 2,
     customer_name,
     phone,
     address,
@@ -602,7 +744,7 @@ checkoutForm.addEventListener('submit', async (e) => {
     voucher: state.voucher || ""
   };
 
-  showToast('Đang gửi giao dịch ACID tới máy chủ SQLite VietLang...', 'info');
+  showToast('Đang gửi giao dịch ACID tới máy chủ VietLang...', 'info');
 
   try {
     const res = await fetch('/api/v1/orders/checkout', {
@@ -618,18 +760,16 @@ checkoutForm.addEventListener('submit', async (e) => {
     }
 
     const orderData = result.data;
-    const orderId = orderData.id || ('NSV' + Math.floor(100000 + Math.random() * 900000));
+    const orderId = orderData.order_id || ('NSV' + Math.floor(100000 + Math.random() * 900000));
 
-    // Clear Cart
     state.cart = [];
     state.voucher = null;
     updateCartUI();
     closeCheckoutModal();
 
-    // Refresh products list from SQLite to reflect decremented stock
     await fetchInitialData();
 
-    if (payment_method.includes('VIETQR') || payment_method.includes('Chuyển Khoản') || payment_method.includes('VietQR')) {
+    if (payment_method.includes('VIETQR')) {
       showVietQRModal({
         id: orderId,
         customer_name,
@@ -637,15 +777,15 @@ checkoutForm.addEventListener('submit', async (e) => {
         total: orderData.total || calculateCartTotals().total
       });
     } else {
-      alert(`[GIAO DICH THÀNH CÔNG — CƠ SỞ DỮ LIỆU SQLITE]\n\nMã đơn hàng: #${orderId}\nKhách hàng: ${customer_name}\nTổng thanh toán: ${formatVND(orderData.total)}\n\nĐơn hàng đã được lưu trữ vĩnh viễn vào CSDL SQLite chuẩn ACID của VietLang!`);
+      alert(`[GIAO DỊCH THÀNH CÔNG — CƠ SỞ DỮ LIỆU CHUẨN ACID]\n\nMã đơn hàng: #${orderId}\nKhách hàng: ${customer_name}\nTổng thanh toán: ${formatVND(orderData.total)}\n\nĐơn hàng đã được lưu trữ vĩnh viễn vào CSDL!`);
     }
 
   } catch (err) {
-    showToast('Lỗi mạng khi kết nối tới máy chủ VietLang: ' + err.message, 'error');
+    showToast('Lỗi kết nối tới máy chủ VietLang: ' + err.message, 'error');
   }
 });
 
-// VietQR Modal Generator
+// VietQR Modal
 function showVietQRModal(order) {
   const qrDiv = document.createElement('div');
   qrDiv.className = 'modal-backdrop open';
@@ -681,7 +821,7 @@ function showVietQRModal(order) {
           <p><strong>Chủ tài khoản:</strong> NONG SAN VIET ENTERPRISE</p>
           <p><strong>Nội dung:</strong> <span style="color: #F59E0B; font-weight: bold;">${order.id} ${order.phone}</span></p>
         </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 16px; padding: 12px;" onclick="document.getElementById('qrModalTemp').remove(); showToast('Hệ thống VietLang đã nhận diện thanh toán thành công!');">Xác Nhận Đã Chuyển Khoản</button>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 16px; padding: 12px;" onclick="document.getElementById('qrModalTemp').remove(); showToast('Hệ thống đã ghi nhận thanh toán!');">Xác Nhận Đã Chuyển Khoản</button>
       </div>
     </div>
   `;
@@ -689,7 +829,7 @@ function showVietQRModal(order) {
 }
 
 // ========================================================================
-// 7. Real 100% SQLite Order Tracking (GET /api/v1/orders/track)
+// 6. Order Tracking (GET /api/v1/orders/track)
 // ========================================================================
 navTrackOrderBtn.addEventListener('click', () => {
   trackModal.classList.add('open');
@@ -702,11 +842,11 @@ window.closeTrackModal = function() {
 doTrackBtn.addEventListener('click', async () => {
   const query = trackInput.value.trim().toUpperCase();
   if (!query) {
-    trackResultBox.innerHTML = '<p style="color: var(--color-danger);">Vui lòng nhập số điện thoại hoặc mã đơn hàng để tra cứu CSDL SQLite!</p>';
+    trackResultBox.innerHTML = '<p style="color: var(--color-danger);">Vui lòng nhập số điện thoại hoặc mã đơn hàng để tra cứu!</p>';
     return;
   }
 
-  trackResultBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Đang truy vấn CSDL SQLite...</p>';
+  trackResultBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Đang truy vấn CSDL...</p>';
 
   try {
     const res = await fetch(`/api/v1/orders/track`);
@@ -719,7 +859,7 @@ doTrackBtn.addEventListener('click', async () => {
       if (matches.length === 0) {
         trackResultBox.innerHTML = `
           <div style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <p style="color: var(--text-muted); font-size: 14px;">Không tìm thấy đơn hàng trong CSDL SQLite cho thông tin: <strong>${query}</strong></p>
+            <p style="color: var(--text-muted); font-size: 14px;">Không tìm thấy đơn hàng trong CSDL cho thông tin: <strong>${query}</strong></p>
           </div>
         `;
         return;
@@ -748,10 +888,24 @@ doTrackBtn.addEventListener('click', async () => {
 });
 
 // ========================================================================
-// 8. Real SQLite Admin Management & Restock (POST /api/v1/admin/restock)
+// 7. Protected Admin Portal & RBAC Management Console
 // ========================================================================
 navAdminBtn.addEventListener('click', () => {
+  // RBAC Permission Check
+  if (!state.currentUser) {
+    showToast('Vui lòng đăng nhập với tài khoản [ADMIN] để vào Cổng Quản Trị!', 'error');
+    authModal.classList.add('open');
+    return;
+  }
+
+  if (state.currentUser.role !== 'ADMIN') {
+    showToast(`Từ chối truy cập! Tài khoản [${state.currentUser.name}] có vai trò (${state.currentUser.role}), yêu cầu quyền (ADMIN)!`, 'error');
+    return;
+  }
+
+  document.getElementById('adminRoleBadge').textContent = `ADMIN ACCESS: ${state.currentUser.name}`;
   updateAdminAnalytics();
+  loadAdminUsers();
   adminModal.classList.add('open');
 });
 
@@ -772,6 +926,14 @@ window.switchAdminTab = function(tabName) {
   } else if (tabName === 'orders') {
     document.querySelector('.admin-tab:nth-child(3)').classList.add('active');
     document.getElementById('tabOrders').classList.add('active');
+    loadAdminOrders();
+  } else if (tabName === 'users') {
+    document.querySelector('.admin-tab:nth-child(4)').classList.add('active');
+    document.getElementById('tabUsers').classList.add('active');
+    loadAdminUsers();
+  } else if (tabName === 'addProduct') {
+    document.querySelector('.admin-tab:nth-child(5)').classList.add('active');
+    document.getElementById('tabAddProduct').classList.add('active');
   }
 };
 
@@ -784,7 +946,7 @@ async function updateAdminAnalytics() {
 
       admTotalRev.textContent = formatVND(data.total_revenue || 0);
       admTotalOrders.textContent = data.total_orders || 0;
-      admTotalProds.textContent = data.total_products || state.products.length;
+      admTotalProds.textContent = state.products.length;
       admLowStockCount.textContent = `${data.low_stock_count || 0} sản phẩm`;
 
       // Inventory Table
@@ -796,7 +958,7 @@ async function updateAdminAnalytics() {
           <td><strong>${p.name}</strong></td>
           <td>${p.origin}</td>
           <td>${formatVND(p.price)} / ${p.unit}</td>
-          <td style="color: ${p.stock < 100 ? 'var(--color-danger)' : 'var(--color-primary-light)'}; font-weight: 700;">${p.stock}</td>
+          <td style="color: ${p.stock < 100 ? 'var(--color-danger)' : 'var(--color-primary-light)'}; font-weight: 700;">${p.stock} ${p.unit}</td>
           <td>
             <button class="btn btn-secondary btn-sm" onclick="restockProduct(${p.id})">+ 100 ${p.unit}</button>
           </td>
@@ -806,6 +968,60 @@ async function updateAdminAnalytics() {
     }
   } catch (err) {
     console.error('Lỗi nạp admin analytics', err);
+  }
+}
+
+async function loadAdminOrders() {
+  try {
+    const res = await fetch('/api/v1/orders/track');
+    if (res.ok) {
+      const json = await res.json();
+      const orders = json.data || [];
+      ordersTableBody.innerHTML = '';
+      if (orders.length === 0) {
+        ordersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Chưa có đơn hàng nào trong CSDL.</td></tr>';
+        return;
+      }
+      orders.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>#${o.id}</strong></td>
+          <td>${o.customer_name}</td>
+          <td>${o.phone}</td>
+          <td style="color: var(--color-primary-light); font-weight: 700;">${formatVND(o.total)}</td>
+          <td><span class="cert-badge">${o.status}</span></td>
+        `;
+        ordersTableBody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    console.error('Lỗi tải danh sách đơn hàng', err);
+  }
+}
+
+async function loadAdminUsers() {
+  try {
+    const res = await fetch('/api/v1/admin/users');
+    if (res.ok) {
+      const json = await res.json();
+      const users = json.data || [];
+      usersTableBody.innerHTML = '';
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        const roleClass = u.role === 'ADMIN' ? 'cert-ocop' : u.role === 'FARMER' ? 'cert-vietgap' : 'cert-organic';
+        tr.innerHTML = `
+          <td>#${u.id}</td>
+          <td><strong>${u.name}</strong></td>
+          <td>${u.email}</td>
+          <td>${u.phone || 'Chưa cập nhật'}</td>
+          <td><span class="cert-badge ${roleClass}">${u.role}</span></td>
+          <td>${new Date(u.created_at * 1000).toLocaleDateString('vi-VN')}</td>
+        `;
+        usersTableBody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    console.error('Lỗi tải danh sách người dùng', err);
   }
 }
 
@@ -824,20 +1040,77 @@ window.restockProduct = async function(productId) {
       prod.stock += 100;
       updateAdminAnalytics();
       renderProducts();
-      showToast(`Đã nhập thêm 100 ${prod.unit} vào CSDL SQLite cho [${prod.name}]!`);
+      showToast(`Đã nhập thêm 100 ${prod.unit} vào CSDL cho [${prod.name}]!`);
     }
   } catch (err) {
-    showToast('Lỗi cập nhật CSDL SQLite: ' + err.message, 'error');
+    showToast('Lỗi cập nhật CSDL: ' + err.message, 'error');
   }
 };
 
+// Form Add Product to SQLite / MySQL
+if (addProductForm) {
+  addProductForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('newProdName').value.trim();
+    const category_id = parseInt(document.getElementById('newProdCategory').value);
+    const coop_id = parseInt(document.getElementById('newProdCoop').value);
+    const price = parseInt(document.getElementById('newProdPrice').value);
+    const original_price = parseInt(document.getElementById('newProdOrigPrice').value);
+    const unit = document.getElementById('newProdUnit').value.trim();
+    const stock = parseInt(document.getElementById('newProdStock').value);
+    const region = document.getElementById('newProdRegion').value;
+    const cert = document.getElementById('newProdCert').value;
+    const description = document.getElementById('newProdDesc').value.trim();
+    const origin = document.getElementById('newProdRegion').selectedOptions[0].text;
+
+    const payload = {
+      name,
+      category_id,
+      coop_id,
+      price,
+      original_price,
+      unit,
+      stock,
+      origin,
+      region,
+      cert,
+      description,
+      harvest_date: "Tháng " + (new Date().getMonth() + 1) + "/2026"
+    };
+
+    showToast('Đang thêm nông sản mới vào CSDL...', 'info');
+
+    try {
+      const res = await fetch('/api/v1/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status_code >= 400) {
+        showToast(result.error || 'Thêm nông sản thất bại!', 'error');
+        return;
+      }
+
+      addProductForm.reset();
+      showToast(`Đã thêm thành công nông sản [${name}] vào CSDL!`);
+      await fetchInitialData();
+      switchAdminTab('inventory');
+
+    } catch (err) {
+      showToast('Lỗi kết nối: ' + err.message, 'error');
+    }
+  });
+}
+
 // ========================================================================
-// 9. Startup Execution & Live Feed
+// 8. Startup Execution & Live Feed
 // ========================================================================
 initFlashSaleTimer();
 fetchInitialData();
 
-// Live Real-Time Activity Feed (VietLang SSE Push Notifications)
 function initLiveActivityFeed() {
   const activities = [
     "Khách hàng tại Sóc Trăng vừa đặt mua 10kg Gạo ST25 Lúa Tôm OCOP!",
@@ -851,6 +1124,6 @@ function initLiveActivityFeed() {
     const text = activities[idx % activities.length];
     showToast(text, "success");
     idx++;
-  }, 22000);
+  }, 24000);
 }
 initLiveActivityFeed();

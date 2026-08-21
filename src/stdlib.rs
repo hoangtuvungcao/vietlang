@@ -1723,15 +1723,12 @@ where
 }
 
 pub fn builtin_mysql_connect(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
-    use mysql::prelude::*;
-
-    let dsn = if !args.is_empty() {
-        match &args[0] {
-            Value::String(s) => s.clone(),
-            _ => "mysql://root:@127.0.0.1:3306/agricultural_db".to_string(),
-        }
-    } else {
-        "mysql://root:@127.0.0.1:3306/agricultural_db".to_string()
+    if args.is_empty() {
+        return Err(VietError::runtime_error("mysql_connect() requires 1 argument (dsn: String)".into(), line, col));
+    }
+    let dsn = match &args[0] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("mysql_connect() expects a string DSN (e.g. mysql://user:pass@host:port/dbname)".into(), line, col)),
     };
 
     let opts = mysql::Opts::from_url(&dsn).map_err(|e|

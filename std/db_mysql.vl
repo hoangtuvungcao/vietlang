@@ -9,11 +9,24 @@ fn mysql_parse_dsn(dsn: String) {
     cfg = map_set(cfg, "host", "127.0.0.1")
     cfg = map_set(cfg, "port", 3306)
     cfg = map_set(cfg, "user", "root")
-    cfg = map_set(cfg, "database", "agricultural_db")
+    cfg = map_set(cfg, "database", "")
     cfg = map_set(cfg, "max_open_conns", 50)
     cfg = map_set(cfg, "max_idle_conns", 10)
     cfg = map_set(cfg, "conn_max_lifetime_sec", 300)
     cfg = map_set(cfg, "charset", "utf8mb4")
+
+    if dsn.contains("/") {
+        let parts = dsn.split("/")
+        if parts.len() >= 4 {
+            let db_part = parts[parts.len() - 1]
+            if db_part.contains("?") {
+                let db_clean = db_part.split("?")[0]
+                cfg = map_set(cfg, "database", db_clean)
+            } else {
+                cfg = map_set(cfg, "database", db_part)
+            }
+        }
+    }
     return cfg
 }
 
