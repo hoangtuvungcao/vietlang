@@ -708,7 +708,78 @@ fn verify_project() {
     println!("\x1b[32mVerification complete.\x1b[0m");
 }
 
-fn show_docs(module_name: &str) {
+pub fn show_docs(module_name: &str) {
+    if module_name.is_empty() || module_name == "--help" || module_name == "-h" {
+        println!("\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m");
+        println!("\x1b[36m║             VietLang Standard Library & Module Explorer            ║\x1b[0m");
+        println!("\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m");
+        println!("Usage: \x1b[33mvietlang doc <module_name>\x1b[0m (e.g. 'vietlang doc std.pagination', 'vietlang doc std.rate_limiter')");
+        println!("       \x1b[33mvietlang doc --all\x1b[0m (generate full Markdown documentation in docs/api/)\n");
+        println!("Available Standard Library Modules in std/:");
+
+        if let Ok(entries) = fs::read_dir("std") {
+            let mut mods = Vec::new();
+            for entry in entries.flatten() {
+                let name = entry.file_name().into_string().unwrap_or_default();
+                if name.ends_with(".vl") {
+                    mods.push(name.trim_end_matches(".vl").to_string());
+                }
+            }
+            mods.sort();
+            for m in mods {
+                let file_path = format!("std/{}.vl", m);
+                let first_desc = if let Ok(content) = fs::read_to_string(&file_path) {
+                    content.lines()
+                        .find(|l| l.starts_with("// Module:") || (l.starts_with("//") && !l.contains("===")))
+                        .map(|l| l.trim_start_matches("//").trim().to_string())
+                        .unwrap_or_else(|| "Standard utility module".to_string())
+                } else {
+                    "Standard utility module".to_string()
+                };
+                println!("  * \x1b[32mstd.{:<18}\x1b[0m — {}", m, first_desc);
+            }
+        }
+        return;
+    }
+
+    if module_name == "--all" || module_name == "all" {
+        println!("\x1b[36mGenerating comprehensive API Documentation into docs/api/...\x1b[0m");
+        let _ = fs::create_dir_all("docs/api");
+        if let Ok(entries) = fs::read_dir("std") {
+            for entry in entries.flatten() {
+                let name = entry.file_name().into_string().unwrap_or_default();
+                if name.ends_with(".vl") {
+                    let mod_name = name.trim_end_matches(".vl");
+                    let file_path = format!("std/{}.vl", mod_name);
+                    if let Ok(content) = fs::read_to_string(&file_path) {
+                        let mut md = format!("# Module `std.{}`\n\n", mod_name);
+                        md.push_str("## Exported Functions\n\n");
+                        let mut doc_buf = Vec::new();
+                        for line in content.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("///") || trimmed.starts_with("//") && !trimmed.contains("===") {
+                                doc_buf.push(trimmed.trim_start_matches("///").trim_start_matches("//").trim().to_string());
+                            } else if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
+                                md.push_str(&format!("### `{}`\n\n", trimmed.trim_end_matches('{').trim()));
+                                if !doc_buf.is_empty() {
+                                    for d in &doc_buf {
+                                        md.push_str(&format!("{}\n\n", d));
+                                    }
+                                    doc_buf.clear();
+                                }
+                            } else if trimmed.is_empty() {
+                                doc_buf.clear();
+                            }
+                        }
+                        let _ = fs::write(format!("docs/api/{}.md", mod_name), md);
+                    }
+                }
+            }
+        }
+        println!("\x1b[32mSuccessfully generated documentation for all modules in docs/api/!\x1b[0m");
+        return;
+    }
+
     let clean = module_name.trim_start_matches("std.");
     let std_path = format!("std/{}.vl", clean);
     let mod_path = format!("modules/{}/src/main.vl", module_name);
@@ -724,13 +795,29 @@ fn show_docs(module_name: &str) {
         return;
     };
 
-    println!("Exported Functions in \x1b[36m{}\x1b[0m ({}):", module_name, target_path);
-    println!("===============================================================");
+    println!("\x1b[36m╔════════════════════════════════════════════════════════════════════╗\x1b[0m");
+    println!("\x1b[36m║ Module: \x1b[32m{:<58}\x1b[36m ║\x1b[0m", module_name);
+    println!("\x1b[36m║ File:   \x1b[33m{:<58}\x1b[36m ║\x1b[0m", target_path);
+    println!("\x1b[36m╚════════════════════════════════════════════════════════════════════╝\x1b[0m\n");
+
     if let Ok(content) = fs::read_to_string(&target_path) {
+        let mut doc_buf: Vec<String> = Vec::new();
         for line in content.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
-                println!("  * \x1b[33m{}\x1b[0m", trimmed);
+            if trimmed.starts_with("///") || (trimmed.starts_with("//") && !trimmed.contains("===") && !trimmed.contains("Module:")) {
+                doc_buf.push(trimmed.trim_start_matches("///").trim_start_matches("//").trim().to_string());
+            } else if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
+                let sig = trimmed.trim_end_matches('{').trim();
+                println!("  \x1b[32mfn\x1b[0m \x1b[33m{}\x1b[0m", sig.trim_start_matches("fn ").trim_start_matches("pub fn "));
+                if !doc_buf.is_empty() {
+                    for d in &doc_buf {
+                        println!("     \x1b[90m// {}\x1b[0m", d);
+                    }
+                    doc_buf.clear();
+                }
+                println!();
+            } else if trimmed.is_empty() {
+                doc_buf.clear();
             }
         }
     }

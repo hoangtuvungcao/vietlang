@@ -57,7 +57,15 @@ fn main() {
                     pm::handle_vpm_command(&[]);
                 }
             }
-            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" | "sync" | "registry" => {
+            "doc" | "docs" => {
+                let target = if args.len() >= 3 {
+                    &args[2]
+                } else {
+                    ""
+                };
+                pm::show_docs(target);
+            }
+            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
             "run" => {
