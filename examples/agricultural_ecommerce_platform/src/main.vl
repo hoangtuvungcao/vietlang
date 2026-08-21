@@ -34,6 +34,9 @@ println("  * GET  /api/v1/categories")
 println("  * GET  /api/v1/cooperatives")
 println("  * GET  /api/v1/vouchers")
 println("  * GET  /api/v1/products")
+println("  * GET  /api/v1/flash_sales")
+println("  * GET  /api/v1/reviews")
+println("  * POST /api/v1/reviews")
 println("  * POST /api/v1/orders/checkout")
 println("  * GET  /api/v1/orders/track")
 println("  * GET  /api/v1/admin/analytics")
@@ -47,5 +50,14 @@ http_listen("0.0.0.0:9090", fn(req) {
     let path = to_string(map_get(req, "path"))
     let body = map_get(req, "body")
 
+    // 1. Serve Static Assets via Pure VietLang std.http_router
+    if method == "GET" {
+        let static_file = http_serve_static("examples/agricultural_ecommerce_platform/public", path)
+        if static_file != none {
+            return static_file
+        }
+    }
+
+    // 2. Dispatch Dynamic REST API Routes
     return api_dispatch_request(global_db, method, path, map_new())
 })

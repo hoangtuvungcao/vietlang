@@ -1425,9 +1425,7 @@ impl Interpreter {
                         let mut buf = vec![0u8; content_length];
                         let _ = reader.read_exact(&mut buf);
                         body = String::from_utf8_lossy(&buf).to_string();
-                    }
-
-                    // CORS OPTIONS Preflight
+                    }                    // CORS OPTIONS Preflight
                     if method == "OPTIONS" {
                         let preflight = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nConnection: close\r\n\r\n";
                         let _ = stream.write_all(preflight.as_bytes());
@@ -1435,49 +1433,7 @@ impl Interpreter {
                         continue;
                     }
 
-                    // Serve Static Files if exist in public folders
-                    let static_candidates = [
-                        format!("public{}", if path == "/" { "/index.html" } else { &path }),
-                        format!("examples/agricultural_ecommerce_platform/public{}", if path == "/" { "/index.html" } else { &path }),
-                    ];
-
-                    let mut served_static = false;
-                    if method == "GET" {
-                        for static_path in &static_candidates {
-                            if std::path::Path::new(static_path).exists() && std::path::Path::new(static_path).is_file() {
-                                if let Ok(content) = std::fs::read(static_path) {
-                                    let mime = if static_path.ends_with(".html") {
-                                        "text/html; charset=utf-8"
-                                    } else if static_path.ends_with(".css") {
-                                        "text/css; charset=utf-8"
-                                    } else if static_path.ends_with(".js") {
-                                        "application/javascript; charset=utf-8"
-                                    } else if static_path.ends_with(".json") {
-                                        "application/json; charset=utf-8"
-                                    } else {
-                                        "text/plain; charset=utf-8"
-                                    };
-
-                                    let response = format!(
-                                        "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n",
-                                        mime, content.len()
-                                    );
-                                    let _ = stream.write_all(response.as_bytes());
-                                    let _ = stream.write_all(&content);
-                                    let _ = stream.flush();
-                                    eprintln!("\x1b[36m[HTTP Static]\x1b[0m {} {} -> 200 ({})", method, path, mime);
-                                    served_static = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if served_static {
-                        continue;
-                    }
-
-                    // If user handler is provided, execute user's VietLang callback!
+                    // Pure VietLang Request Dispatching
                     let (status_code, content_type, response_body) = if let Some(ref h) = handler {
                         let mut req_map = HashMap::new();
                         req_map.insert("method".to_string(), Value::String(method.clone()));
