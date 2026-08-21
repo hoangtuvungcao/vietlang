@@ -47,14 +47,14 @@ VietLang is designed from the ground up for **backend development**. It combines
 
 ## Quick Start
 
-### Install
+### Install (1-Line Quickstart)
 
 ```bash
-# Build from source (Requirements: Rust 1.70+)
-git clone https://github.com/hoangtuvungcao/vietlang.git
-cd vietlang
-cargo build --release
-sudo cp target/release/vietlang /usr/local/bin/
+# Linux & macOS (Bash, Zsh, Fish) — Auto-detects CPU & sets PATH
+curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
+
+# Windows (PowerShell)
+iex (irm https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.ps1)
 ```
 
 ### Hello World

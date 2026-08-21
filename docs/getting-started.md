@@ -1,230 +1,122 @@
 # Getting Started with VietLang
 
-## Installation
+Welcome to **VietLang** — The Backend-First Programming Language designed for high-performance microservices, REST APIs, real-time WebSockets, and ACID transactional databases.
 
-### Option 1: Download Binary (Recommended)
+---
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/hoangtuvungcao/vietlang/releases).
+## 1. Fast 1-Line Installation (Auto-Set PATH)
 
-| Platform | Download |
-|:---|:---|
-| Linux x86_64 | `vietlang-linux-x64` |
-| Linux ARM64 | `vietlang-linux-arm64` |
-| macOS x86_64 | `vietlang-macos-x64` |
-| macOS ARM64 (M1/M2) | `vietlang-macos-arm64` |
-| Windows x86_64 | `vietlang-windows-x64.exe` |
+### 🐧 Linux & 🍎 macOS (Apple Silicon M1-M4 & Intel x64)
 
 ```bash
-# Linux / macOS
-chmod +x vietlang-linux-x64
-sudo mv vietlang-linux-x64 /usr/local/bin/vietlang
+curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
 ```
 
-### Option 2: Build from Source
+- **Auto-Configures PATH** in `~/.bashrc`, `~/.zshrc`, and `~/.profile`.
+- **Pre-syncs all 49 Standard Library Modules** into `~/.vietlang/std`.
+- **Zero sudo required**: Binary installed directly to `~/.vietlang/bin/vietlang`.
 
-Requirements: **Rust 1.70+**
+### 🪟 Windows (PowerShell)
 
-```bash
-git clone https://github.com/hoangtuvungcao/vietlang.git
-cd vietlang
-cargo build --release
-sudo cp target/release/vietlang /usr/local/bin/
+```powershell
+iex (irm https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.ps1)
 ```
 
-### Verify Installation
+- Installs to `$HOME\.vietlang\bin\vietlang.exe` and sets user environment `PATH`.
+
+---
+
+## 2. Verify Installation
 
 ```bash
 vietlang --version
 # VietLang v0.1.0
 ```
 
----
-
-## Your First Program
-
-Create a file called `hello.vl`:
-
-```rust
-println("Hello, VietLang! ")
+Start the interactive REPL:
+```bash
+vietlang
+vl> let greeting = "Xin chào Việt Nam!"
+vl> println(greeting)
+Xin chào Việt Nam!
+vl> :quit
 ```
 
-Run it:
+---
 
+## 3. Your First VietLang Program (5 Minutes)
+
+Create a file `hello.vl`:
+```rust
+let name = "VietLang Backend"
+let port = 8080
+
+println("Khởi động dịch vụ: " + name + " trên cổng " + to_string(port))
+
+let mut counter = 0
+while counter < 3 {
+    println("Request id: " + to_string(counter + 1))
+    counter += 1
+}
+```
+
+Run it with:
 ```bash
 vietlang hello.vl
-# Output: Hello, VietLang! 
 ```
 
 ---
 
-## Tutorial
+## 4. Building a Real REST API Microservice (10 Minutes)
 
-### Step 1: Variables
-
+Create `server.vl`:
 ```rust
-// Immutable by default
-let name = "VietLang"
-let version = 0.1
-let is_awesome = true
+import std.http_router
+import std.http2
+import std.db_sqlite
 
-// Mutable with 'mut'
-let mut counter = 0
-counter = counter + 1
+// 1. Connect to SQLite database
+let db = db_sqlite_connect("app.sqlite")
+db_sqlite_exec(db, "CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, name TEXT, price REAL);")
+db_sqlite_exec(db, "INSERT OR IGNORE INTO products VALUES (1, 'Gạo ST25 Sóc Trăng', 195000);")
 
-println(name + " v" + to_string(version))
-```
+// 2. Start HTTP Server
+let server_cfg = http2_server_config(port: 9090)
+println("REST API Server running on http://0.0.0.0:9090")
 
-### Step 2: Functions
+http_listen(server_cfg, fn(req) {
+    let method = to_string(map_get(req, "method"))
+    let path = to_string(map_get(req, "path"))
 
-```rust
-fn greet(name: String) -> String {
-    return "Hello, " + name + "! "
-}
-
-fn add(a: Int, b: Int) -> Int {
-    return a + b
-}
-
-println(greet("World"))
-println("2 + 3 = " + to_string(add(2, 3)))
-```
-
-### Step 3: Control Flow
-
-```rust
-// If/Else
-let score = 85
-if score >= 90 {
-    println("Grade: A")
-} else if score >= 80 {
-    println("Grade: B")
-} else {
-    println("Grade: C")
-}
-
-// For loop
-for i in 1..6 {
-    println("Count: " + to_string(i))
-}
-
-// While loop
-let mut n = 5
-while n > 0 {
-    println("Countdown: " + to_string(n))
-    n = n - 1
-}
-```
-
-### Step 4: Arrays & Higher-Order Functions
-
-```rust
-let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-let doubled = numbers.map(fn(x) { return x * 2 })
-let evens = numbers.filter(fn(x) { return x % 2 == 0 })
-let sum = numbers.reduce(fn(acc, x) { return acc + x }, 0)
-
-println("Doubled: " + to_string(doubled))
-println("Evens: " + to_string(evens))
-println("Sum: " + to_string(sum))
-```
-
-### Step 5: Structs
-
-```rust
-struct User {
-    name: String,
-    email: String,
-    age: Int
-}
-
-let user = User { name: "Trong", email: "trong@example.com", age: 25 }
-println("User: " + user.name + " (" + to_string(user.age) + ")")
-```
-
-### Step 6: Pattern Matching
-
-```rust
-fn describe(n: Int) -> String {
-    return match n {
-        0 => "zero",
-        1 => "one",
-        2 => "two",
-        _ => "many"
+    if method == "GET" && path == "/api/v1/health" {
+        return "{\"status\":200,\"message\":\"Service Healthy\"}"
     }
-}
 
-for i in 0..5 {
-    println(to_string(i) + " is " + describe(i))
-}
+    if method == "GET" && path == "/api/v1/products" {
+        let items = db_sqlite_query(db, "SELECT * FROM products;")
+        return api_response(200, items, "Lấy danh sách sản phẩm thành công")
+    }
+
+    return api_error(404, "Endpoint Not Found")
+})
 ```
 
-### Step 7: Backend Features
-
-```rust
-// JSON
-let data = map_new()
-let data = map_set(data, "message", "Hello from VietLang!")
-let data = map_set(data, "status", 200)
-println(json_stringify(data, true))
-
-// File I/O
-file_write("output.json", json_stringify(data, true))
-let content = file_read("output.json")
-println("Read back: " + content)
-
-// Crypto
-let hash = sha256("my-password")
-let id = uuid()
-println("Hash: " + hash)
-println("UUID: " + id)
-
-// Logging
-log_info("Application started")
-log_warn("High memory usage")
-```
-
----
-
-## Using the REPL
-
-Start the interactive REPL:
-
+Run your server:
 ```bash
-$ vietlang
-
-vl:1 > let x = 42
-vl:2 > x * 2
-  = 84
-vl:3 > let arr = [1, 2, 3, 4, 5]
-vl:4 > arr.map(fn(x) { return x * x })
-  = [1, 4, 9, 16, 25]
-vl:5 > exit
-Goodbye! 
+vietlang server.vl
 ```
 
-**REPL Commands:**
-- `help` — Show help
-- `clear` — Clear screen
-- `exit` — Exit REPL
-
----
-
-## Debug Tools
-
+Test with curl:
 ```bash
-# Show tokens
-vietlang --tokens myfile.vl
-
-# Show AST
-vietlang --ast myfile.vl
+curl http://localhost:9090/api/v1/health
+curl http://localhost:9090/api/v1/products
 ```
 
 ---
 
-## Next Steps
+## 5. Next Steps & Learning Roadmap
 
--  Read the [Language Reference](language-reference.md)
--  Browse the [Standard Library](stdlib-reference.md)
--  Check out [examples/](../examples/) for more demos
--  [Contribute](../CONTRIBUTING.md) to VietLang
+- 📖 **[Complete Language Reference](language-reference.md)**: Full syntax, types, and error handling.
+- 📦 **[Standard Library Ecosystem (49 Modules)](standard-library-ecosystem.md)**: Explore all built-in modules.
+- 🍳 **[Backend Cookbook](backend-cookbook.md)**: JWT auth, WebSocket events, and database transactions.
+- 💻 **[VS Code Setup](installation-and-vscode-marketplace.md)**: Install the official VS Code extension with snippets and syntax highlighting.
