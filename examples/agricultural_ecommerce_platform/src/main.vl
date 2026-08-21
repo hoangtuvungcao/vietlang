@@ -19,18 +19,47 @@ fn load_app_config() {
     let mut cfg = map_new()
     cfg = map_set(cfg, "port", 9090)
     cfg = map_set(cfg, "workers", 500)
-    cfg = map_set(cfg, "db_path", "examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
-    cfg = map_set(cfg, "public_dir", "examples/agricultural_ecommerce_platform/public")
+
+    // Auto-detect public directory: prioritize local ./public, fallback to examples path
+    let mut default_public = "public"
+    if !file_exists("public/index.html") && file_exists("examples/agricultural_ecommerce_platform/public/index.html") {
+        default_public = "examples/agricultural_ecommerce_platform/public"
+    }
+
+    // Auto-detect db path: prioritize local ./data, fallback to examples path
+    let mut default_db = "data/agricultural.sqlite"
+    if default_public != "public" {
+        default_db = "examples/agricultural_ecommerce_platform/data/agricultural.sqlite"
+    }
+
+    cfg = map_set(cfg, "db_path", default_db)
+    cfg = map_set(cfg, "public_dir", default_public)
 
     // 1. Try reading config.json if present in CWD or app dir
     try {
-        let json_raw = file_read("config.json")
-        if json_raw != "" {
-            let parsed = json_parse(json_raw)
-            if map_has(parsed, "port") { cfg = map_set(cfg, "port", to_int(map_get(parsed, "port"))) }
-            if map_has(parsed, "db_path") { cfg = map_set(cfg, "db_path", to_string(map_get(parsed, "db_path"))) }
-            if map_has(parsed, "public_dir") { cfg = map_set(cfg, "public_dir", to_string(map_get(parsed, "public_dir"))) }
-            if map_has(parsed, "workers") { cfg = map_set(cfg, "workers", to_int(map_get(parsed, "workers"))) }
+        if file_exists("config.json") {
+            let json_raw = file_read("config.json")
+            if json_raw != "" {
+                let parsed = json_parse(json_raw)
+                if map_has(parsed, "port") { cfg = map_set(cfg, "port", to_int(map_get(parsed, "port"))) }
+                if map_has(parsed, "db_path") {
+                    let user_db = to_string(map_get(parsed, "db_path"))
+                    if user_db == "data/agricultural.sqlite" && default_public != "public" {
+                        cfg = map_set(cfg, "db_path", "examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
+                    } else {
+                        cfg = map_set(cfg, "db_path", user_db)
+                    }
+                }
+                if map_has(parsed, "public_dir") {
+                    let user_pub = to_string(map_get(parsed, "public_dir"))
+                    if user_pub == "public" && default_public != "public" {
+                        cfg = map_set(cfg, "public_dir", "examples/agricultural_ecommerce_platform/public")
+                    } else {
+                        cfg = map_set(cfg, "public_dir", user_pub)
+                    }
+                }
+                if map_has(parsed, "workers") { cfg = map_set(cfg, "workers", to_int(map_get(parsed, "workers"))) }
+            }
         }
     } catch err {}
 

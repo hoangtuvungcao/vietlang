@@ -284,14 +284,72 @@ fn run_source(source: &str, _name: &str) {
     }
 }
 
+fn resolve_import_file(path_str: &str) -> Option<String> {
+    let joined = path_str.replace('.', "/");
+    let search_paths = vec![
+        format!("{}.vl", joined),
+        format!("src/{}.vl", joined),
+        format!("std/{}.vl", joined),
+        format!("modules/{}.vl", joined),
+        format!("modules/{}/src/main.vl", joined),
+        format!("modules/{}/src/lib.vl", joined),
+        format!("modules/{}/mod.vl", joined),
+    ];
+    for sp in search_paths {
+        if std::path::Path::new(&sp).exists() {
+            return Some(sp);
+        }
+    }
+    None
+}
+
+fn bundle_source_recursive(file_path: &str, visited: &mut std::collections::HashSet<String>) -> Result<String, String> {
+    let canonical = std::fs::canonicalize(file_path)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| file_path.to_string());
+
+    if visited.contains(&canonical) {
+        return Ok(String::new());
+    }
+    visited.insert(canonical);
+
+    let raw = fs::read_to_string(file_path)
+        .map_err(|e| format!("Cannot read '{}': {}", file_path, e))?;
+
+    let mut bundled_deps = String::new();
+    let mut main_lines = Vec::new();
+
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("import ") {
+            let mod_name = trimmed.trim_start_matches("import ").trim().trim_end_matches(';').trim();
+            if mod_name.starts_with("std.") {
+                // Keep standard library import as is
+                main_lines.push(line.to_string());
+            } else if let Some(dep_path) = resolve_import_file(mod_name) {
+                let dep_code = bundle_source_recursive(&dep_path, visited)?;
+                bundled_deps.push_str(&dep_code);
+                bundled_deps.push('\n');
+            } else {
+                main_lines.push(line.to_string());
+            }
+        } else {
+            main_lines.push(line.to_string());
+        }
+    }
+
+    Ok(format!("{}\n{}", bundled_deps, main_lines.join("\n")))
+}
+
 fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str) {
     println!("\x1b[36m[VietLang Compiler]\x1b[0m Compiling \x1b[33m{}\x1b[0m for target \x1b[35m[{}]\x1b[0m -> \x1b[32m{}\x1b[0m...", source_path, target_os, output_path);
     
-    // 1. Read and validate source
-    let source = match fs::read_to_string(source_path) {
+    // 1. Recursively bundle source and local module dependencies
+    let mut visited = std::collections::HashSet::new();
+    let source = match bundle_source_recursive(source_path, &mut visited) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("\x1b[31mError:\x1b[0m Cannot read source file '{}': {}", source_path, e);
+            eprintln!("\x1b[31mError:\x1b[0m Failed to bundle source '{}': {}", source_path, e);
             std::process::exit(1);
         }
     };

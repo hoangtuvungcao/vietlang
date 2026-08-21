@@ -446,7 +446,7 @@ impl Interpreter {
 
             Statement::Import { path, span, .. } => {
                 let joined = path.join("/");
-                let search_paths = vec![
+                let mut search_paths = vec![
                     format!("{}.vl", joined),
                     format!("src/{}.vl", joined),
                     format!("std/{}.vl", joined),
@@ -460,6 +460,27 @@ impl Interpreter {
                         String::new()
                     },
                 ];
+
+                // Global ~/.vietlang paths
+                if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+                    search_paths.push(format!("{}/.vietlang/std/{}.vl", home, joined));
+                    search_paths.push(format!("{}/.vietlang/modules/{}.vl", home, joined));
+                    if path.len() > 1 && path[0] == "std" {
+                        search_paths.push(format!("{}/.vietlang/std/{}.vl", home, path[1..].join("/")));
+                    }
+                }
+
+                // Executable directory relative paths
+                if let Ok(exe_path) = std::env::current_exe() {
+                    if let Some(exe_dir) = exe_path.parent() {
+                        let exe_dir_str = exe_dir.to_string_lossy();
+                        search_paths.push(format!("{}/std/{}.vl", exe_dir_str, joined));
+                        search_paths.push(format!("{}/modules/{}.vl", exe_dir_str, joined));
+                        if path.len() > 1 && path[0] == "std" {
+                            search_paths.push(format!("{}/std/{}.vl", exe_dir_str, path[1..].join("/")));
+                        }
+                    }
+                }
 
                 let mut found_path = None;
                 for sp in search_paths {
