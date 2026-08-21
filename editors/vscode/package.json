@@ -1,12 +1,35 @@
 {
   "name": "vietlang",
-  "displayName": "VietLang Language Support",
-  "description": "Rich language support for VietLang - The Backend-First Programming Language",
+  "displayName": "VietLang - Backend Programming Language",
+  "description": "Official Visual Studio Code extension for VietLang: Syntax Highlighting, Code Snippets, Bracket Matching, and Language Support for High-Throughput Backend Development.",
   "version": "0.1.0",
   "publisher": "hoangtuvungcao",
   "engines": {
     "vscode": "^1.75.0"
   },
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#064E3B",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hoangtuvungcao/vietlang.git"
+  },
+  "homepage": "https://github.com/hoangtuvungcao/vietlang",
+  "bugs": {
+    "url": "https://github.com/hoangtuvungcao/vietlang/issues"
+  },
+  "keywords": [
+    "vietlang",
+    "backend",
+    "programming language",
+    "microservices",
+    "database",
+    "rest-api",
+    "websocket"
+  ],
   "categories": [
     "Programming Languages",
     "Snippets"
