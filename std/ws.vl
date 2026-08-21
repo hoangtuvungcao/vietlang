@@ -1,0 +1,21 @@
+// ========================================================================
+// Module: std.ws
+// Standard WebSocket Real-Time Communication Engine
+// ========================================================================
+
+fn ws_init(endpoint: String = "/ws") {
+    ws_enable(endpoint)
+    return true
+}
+
+fn ws_emit(event_type: String, data_map) {
+    let mut payload = map_new()
+    payload = map_set(payload, "type", event_type)
+    payload = map_set(payload, "data", data_map)
+    payload = map_set(payload, "timestamp", time_now())
+    return ws_broadcast(json_stringify(payload, false))
+}
+
+fn ws_send_text(message: String) {
+    return ws_broadcast(message)
+}

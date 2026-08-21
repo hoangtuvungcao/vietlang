@@ -14,6 +14,7 @@ import std.logger
 import std.session
 import std.queue
 import std.rate_limiter
+import std.ws
 
 suite("VietLang Enterprise Backend Framework & Architecture Ecosystem")
 
@@ -128,4 +129,12 @@ test("9. Configurable Sliding-Window Rate Limiter (std.rate_limiter)", fn() {
     // Request from different IP: Allowed
     let r4 = rate_limiter_check(rl, "10.0.0.1")
     assert_true(map_get(r4, "allowed"), "IP khac phai duoc phep")
+})
+
+test("10. Opt-in Standard WebSocket Engine (std.ws)", fn() {
+    let initialized = ws_init("/ws/events")
+    assert_true(initialized, "WebSocket phai duoc kich hoat khi goi ws_init")
+
+    let send_res = ws_send_text("{\"type\":\"heartbeat\",\"ping\":true}")
+    assert_true(send_res, "ws_send_text phai broadcast thanh cong khi WebSocket da enable")
 })

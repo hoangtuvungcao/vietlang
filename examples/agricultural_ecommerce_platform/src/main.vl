@@ -7,6 +7,7 @@ import std.http_router
 import std.http2
 import std.middleware
 import std.metrics
+import std.ws
 import examples.agricultural_ecommerce_platform.src.config.database
 import examples.agricultural_ecommerce_platform.src.routes.api_router
 
@@ -14,7 +15,11 @@ println("=======================================================================
 println("Nong San Viet Enterprise Platform — Starting High-Performance Services...")
 println("========================================================================")
 
-// 1. Initialize SQLite Database & Schema Migrations
+// 1. Explicitly enable real-time WebSocket on endpoint /ws
+ws_init("/ws")
+println("[WebSocket] RFC 6455 Real-Time Engine Initialized on /ws")
+
+// 2. Initialize SQLite Database & Schema Migrations
 let mut global_db = db_init_and_migrate("examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
 println("[Database] SQLite Relational File Initialized: data/agricultural.sqlite")
 

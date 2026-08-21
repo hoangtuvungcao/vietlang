@@ -136,6 +136,7 @@ impl Interpreter {
             ("http_fetch", None),
             ("csv_parse", Some(1)),
             ("csv_stringify", Some(1)),
+            ("ws_enable", None),
             ("ws_broadcast", None),
             ("html_escape", Some(1)),
 
@@ -1340,6 +1341,7 @@ impl Interpreter {
             "http_fetch" | "builtin_http_fetch" => crate::stdlib::builtin_http_fetch(args, span.line, span.column),
             "csv_parse" | "builtin_csv_parse" => crate::stdlib::builtin_csv_parse(args, span.line, span.column),
             "csv_stringify" | "builtin_csv_stringify" => crate::stdlib::builtin_csv_stringify(args, span.line, span.column),
+            "ws_enable" | "builtin_ws_enable" => crate::stdlib::builtin_ws_enable(args, span.line, span.column),
             "ws_broadcast" | "builtin_ws_broadcast" => crate::stdlib::builtin_ws_broadcast(args, span.line, span.column),
             "html_escape" | "builtin_html_escape" => crate::stdlib::builtin_html_escape(args, span.line, span.column),
 
@@ -1500,8 +1502,17 @@ impl Interpreter {
                         body = String::from_utf8_lossy(&buf).to_string();
                     }
 
-                    // WebSocket RFC 6455 Handshake Upgrade
-                    if headers_map.contains_key("sec-websocket-key") || headers_map.get("upgrade").map(|v| match v { Value::String(s) => s.to_lowercase().contains("websocket"), _ => false }).unwrap_or(false) {
+                    // WebSocket RFC 6455 Handshake Upgrade (Only if explicitly enabled by user via std.ws)
+                    let ws_is_active = crate::stdlib::WS_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
+                    let ws_path_matches = {
+                        let guard = crate::stdlib::WS_ENDPOINT.lock().unwrap();
+                        match &*guard {
+                            Some(ep) => ep == &path,
+                            None => true,
+                        }
+                    };
+
+                    if ws_is_active && ws_path_matches && (headers_map.contains_key("sec-websocket-key") || headers_map.get("upgrade").map(|v| match v { Value::String(s) => s.to_lowercase().contains("websocket"), _ => false }).unwrap_or(false)) {
                         let ws_key = match headers_map.get("sec-websocket-key") {
                             Some(Value::String(s)) => s.clone(),
                             _ => "".to_string(),

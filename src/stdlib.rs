@@ -587,7 +587,24 @@ pub fn register_ws_client(stream: Arc<Mutex<std::net::TcpStream>>) {
     clients.push(stream);
 }
 
+pub static WS_ENABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static WS_ENDPOINT: Mutex<Option<String>> = Mutex::new(None);
+
+pub fn builtin_ws_enable(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    WS_ENABLED.store(true, std::sync::atomic::Ordering::SeqCst);
+    if !args.is_empty() {
+        if let Value::String(ref ep) = args[0] {
+            let mut guard = WS_ENDPOINT.lock().unwrap();
+            *guard = Some(ep.clone());
+        }
+    }
+    Ok(Value::Bool(true))
+}
+
 pub fn builtin_ws_broadcast(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if !WS_ENABLED.load(std::sync::atomic::Ordering::SeqCst) {
+        return Ok(Value::Bool(false));
+    }
     if args.is_empty() {
         return Err(VietError::runtime_error("ws_broadcast() takes at least 1 argument (data)".into(), line, col));
     }
