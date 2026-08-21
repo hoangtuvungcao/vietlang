@@ -51,7 +51,7 @@ fn main() {
         match args[1].as_str() {
             "--help" | "-h" => print_help(),
             "--version" | "-v" => println!("VietLang v{}", VERSION),
-            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" => {
+            "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
             "--tokens" => {
