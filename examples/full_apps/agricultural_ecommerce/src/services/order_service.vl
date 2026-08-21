@@ -4,8 +4,8 @@
 // ========================================================================
 
 import std.db_sqlite
-import examples.agricultural_ecommerce_platform.src.repositories.product_repo
-import examples.agricultural_ecommerce_platform.src.repositories.order_repo
+import examples.full_apps.agricultural_ecommerce.src.repositories.product_repo
+import examples.full_apps.agricultural_ecommerce.src.repositories.order_repo
 
 fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String, address: String, city: String, payment_method: String, items: Array, voucher_code: String = "") {
     if items.len() == 0 {

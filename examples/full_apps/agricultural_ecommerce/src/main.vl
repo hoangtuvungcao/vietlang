@@ -9,8 +9,8 @@ import std.http2
 import std.middleware
 import std.metrics
 import std.ws
-import examples.agricultural_ecommerce_platform.src.config.database
-import examples.agricultural_ecommerce_platform.src.routes.api_router
+import examples.full_apps.agricultural_ecommerce.src.config.database
+import examples.full_apps.agricultural_ecommerce.src.routes.api_router
 
 // ------------------------------------------------------------------------
 // Dynamic Configuration Loader (.env, config.json, and OS Environment)
@@ -22,14 +22,14 @@ fn load_app_config() {
 
     // Auto-detect public directory: prioritize local ./public, fallback to examples path
     let mut default_public = "public"
-    if !file_exists("public/index.html") && file_exists("examples/agricultural_ecommerce_platform/public/index.html") {
-        default_public = "examples/agricultural_ecommerce_platform/public"
+    if !file_exists("public/index.html") && file_exists("examples/full_apps/agricultural_ecommerce/public/index.html") {
+        default_public = "examples/full_apps/agricultural_ecommerce/public"
     }
 
     // Auto-detect db path: prioritize local ./data, fallback to examples path
     let mut default_db = "data/agricultural.sqlite"
     if default_public != "public" {
-        default_db = "examples/agricultural_ecommerce_platform/data/agricultural.sqlite"
+        default_db = "examples/full_apps/agricultural_ecommerce/data/agricultural.sqlite"
     }
 
     cfg = map_set(cfg, "db_path", default_db)
@@ -45,7 +45,7 @@ fn load_app_config() {
                 if map_has(parsed, "db_path") {
                     let user_db = to_string(map_get(parsed, "db_path"))
                     if user_db == "data/agricultural.sqlite" && default_public != "public" {
-                        cfg = map_set(cfg, "db_path", "examples/agricultural_ecommerce_platform/data/agricultural.sqlite")
+                        cfg = map_set(cfg, "db_path", "examples/full_apps/agricultural_ecommerce/data/agricultural.sqlite")
                     } else {
                         cfg = map_set(cfg, "db_path", user_db)
                     }
@@ -53,7 +53,7 @@ fn load_app_config() {
                 if map_has(parsed, "public_dir") {
                     let user_pub = to_string(map_get(parsed, "public_dir"))
                     if user_pub == "public" && default_public != "public" {
-                        cfg = map_set(cfg, "public_dir", "examples/agricultural_ecommerce_platform/public")
+                        cfg = map_set(cfg, "public_dir", "examples/full_apps/agricultural_ecommerce/public")
                     } else {
                         cfg = map_set(cfg, "public_dir", user_pub)
                     }

@@ -4,7 +4,7 @@
 // ========================================================================
 
 import std.http_router
-import examples.agricultural_ecommerce_platform.src.services.catalog_service
+import examples.full_apps.agricultural_ecommerce.src.services.catalog_service
 
 fn handle_list_categories(db) {
     let cats = catalog_service_get_categories(db)

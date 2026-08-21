@@ -6,7 +6,7 @@
 import std.db_sqlite
 import std.security
 
-fn db_init_and_migrate(db_path: String = "examples/agricultural_ecommerce_platform/data/agricultural.sqlite") {
+fn db_init_and_migrate(db_path: String = "examples/full_apps/agricultural_ecommerce/data/agricultural.sqlite") {
     let mut db = sqlite_open(db_path)
 
     // 1. Relational Schema Definition (Real SQLite DDL)

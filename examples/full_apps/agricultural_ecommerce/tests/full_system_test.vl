@@ -4,9 +4,9 @@
 // ========================================================================
 
 import std.test
-import examples.agricultural_ecommerce_platform.src.config.database
-import examples.agricultural_ecommerce_platform.src.routes.api_router
-import examples.agricultural_ecommerce_platform.src.services.auth_service
+import examples.full_apps.agricultural_ecommerce.src.config.database
+import examples.full_apps.agricultural_ecommerce.src.routes.api_router
+import examples.full_apps.agricultural_ecommerce.src.services.auth_service
 
 suite("Nong San Viet Enterprise Platform — System Integration Suite")
 

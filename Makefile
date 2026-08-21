@@ -1,19 +1,19 @@
-.PHONY: build test clean install demo release help
+.PHONY: build test clean install demo release help lint
 
 # Default
 help:
-	@echo "VietLang Build System"
-	@echo "====================="
+	@echo "VietLang Build & Automation System"
+	@echo "==================================="
 	@echo ""
 	@echo "Usage:"
 	@echo "  make build     Build release binary"
 	@echo "  make debug     Build debug binary"
-	@echo "  make test      Run all tests"
-	@echo "  make demo      Run all examples and bootstrap tests"
-	@echo "  make install   Install to /usr/local/bin"
-	@echo "  make clean     Clean build artifacts"
+	@echo "  make test      Run all Rust unit tests & integration tests"
+	@echo "  make demo      Run all curated examples, fintech suites & bootstrap compiler"
+	@echo "  make install   Install binary & 55 standard modules to ~/.vietlang"
 	@echo "  make release   Build release + strip binary"
-	@echo "  make lint      Run clippy linter"
+	@echo "  make clean     Clean build artifacts"
+	@echo "  make lint      Run cargo clippy linter"
 	@echo ""
 
 # Build
@@ -29,58 +29,32 @@ test:
 	cargo test --all
 	@echo "\nAll Rust unit tests passed!"
 
-# Run examples
+# Run Curated Examples & Suites
 demo: build
-	@echo "=== Running all VietLang demos ===\n"
-	@echo "--- demo.vl ---"
-	./target/release/vietlang examples/demo.vl
-	@echo "\n--- backend_demo.vl ---"
-	./target/release/vietlang examples/backend_demo.vl
-	@echo "\n--- file_io.vl ---"
-	./target/release/vietlang examples/file_io.vl
-	@echo "\n--- json_demo.vl ---"
-	./target/release/vietlang examples/json_demo.vl
-	@echo "\n--- http_server.vl ---"
-	./target/release/vietlang examples/http_server.vl
-	@echo "\n--- database.vl ---"
-	./target/release/vietlang examples/database.vl
-	@echo "\n--- concurrency.vl ---"
-	./target/release/vietlang examples/concurrency.vl
-	@echo "\n--- new_features_test.vl ---"
-	./target/release/vietlang examples/new_features_test.vl
-	@echo "\n--- community_modules_demo.vl ---"
-	./target/release/vietlang examples/community_modules_demo.vl
-	@echo "\n--- enterprise_microservice.vl ---"
-	./target/release/vietlang examples/enterprise_microservice.vl
-	@echo "\n--- realtime_websocket_server.vl ---"
-	./target/release/vietlang examples/realtime_websocket_server.vl
-	@echo "\n--- full_backend_suite.vl ---"
-	./target/release/vietlang examples/full_backend_suite.vl
-	@echo "\n--- king_of_backend_benchmark.vl ---"
-	./target/release/vietlang examples/king_of_backend_benchmark.vl
-	@echo "\n--- master_backend_enterprise.vl ---"
-	./target/release/vietlang examples/master_backend_enterprise.vl
-	@echo "\n--- database_drivers_demo.vl (SQLite/MySQL/Postgres) ---"
-	./target/release/vietlang examples/database_drivers_demo.vl
-	@echo "\n--- enterprise_ecommerce_system.vl ---"
-	./target/release/vietlang examples/enterprise_ecommerce_system.vl
-	@echo "\n--- bytecode_vm_demo.vl (Phase 8 VM) ---"
-	./target/release/vietlang --vm examples/bytecode_vm_demo.vl
-	@echo "\n--- agricultural_ecommerce_backend/tests/main_test.vl ---"
-	./target/release/vietlang examples/agricultural_ecommerce_backend/tests/main_test.vl
-	@echo "\n--- agricultural_ecommerce_platform/tests/full_system_test.vl ---"
-	./target/release/vietlang examples/agricultural_ecommerce_platform/tests/full_system_test.vl
-	@echo "\n--- bootstrap/parser.vl ---"
-	./target/release/vietlang bootstrap/parser.vl
+	@echo "=== Running all Curated VietLang Examples & Test Suites ===\n"
+	@echo "--- basics/hello_world.vl ---"
+	./target/release/vietlang examples/basics/hello_world.vl
+	@echo "\n--- basics/data_structures.vl ---"
+	./target/release/vietlang examples/basics/data_structures.vl
+	@echo "\n--- basics/file_and_json.vl ---"
+	./target/release/vietlang examples/basics/file_and_json.vl
+	@echo "\n--- backend/sqlite_database.vl ---"
+	./target/release/vietlang examples/backend/sqlite_database.vl
+	@echo "\n--- fintech/vietnam_fintech.vl ---"
+	./target/release/vietlang examples/fintech/vietnam_fintech.vl
+	@echo "\n--- fintech/concurrency_csp.vl ---"
+	./target/release/vietlang examples/fintech/concurrency_csp.vl
+	@echo "\n--- full_apps/agricultural_ecommerce/tests/full_system_test.vl ---"
+	./target/release/vietlang examples/full_apps/agricultural_ecommerce/tests/full_system_test.vl
 	@echo "\n--- bootstrap/lexer.vl ---"
 	./target/release/vietlang bootstrap/lexer.vl
-	@echo "\nAll demos, enterprise suites, and bootstrap tests completed successfully!"
+	@echo "\n--- bootstrap/parser.vl ---"
+	./target/release/vietlang bootstrap/parser.vl
+	@echo "\nAll curated examples, fintech suites, and bootstrap tests completed successfully!"
 
 # Install
 install: build
-	sudo cp target/release/vietlang /usr/local/bin/vietlang
-	@echo "Installed vietlang to /usr/local/bin/"
-	@vietlang --version
+	bash ./install.sh
 
 # Clean
 clean:
