@@ -1,12 +1,15 @@
 // ========================================================================
 // Module: repositories/product_repo.vl
-// Data Access Object for Products, Categories, and Vouchers in SQLite
+// Data Access Object for Products, Categories, Vouchers & Reviews
 // ========================================================================
 
 import std.db_sqlite
 
-fn product_repo_get_all(db, category_id: Int = 0, query: String = "", max_price: Int = 0) {
-    let q_lower = query.to_lowercase()
+fn product_repo_get_all(db, category_id: Int = 0, query: String = "", max_price: Int = 0, region: String = "", cert: String = "") {
+    let q_lower = query.to_lower()
+    let region_lower = region.to_lower()
+    let cert_lower = cert.to_lower()
+
     return sqlite_query(db, "products", fn(item) {
         if category_id > 0 && map_get(item, "category_id") != category_id {
             return false
@@ -14,10 +17,17 @@ fn product_repo_get_all(db, category_id: Int = 0, query: String = "", max_price:
         if max_price > 0 && map_get(item, "price") > max_price {
             return false
         }
+        if region_lower != "" && !to_string(map_get(item, "region")).to_lower().contains(region_lower) {
+            return false
+        }
+        if cert_lower != "" && !to_string(map_get(item, "cert")).to_lower().contains(cert_lower) {
+            return false
+        }
         if q_lower != "" {
-            let name_lower = to_string(map_get(item, "name")).to_lowercase()
-            let origin_lower = to_string(map_get(item, "origin")).to_lowercase()
-            if !name_lower.contains(q_lower) && !origin_lower.contains(q_lower) {
+            let name_lower = to_string(map_get(item, "name")).to_lower()
+            let origin_lower = to_string(map_get(item, "origin")).to_lower()
+            let desc_lower = to_string(map_get(item, "description")).to_lower()
+            if !name_lower.contains(q_lower) && !origin_lower.contains(q_lower) && !desc_lower.contains(q_lower) {
                 return false
             }
         }
@@ -39,6 +49,16 @@ fn product_repo_get_categories(db) {
     return sqlite_query(db, "categories")
 }
 
+fn product_repo_get_cooperatives(db) {
+    return sqlite_query(db, "farm_cooperatives")
+}
+
+fn product_repo_get_vouchers(db) {
+    return sqlite_query(db, "vouchers", fn(v) {
+        return map_get(v, "is_active") == true
+    })
+}
+
 fn product_repo_get_voucher(db, code: String) {
     let list = sqlite_query(db, "vouchers", fn(v) {
         return map_get(v, "code") == code && map_get(v, "is_active") == true
@@ -47,4 +67,18 @@ fn product_repo_get_voucher(db, code: String) {
         return list[0]
     }
     return map_new()
+}
+
+fn product_repo_get_reviews(db, product_id: Int) {
+    return sqlite_query(db, "reviews", fn(r) {
+        return map_get(r, "product_id") == product_id
+    })
+}
+
+fn product_repo_add_review(db, review_map) {
+    return sqlite_insert(db, "reviews", review_map)
+}
+
+fn product_repo_create(db, product_map) {
+    return sqlite_insert(db, "products", product_map)
 }

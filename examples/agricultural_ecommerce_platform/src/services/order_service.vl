@@ -1,15 +1,15 @@
 // ========================================================================
 // Module: services/order_service.vl
-// ACID Transactional Checkout Engine with Stock Deduction and Vouchers
+// Enterprise ACID Order Checkout, Cancellation Rollback & Tracking Engine
 // ========================================================================
 
 import std.db_sqlite
 import examples.agricultural_ecommerce_platform.src.repositories.product_repo
 import examples.agricultural_ecommerce_platform.src.repositories.order_repo
 
-fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String, address: String, items: Array, voucher_code: String = "") {
+fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String, address: String, city: String, payment_method: String, items: Array, voucher_code: String = "") {
     if items.len() == 0 {
-        let err = map_set(map_new(), "error", "Gio hang trong")
+        let err = map_set(map_new(), "error", "Gio hang trong khong the dat hang")
         return map_set(err, "db", db)
     }
 
@@ -19,7 +19,7 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
     let mut subtotal = 0
     let mut item_records = []
 
-    // Step 2: Validate stock for all items
+    // Step 2: Validate stock for each item
     let mut i = 0
     while i < items.len() {
         let cart_item = items[i]
@@ -29,15 +29,15 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
         let prod = product_repo_get_by_id(tx_db, prod_id)
         if !map_has(prod, "id") {
             tx_db = sqlite_rollback(tx_db)
-            let err = map_set(map_new(), "error", "San pham khong ton tai")
+            let err = map_set(map_new(), "error", "San pham #" + to_string(prod_id) + " khong ton tai")
             return map_set(err, "db", tx_db)
         }
 
         let current_stock = map_get(prod, "stock")
         if current_stock < qty {
-            // Out of stock -> Rollback Transaction
+            // Out of stock -> Atomic Rollback
             tx_db = sqlite_rollback(tx_db)
-            let err = map_set(map_new(), "error", "San pham " + to_string(map_get(prod, "name")) + " khong du so luong trong kho")
+            let err = map_set(map_new(), "error", "San pham '" + to_string(map_get(prod, "name")) + "' chi con " + to_string(current_stock) + " " + to_string(map_get(prod, "unit")) + " trong kho")
             return map_set(err, "db", tx_db)
         }
 
@@ -56,7 +56,13 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
         i = i + 1
     }
 
-    // Step 3: Voucher discount calculation
+    // Step 3: Calculate Shipping Fee (Free for orders >= 150,000 VND)
+    let mut shipping_fee = 30000
+    if subtotal >= 150000 {
+        shipping_fee = 0
+    }
+
+    // Step 4: Voucher discount calculation
     let mut discount = 0
     if voucher_code != "" {
         let v = product_repo_get_voucher(tx_db, voucher_code)
@@ -74,12 +80,12 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
         }
     }
 
-    let mut total = 0
-    if (subtotal - discount) > 0 {
-        total = subtotal - discount
+    let mut total = (subtotal + shipping_fee) - discount
+    if total < 0 {
+        total = 0
     }
 
-    // Step 4: Record Order and Order Items
+    // Step 5: Record Order and Order Items
     let order_id = (time_now() % 900000) + 100000
     let mut order_rec = map_new()
     order_rec = map_set(order_rec, "id", order_id)
@@ -87,8 +93,11 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
     order_rec = map_set(order_rec, "customer_name", customer_name)
     order_rec = map_set(order_rec, "phone", phone)
     order_rec = map_set(order_rec, "address", address)
+    order_rec = map_set(order_rec, "city", city)
+    order_rec = map_set(order_rec, "payment_method", payment_method)
     order_rec = map_set(order_rec, "subtotal", subtotal)
     order_rec = map_set(order_rec, "discount", discount)
+    order_rec = map_set(order_rec, "shipping_fee", shipping_fee)
     order_rec = map_set(order_rec, "total", total)
     order_rec = map_set(order_rec, "status", "CONFIRMED")
     order_rec = map_set(order_rec, "created_at", time_now())
@@ -103,7 +112,7 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
         j = j + 1
     }
 
-    // Step 5: Commit ACID SQLite Transaction
+    // Step 6: Commit ACID Transaction
     tx_db = sqlite_commit(tx_db)
 
     let mut res = map_new()
@@ -111,14 +120,27 @@ fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String
     res = map_set(res, "order_id", order_id)
     res = map_set(res, "subtotal", subtotal)
     res = map_set(res, "discount", discount)
+    res = map_set(res, "shipping_fee", shipping_fee)
     res = map_set(res, "total", total)
     res = map_set(res, "status", "CONFIRMED")
+    res = map_set(res, "payment_method", payment_method)
+    res = map_set(res, "items", item_records)
     res = map_set(res, "db", tx_db)
     return res
 }
 
-fn order_service_get_order(db, id: Int) {
-    return order_repo_get_by_id(db, id)
+fn order_service_track_order(db, query_str: String) {
+    let q_clean = query_str.trim()
+    let orders = sqlite_query(db, "orders", fn(o) {
+        let id_str = to_string(map_get(o, "id"))
+        let phone_str = to_string(map_get(o, "phone"))
+        return id_str == q_clean || phone_str == q_clean
+    })
+    return orders
+}
+
+fn order_service_get_order_detail(db, order_id: Int) {
+    return order_repo_get_by_id(db, order_id)
 }
 
 fn order_service_get_all_orders(db) {

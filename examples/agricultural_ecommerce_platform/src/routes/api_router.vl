@@ -1,11 +1,12 @@
 // ========================================================================
 // Module: routes/api_router.vl
-// Unified REST API Dispatcher & Router Table
+// Unified Enterprise REST API Dispatcher
 // ========================================================================
 
-import examples.agricultural_ecommerce_platform.src.controllers.product_controller
-import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
+import examples.agricultural_ecommerce_platform.src.repositories.product_repo
+import examples.agricultural_ecommerce_platform.src.repositories.order_repo
 import examples.agricultural_ecommerce_platform.src.services.order_service
+import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
 
 fn api_response(status_code: Int, data, message: String = "OK") {
     let mut resp = map_new()
@@ -28,8 +29,18 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
     }
 
     if method == "GET" && path == "/api/v1/categories" {
-        let cats = catalog_service_get_categories(db)
+        let cats = product_repo_get_categories(db)
         return api_response(200, cats, "Lay danh muc thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/vouchers" {
+        let vouchers = product_repo_get_vouchers(db)
+        return api_response(200, vouchers, "Lay danh sach ma giam gia thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/cooperatives" {
+        let coops = product_repo_get_cooperatives(db)
+        return api_response(200, coops, "Lay danh sach hop tac xa nong nghiep thanh cong")
     }
 
     if method == "GET" && path == "/api/v1/products" {
@@ -45,13 +56,31 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         if map_has(body_map, "max_price") {
             max_p = map_get(body_map, "max_price")
         }
-        let prods = catalog_service_get_products(db, cat_id, q, max_p)
+        let mut region = ""
+        if map_has(body_map, "region") {
+            region = to_string(map_get(body_map, "region"))
+        }
+        let mut cert = ""
+        if map_has(body_map, "cert") {
+            cert = to_string(map_get(body_map, "cert"))
+        }
+
+        let prods = product_repo_get_all(db, cat_id, q, max_p, region, cert)
         return api_response(200, prods, "Lay danh sach san pham thanh cong")
     }
 
     if method == "GET" && path == "/api/v1/admin/analytics" {
         let analytics = handle_admin_analytics(db)
         return api_response(200, analytics, "Thong ke admin")
+    }
+
+    if method == "GET" && path == "/api/v1/orders/track" {
+        let mut q = ""
+        if map_has(body_map, "query") {
+            q = to_string(map_get(body_map, "query"))
+        }
+        let orders = order_service_track_order(db, q)
+        return api_response(200, orders, "Tra cuu don hang thanh cong")
     }
 
     if method == "POST" && path == "/api/v1/orders/checkout" {
@@ -62,13 +91,21 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         let customer_name = to_string(map_get(body_map, "customer_name"))
         let phone = to_string(map_get(body_map, "phone"))
         let address = to_string(map_get(body_map, "address"))
+        let mut city = "TP. Ho Chi Minh"
+        if map_has(body_map, "city") {
+            city = to_string(map_get(body_map, "city"))
+        }
+        let mut pay_method = "COD"
+        if map_has(body_map, "payment_method") {
+            pay_method = to_string(map_get(body_map, "payment_method"))
+        }
         let items = map_get(body_map, "items")
         let mut voucher = ""
         if map_has(body_map, "voucher") {
             voucher = to_string(map_get(body_map, "voucher"))
         }
         
-        let res = order_service_checkout(db, user_id, customer_name, phone, address, items, voucher)
+        let res = order_service_checkout(db, user_id, customer_name, phone, address, city, pay_method, items, voucher)
         if map_has(res, "error") {
             return api_error(400, to_string(map_get(res, "error")))
         }
