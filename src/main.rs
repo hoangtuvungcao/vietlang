@@ -76,17 +76,32 @@ fn main() {
             "--help" | "-h" => print_help(),
             "build" | "compile" => {
                 if args.len() < 3 {
-                    eprintln!("Usage: vietlang build <source.vl> [-o <output_binary>]");
+                    eprintln!("Usage: vietlang build <source.vl> [-o <output_binary>] [--target <linux|windows|macos>]");
                     std::process::exit(1);
                 }
                 let source_file = &args[2];
                 let mut output_file = source_file.trim_end_matches(".vl").to_string();
-                if args.len() >= 5 && (args[3] == "-o" || args[3] == "--output") {
-                    output_file = args[4].clone();
-                } else if args.len() >= 4 && args[3] != "-o" && args[3] != "--output" {
-                    output_file = args[3].clone();
+                let mut target_os = "linux".to_string();
+
+                let mut i = 3;
+                while i < args.len() {
+                    if (args[i] == "-o" || args[i] == "--output") && i + 1 < args.len() {
+                        output_file = args[i + 1].clone();
+                        i += 2;
+                    } else if args[i] == "--target" && i + 1 < args.len() {
+                        target_os = args[i + 1].to_lowercase();
+                        i += 2;
+                    } else if !args[i].starts_with('-') {
+                        output_file = args[i].clone();
+                        i += 1;
+                    } else {
+                        i += 1;
+                    }
                 }
-                build_standalone_binary(source_file, &output_file);
+                if output_file.ends_with(".exe") {
+                    target_os = "windows".to_string();
+                }
+                build_standalone_binary(source_file, &output_file, &target_os);
             }
             "pkg" | "package" | "pm" => {
                 if args.len() >= 3 {
@@ -269,8 +284,8 @@ fn run_source(source: &str, _name: &str) {
     }
 }
 
-fn build_standalone_binary(source_path: &str, output_path: &str) {
-    println!("\x1b[36m[VietLang Compiler]\x1b[0m Compiling \x1b[33m{}\x1b[0m to standalone binary \x1b[32m{}\x1b[0m...", source_path, output_path);
+fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str) {
+    println!("\x1b[36m[VietLang Compiler]\x1b[0m Compiling \x1b[33m{}\x1b[0m for target \x1b[35m[{}]\x1b[0m -> \x1b[32m{}\x1b[0m...", source_path, target_os, output_path);
     
     // 1. Read and validate source
     let source = match fs::read_to_string(source_path) {
@@ -296,17 +311,33 @@ fn build_standalone_binary(source_path: &str, output_path: &str) {
         std::process::exit(1);
     }
 
-    // 2. Read base runtime binary
-    let current_exe = env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("vietlang"));
-    let base_binary = match fs::read(&current_exe) {
-        Ok(b) if b.len() > 100_000 => b,
-        _ => match fs::read("target/release/vietlang") {
+    // 2. Select appropriate base runtime binary
+    let base_binary = if target_os == "windows" || output_path.ends_with(".exe") {
+        match fs::read("target/x86_64-pc-windows-gnu/release/vietlang.exe") {
             Ok(b) => b,
-            Err(_) => match fs::read("/home/vantrong/.vietlang/bin/vietlang") {
+            Err(_) => match fs::read("vietlang-windows-x64.exe") {
                 Ok(b) => b,
-                Err(e) => {
-                    eprintln!("\x1b[31mError:\x1b[0m Cannot locate base runtime binary: {}", e);
-                    std::process::exit(1);
+                Err(_) => match fs::read("/home/vantrong/.vietlang/bin/vietlang.exe") {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("\x1b[31mError:\x1b[0m Cannot locate Windows base runtime binary (vietlang.exe): {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+        }
+    } else {
+        let current_exe = env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("vietlang"));
+        match fs::read(&current_exe) {
+            Ok(b) if b.len() > 100_000 => b,
+            _ => match fs::read("target/release/vietlang") {
+                Ok(b) => b,
+                Err(_) => match fs::read("/home/vantrong/.vietlang/bin/vietlang") {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("\x1b[31mError:\x1b[0m Cannot locate Linux base runtime binary: {}", e);
+                        std::process::exit(1);
+                    }
                 }
             }
         }
@@ -353,8 +384,12 @@ fn build_standalone_binary(source_path: &str, output_path: &str) {
         }
     }
 
-    println!("\x1b[32m[SUCCESS]\x1b[0m Standalone executable created: \x1b[32;1m{}\x1b[0m ({} bytes)", output_path, standalone_bin.len());
-    println!("  -> Run directly with: \x1b[36m./{}\x1b[0m", output_path);
+    println!("\x1b[32m[SUCCESS]\x1b[0m Standalone executable created: \x1b[32;1m{}\x1b[0m ({} bytes, target: {})", output_path, standalone_bin.len(), target_os);
+    if target_os == "windows" || output_path.ends_with(".exe") {
+        println!("  -> Run on Windows with: \x1b[36m{}\x1b[0m (or 'wine {}')", output_path, output_path);
+    } else {
+        println!("  -> Run directly with: \x1b[36m./{}\x1b[0m", output_path);
+    }
 }
 
 fn run_file(path: &str) {
