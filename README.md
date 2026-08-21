@@ -232,31 +232,37 @@ test("Token generation", fn() {
 test_summary()
 ```
 
-## Package Manager (vpm)
+## Package Manager & Central Registry
 
-VietLang comes with `vpm.vl`, a decentralized package manager written in pure VietLang:
+VietLang provides a **native package manager built directly into the runtime binary** with a unified **Central Community Registry**:
 
 ```bash
 # Initialize a new package (templates: lib | api | microservice)
-vietlang vpm.vl init my_service microservice
+vietlang init my_service microservice
 
-# Search community modules
-vietlang vpm.vl search redis
-vietlang vpm.vl search postgres
+# Search Central Community Registry
+vietlang search redis
+vietlang search postgres
 
-# Install any Git repository directly as a module
-vietlang vpm.vl install https://github.com/user/vietlang_redis.git
+# Install package from Central Registry (by name or explicit version lock)
+vietlang install redis
+vietlang install redis@1.2.0
+vietlang install auth@3.0.0
 
 # Inspect module exported API signatures
-vietlang vpm.vl docs std.db_sqlite
+vietlang docs std.db_sqlite
+vietlang docs redis
 
 # Verify package syntax and unit tests
-vietlang vpm.vl verify
+vietlang verify
 
-# List, update, or remove installed modules
-vietlang vpm.vl list
-vietlang vpm.vl update vietlang_redis
-vietlang vpm.vl remove vietlang_redis
+# Update or remove dependencies
+vietlang update redis
+vietlang update redis@2.0.0
+vietlang remove redis
+
+# Publish module to Central Community Registry
+vietlang publish
 ```
 
 ## Self-Hosting Bootstrap & Bytecode Virtual Machine (VM)
@@ -284,12 +290,15 @@ vietlang --vm examples/bytecode_vm_demo.vl
 vietlang/
 ├── src/
 │   ├── main.rs              # CLI, REPL, and Dispatcher
+│   ├── pm.rs                # Native Package Manager & Central Registry
 │   ├── error.rs             # Error types & control flow signals
 │   ├── stdlib.rs            # Built-in native standard library
 │   ├── lexer/               # Lexer & Token definitions
 │   ├── parser/              # Parser & AST definitions
 │   ├── interpreter/         # Tree-walking interpreter & environment
 │   └── vm/                  # Bytecode VM & compiler (OpCode stack machine)
+├── registry/                # Central Community Package Registry
+│   └── index.json           # Unified Community Package Catalog
 ├── std/                     # 30 Pure VietLang Standard Libraries
 │   ├── db_sqlite.vl         # In-memory & file-backed SQLite relational engine
 │   ├── db_mysql.vl          # MySQL protocol and connection pool
@@ -319,7 +328,6 @@ vietlang/
 │   ├── backend-cookbook.md
 │   ├── community-module-guide.md
 │   └── vietlang-handbook.md
-├── vpm.vl                   # Decentralized Package Manager
 ├── Makefile
 ├── CONTRIBUTING.md
 └── LICENSE
@@ -345,7 +353,7 @@ make demo
 - [x] Phase 3: Standard Library (HTTP, DB, JSON, File I/O, Crypto, Logging, Env, Time, Collections)
 - [x] Phase 4: Extended Syntax (Compound Assignment += -= *= /= %=, Short-circuit && ||, Try/Catch)
 - [x] Phase 5: Community Standard Library in VietLang (30 pure modules in `std.*`)
-- [x] Phase 6: Decentralized Package Manager (`vpm.vl` with search, docs, verify, install)
+- [x] Phase 6: Central Package Manager & Community Registry (`vietlang install`, `publish`, `search`)
 - [x] Phase 7: Self-Hosting Bootstrap (Stage 1: `bootstrap/lexer.vl`, Stage 2: `bootstrap/parser.vl`)
 - [x] Phase 8: Bytecode VM / Native Stack-based Execution (`vietlang --vm`)
 

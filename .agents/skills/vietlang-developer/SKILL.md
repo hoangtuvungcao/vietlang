@@ -424,23 +424,37 @@ let form_data = map_get(parsed, "fields")
 
 ---
 
-## 3. Package Management with VPM (`vpm.vl`)
+## 3. Native Package Management & Central Registry
 
-VietLang uses a **decentralized, serverless package model**. Any public or private Git repository is a module:
+VietLang provides a **native package manager connected to the Central Community Registry**:
 
 ```bash
-# Initialize a new project (templates: api | lib | microservice)
-vietlang vpm.vl init my_service microservice
+# Initialize a new package (templates: lib | api | microservice)
+vietlang init my_service microservice
 
-# Install module directly from any Git repository (GitHub/GitLab/Gitea)
-vietlang vpm.vl install https://github.com/user/vietlang_redis.git
+# Search Central Community Registry
+vietlang search redis
+vietlang search postgres
+
+# Install module directly (short name or version lock)
+vietlang install redis
+vietlang install redis@1.2.0
+vietlang install auth@3.0.0
+
+# Inspect module API signatures
+vietlang docs redis
+vietlang docs std.db_sqlite
+
+# Verify package syntax & test suite
+vietlang verify
 
 # Update or remove modules
-vietlang vpm.vl update vietlang_redis
-vietlang vpm.vl remove vietlang_redis
+vietlang update redis
+vietlang update redis@2.0.0
+vietlang remove redis
 
-# Publish & release validation
-vietlang vpm.vl publish
+# Publish module to Central Community Registry
+vietlang publish
 ```
 
 ---

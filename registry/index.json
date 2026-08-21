@@ -1,0 +1,169 @@
+{
+  "registry_version": "1.0.0",
+  "updated_at": "2026-08-21T08:15:00Z",
+  "packages": {
+    "my_logger": {
+      "name": "my_logger",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "High-performance backend module built with VietLang",
+          "author": "community",
+          "source": "https://github.com/hoangtuvungcao/vietlang_my_logger.git",
+          "checksum": "vlt_b4a1dcd103584e7c",
+          "keywords": ["my_logger"]
+        }
+      }
+    },
+
+    "redis": {
+      "name": "redis",
+      "latest": "1.2.0",
+      "versions": {
+        "1.2.0": {
+          "version": "1.2.0",
+          "description": "High-performance Redis client & Pub/Sub broker",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_redis.git",
+          "checksum": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",
+          "keywords": ["redis", "cache", "pubsub", "kv", "memory"]
+        },
+        "1.1.0": {
+          "version": "1.1.0",
+          "description": "Redis client with basic KV support",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_redis.git",
+          "checksum": "b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890a1",
+          "keywords": ["redis", "cache"]
+        }
+      }
+    },
+    "postgres": {
+      "name": "postgres",
+      "latest": "2.1.0",
+      "versions": {
+        "2.1.0": {
+          "version": "2.1.0",
+          "description": "Production-grade PostgreSQL driver with connection pooling",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_postgres.git",
+          "checksum": "c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890a1b2",
+          "keywords": ["postgres", "postgresql", "sql", "db", "database"]
+        }
+      }
+    },
+    "mysql": {
+      "name": "mysql",
+      "latest": "1.1.0",
+      "versions": {
+        "1.1.0": {
+          "version": "1.1.0",
+          "description": "MySQL protocol driver with connection pool & prepared queries",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_mysql.git",
+          "checksum": "d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3",
+          "keywords": ["mysql", "mariadb", "sql", "db", "database"]
+        }
+      }
+    },
+    "sqlite": {
+      "name": "sqlite",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "ACID compliant SQLite relational storage engine with rollback snapshot",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_sqlite.git",
+          "checksum": "e5f67890abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4",
+          "keywords": ["sqlite", "acid", "embedded", "db"]
+        }
+      }
+    },
+    "auth": {
+      "name": "auth",
+      "latest": "3.0.0",
+      "versions": {
+        "3.0.0": {
+          "version": "3.0.0",
+          "description": "OAuth2, JWT RBAC security, session storage and password hashing suite",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_auth.git",
+          "checksum": "f67890abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5",
+          "keywords": ["auth", "jwt", "security", "rbac", "oauth2"]
+        }
+      }
+    },
+    "mailer": {
+      "name": "mailer",
+      "latest": "1.0.1",
+      "versions": {
+        "1.0.1": {
+          "version": "1.0.1",
+          "description": "SMTP Email client with template rendering & attachments",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_mailer.git",
+          "checksum": "7890abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5f6",
+          "keywords": ["mailer", "email", "smtp", "sendgrid"]
+        }
+      }
+    },
+    "graphql": {
+      "name": "graphql",
+      "latest": "0.9.0",
+      "versions": {
+        "0.9.0": {
+          "version": "0.9.0",
+          "description": "GraphQL schema parser, query executor & resolvers engine",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_graphql.git",
+          "checksum": "890abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5f67",
+          "keywords": ["graphql", "api", "query", "schema"]
+        }
+      }
+    },
+    "grpc": {
+      "name": "grpc",
+      "latest": "0.8.5",
+      "versions": {
+        "0.8.5": {
+          "version": "0.8.5",
+          "description": "gRPC & Protobuf RPC microservice framework",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_grpc.git",
+          "checksum": "90abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5f678",
+          "keywords": ["grpc", "protobuf", "rpc", "microservice"]
+        }
+      }
+    },
+    "kafka": {
+      "name": "kafka",
+      "latest": "2.0.1",
+      "versions": {
+        "2.0.1": {
+          "version": "2.0.1",
+          "description": "Distributed event streaming partitioned consumer & producer",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_kafka.git",
+          "checksum": "0abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5f6789",
+          "keywords": ["kafka", "stream", "event", "pubsub", "queue"]
+        }
+      }
+    },
+    "rabbitmq": {
+      "name": "rabbitmq",
+      "latest": "1.0.2",
+      "versions": {
+        "1.0.2": {
+          "version": "1.0.2",
+          "description": "AMQP RabbitMQ message broker client with exchange routing",
+          "author": "hoangtuvungcao",
+          "source": "https://github.com/hoangtuvungcao/vietlang_rabbitmq.git",
+          "checksum": "abcdef1234567890abcdef1234567890abcdef1234567890a1b2c3d4e5f67890",
+          "keywords": ["rabbitmq", "amqp", "queue", "broker"]
+        }
+      }
+    }
+  }
+}

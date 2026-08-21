@@ -1,30 +1,30 @@
-# VietLang Community Module Development & Distribution Guide
+# VietLang Community Module Development & Central Registry Guide
 
-A comprehensive, step-by-step guide for developers to create, test, publish, discover, and install community packages in the decentralized VietLang ecosystem.
+A comprehensive, step-by-step guide for developers to create, test, publish, discover, and install community packages in the VietLang ecosystem.
 
 Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
 ---
 
-## 1. Overview: The Serverless Package Philosophy
+## 1. Overview: The Central Community Registry & Native Package Toolchain
 
-VietLang uses a **decentralized, serverless package model**. Unlike npm or PyPI, you do not need an account on a centralized server to publish libraries. **Any public or private Git repository on GitHub, GitLab, Gitea, or self-hosted Git servers is an installable VietLang module.**
+VietLang integrates a **native package manager directly into the `vietlang` runtime binary**. No external scripts or node/python runtimes needed.
 
-Benefits:
-- Zero central point of failure.
-- Instant publishing with `git push`.
-- Native support for private microservice repositories.
-- Deterministic semantic versioning and SHA256 checksum validation.
+Highlights:
+- **Central Community Registry (`registry/index.json`)**: One centralized place to search and discover modules.
+- **Short Name & Version Tagging**: Install instantly via `vietlang install redis` or `vietlang install redis@1.2.0`.
+- **Zero Configuration**: Built-in dependency tracking and version locking in `vietlang.json`.
+- **Deterministic Checksum Validation**: Every published package is verified by source checksum.
 
 ---
 
 ## 2. Creating a New Module
 
-Use the VietLang Package Manager (`vpm.vl`) to scaffold your project:
+Use the native CLI to scaffold your project:
 
 ```bash
 # Template options: 'lib' (Community Library), 'api' (REST API), 'microservice' (Full backend)
-vietlang vpm.vl init vietlang_email_sender lib
+vietlang init vietlang_email_sender lib
 ```
 
 This creates the standard project structure:
@@ -100,70 +100,72 @@ vietlang tests/main_test.vl
 
 ---
 
-## 5. Publishing to the Community
+## 5. Publishing to the Central Community Registry
 
 1. **Verify project integrity before release**:
    ```bash
-   vietlang vpm.vl verify
-   vietlang vpm.vl publish
+   vietlang verify
    ```
 
-2. **Push to GitHub**:
+2. **Publish to the Central Registry**:
    ```bash
-   git init
-   git add -A
-   git commit -m "feat: initial release v0.1.0"
-   git remote add origin https://github.com/your-username/vietlang_email_sender.git
-   git push -u origin main
+   vietlang publish
    ```
 
-Your library is now live and installable worldwide!
+This validates `vietlang.json`, executes test suites, computes the release checksum, and registers the module entry into the Central Community Registry index.
 
 ---
 
 ## 6. Discovering & Installing Modules
 
-### Searching for Modules
-Developers can search the community catalog:
+### Searching the Central Registry
+Developers can search the community catalog by keywords, package name, or author:
 ```bash
-vietlang vpm.vl search redis
-vietlang vpm.vl search postgres
-vietlang vpm.vl search db
+vietlang search redis
+vietlang search postgres
+vietlang search mailer
 ```
 
 ### Installing a Module
-Install directly from any Git URL into your project:
+Install directly using the module name or with a specific version lock:
 ```bash
-vietlang vpm.vl install https://github.com/your-username/vietlang_email_sender.git
+# Install latest
+vietlang install redis
+
+# Install specific version
+vietlang install redis@1.2.0
+vietlang install auth@3.0.0
+vietlang install user/custom_module@v1.0.0
 ```
 
 This will:
-- Clone the repository into `modules/vietlang_email_sender`.
-- Update your `vietlang.json` dependency map.
+- Download the module into `modules/<pkg_name>`.
+- Checkout the exact version tag.
+- Update your `vietlang.json` dependency manifest.
 
-### Inspecting Module API Documentation
-Inspect all exported functions without opening code:
+### Inspecting Module API Signatures
+Inspect exported functions without opening code:
 ```bash
-vietlang vpm.vl docs vietlang_email_sender
-# Output:
-# Exported Functions in 'vietlang_email_sender' (modules/vietlang_email_sender/src/main.vl):
-#   * fn email_client_new(smtp_host: String, smtp_port: Int = 587) {
-#   * fn email_send(client, to_addr: String, subject: String, body: String) -> Bool {
+vietlang docs redis
+vietlang docs std.db_sqlite
 ```
 
 ### Importing in Your Backend Code
 ```rust
-import modules.vietlang_email_sender.src.main
+import modules.redis.src.main
 
-let mailer = email_client_new("smtp.sendgrid.net", 587)
-email_send(mailer, "customer@example.com", "Order Confirmation", "Your order has shipped!")
+let client = redis_client_new("127.0.0.1", 6379)
 ```
 
 ### Updating & Removing Modules
 ```bash
-# Pull latest updates from Git
-vietlang vpm.vl update vietlang_email_sender
+# Update single module to target or latest version
+vietlang update redis
+vietlang update redis@2.0.0
+
+# Update all dependencies
+vietlang update
 
 # Remove module
-vietlang vpm.vl remove vietlang_email_sender
+vietlang remove redis
 ```

@@ -86,4 +86,4 @@ Create a `.vscode/tasks.json` in your project root to run VietLang files with a 
 
 - **Check AST**: Use `vietlang --ast <file.vl>` to inspect the syntax tree.
 - **Check Tokens**: Use `vietlang --tokens <file.vl>` to inspect the lexical token stream.
-- **Run Package Manager**: Use `vietlang vpm.vl <command>` to manage modules.
+- **Run Package Manager**: Use `vietlang install <pkg>`, `vietlang search <query>`, `vietlang publish` to manage modules.

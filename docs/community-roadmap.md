@@ -20,13 +20,13 @@ To scale VietLang and outpace legacy languages, we focus on four core pillars:
 ### How Developers Publish Modules
 ```bash
 # 1. Initialize a community module
-vietlang vpm.vl init my_awesome_logger lib
+vietlang init my_awesome_logger lib
 
 # 2. Develop and test with std.test
 vietlang tests/main_test.vl
 
-# 3. Publish to registry
-vietlang vpm.vl publish
+# 3. Publish to Central Registry
+vietlang publish
 ```
 
 ### Official Target Libraries for Community Bounties

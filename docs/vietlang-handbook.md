@@ -256,31 +256,35 @@ let state = mutex_new(0)
 
 ---
 
-## 10. Package Management with VPM (`vpm.vl`)
+## 10. Package Management & Central Registry
 
-VietLang features a **decentralized, serverless package manager**:
+VietLang features a **native package manager connected to the Central Community Registry**:
 
 ```bash
 # Initialize a new package (templates: lib | api | microservice)
-vietlang vpm.vl init my_service microservice
+vietlang init my_service microservice
 
-# Search community packages
-vietlang vpm.vl search redis
-vietlang vpm.vl search postgres
+# Search Central Community Registry
+vietlang search redis
+vietlang search postgres
 
-# Install any Git repository directly as a module
-vietlang vpm.vl install https://github.com/user/my_module.git
+# Install package from Central Registry (short name or version lock)
+vietlang install redis
+vietlang install redis@1.2.0
+vietlang install postgres@2.1.0
 
 # Inspect exported functions without opening code
-vietlang vpm.vl docs my_module
+vietlang docs redis
+vietlang docs std.db_sqlite
 
 # Verify code syntax and automated test suites
-vietlang vpm.vl verify
+vietlang verify
 
 # Update or remove modules
-vietlang vpm.vl update my_module
-vietlang vpm.vl remove my_module
+vietlang update redis
+vietlang update redis@2.0.0
+vietlang remove redis
 
-# Validate package before publishing
-vietlang vpm.vl publish
+# Publish package to Central Community Registry
+vietlang publish
 ```

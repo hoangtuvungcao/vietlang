@@ -32,17 +32,17 @@ my_awesome_module/
 
 ## 3. Creating a Community Module
 
-Use `vpm.vl` with the `lib` template:
+Use the native CLI with the `lib` template:
 
 ```bash
-vietlang vpm.vl init vietlang_redis lib
+vietlang init vietlang_redis lib
 ```
 
 This creates `vietlang.json`:
 ```json
 {
   "name": "vietlang_redis",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "lib",
   "description": "High-performance Redis client for VietLang",
   "main": "src/main.vl",
@@ -58,33 +58,37 @@ This creates `vietlang.json`:
 In `src/main.vl`:
 
 ```rust
+// vietlang_redis - Public API
 import std.socket
+import std.json
 
 fn redis_connect(host: String = "127.0.0.1", port: Int = 6379) {
     let client = map_new()
     let client = map_set(client, "host", host)
     let client = map_set(client, "port", port)
+    let client = map_set(client, "connected", true)
     return client
 }
 
-fn redis_set(client, key: String, val: String) -> String {
+fn redis_set(client, key: String, val: String) -> Bool {
     let host = map_get(client, "host")
     let port = map_get(client, "port")
-    let cmd = "*3\r\n$3\r\nSET\r\n$" + to_string(key.len()) + "\r\n" + key + "\r\n$" + to_string(val.len()) + "\r\n" + val + "\r\n"
-    return socket_tcp_send(host, port, cmd)
+    let cmd = "SET " + key + " " + val + "\r\n"
+    let resp = socket_tcp_send(host, port, cmd)
+    return resp != ""
 }
 
 fn redis_get(client, key: String) -> String {
     let host = map_get(client, "host")
     let port = map_get(client, "port")
-    let cmd = "*2\r\n$3\r\nGET\r\n$" + to_string(key.len()) + "\r\n" + key + "\r\n"
+    let cmd = "GET " + key + "\r\n"
     return socket_tcp_send(host, port, cmd)
 }
 ```
 
 ---
 
-## 5. Testing with `std.test`
+## 5. Writing Unit Tests
 
 In `tests/main_test.vl`:
 
@@ -94,9 +98,11 @@ import src.main
 
 suite("Redis Client Test Suite")
 
-test("Redis Client Config", fn() {
+test("Client connection initialization", fn() {
     let client = redis_connect("127.0.0.1", 6379)
-    assert_eq(map_get(client, "port"), 6379, "Port mismatch")
+    assert_eq(map_get(client, "host"), "127.0.0.1", "Host should match")
+    assert_eq(map_get(client, "port"), 6379, "Port should match")
+    assert_true(map_get(client, "connected"), "Should be connected")
 })
 
 test_summary()
@@ -109,50 +115,43 @@ vietlang tests/main_test.vl
 
 ---
 
-## 6. Publishing Your Module to the Community
+## 6. Publishing to Central Community Registry
 
-1. Initialize Git and commit your files:
 ```bash
-git init
-git add -A
-git commit -m "feat: initial release v0.1.0"
-```
-
-2. Validate package with `vpm`:
-```bash
-vietlang vpm.vl publish
-```
-
-3. Push to GitHub:
-```bash
-git remote add origin https://github.com/yourusername/vietlang_redis.git
-git push -u origin main
+vietlang verify
+vietlang publish
 ```
 
 ---
 
-## 7. Installing and Using Community Modules in Projects
+## 7. Installing in Other Projects
 
-In any other VietLang project:
+Any developer can install your module:
 
-### Install via Git URL:
 ```bash
-vietlang vpm.vl install https://github.com/yourusername/vietlang_redis.git
+vietlang install redis
+vietlang install redis@1.2.0
 ```
 
-### Import into your backend service:
+Import in user code:
 ```rust
-import modules.vietlang_redis.src.main
+import modules.redis.src.main
 
-let r = redis_connect("127.0.0.1", 6379)
-println("Redis client ready")
+let r = redis_connect()
+redis_set(r, "session:101", "active")
 ```
 
-### Update or Remove:
-```bash
-# Update module to latest git commit
-vietlang vpm.vl update vietlang_redis
+---
 
-# Remove module
-vietlang vpm.vl remove vietlang_redis
+## 8. Updating & Removing Dependencies
+
+```bash
+# Update single package
+vietlang update redis
+
+# Update all packages
+vietlang update
+
+# Remove package
+vietlang remove redis
 ```
