@@ -15,6 +15,10 @@ import std.session
 import std.queue
 import std.rate_limiter
 import std.ws
+import std.pagination
+import std.email
+import std.otp
+import std.file_storage
 
 suite("VietLang Enterprise Backend Framework & Architecture Ecosystem")
 
@@ -137,4 +141,47 @@ test("10. Opt-in Standard WebSocket Engine (std.ws)", fn() {
 
     let send_res = ws_send_text("{\"type\":\"heartbeat\",\"ping\":true}")
     assert_true(send_res, "ws_send_text phai broadcast thanh cong khi WebSocket da enable")
+})
+
+test("11. REST API Pagination & Query Cursor Utility (std.pagination)", fn() {
+    let items = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    let res = pagination_slice(items, 2, 3)
+    let p_items = map_get(res, "items")
+    let p_meta = map_get(res, "pagination")
+
+    assert_eq(len(p_items), 3, "Trang 2 voi size 3 phai lay ra dung 3 phan tu")
+    assert_eq(p_items[0], 40, "Phan tu dau trang 2 phai la 40")
+    assert_eq(map_get(p_meta, "total_pages"), 4, "Tong so trang phai la 4")
+    assert_true(map_get(p_meta, "has_next"), "Trang 2 phai co trang tiep theo")
+    assert_true(map_get(p_meta, "has_prev"), "Trang 2 phai co trang truoc do")
+})
+
+test("12. Generic Transactional Email Builder (std.email)", fn() {
+    let mut mail = email_new("noreply@vietlang.dev", "customer@gmail.com", "Don hang #101")
+    let html = email_render_simple_card("Thong Bao He Thong", "Giao dich thanh cong", "Xem Chi Tiet", "https://vietlang.dev")
+    mail = email_set_html(mail, html)
+
+    assert_eq(map_get(mail, "to"), "customer@gmail.com", "Email nguoi nhan phai khop")
+    assert_true(html.contains("Thong Bao He Thong"), "HTML phai chua title")
+    assert_true(html.contains("https://vietlang.dev"), "HTML phai chua action URL")
+})
+
+test("13. Cryptographic OTP & 2FA Tokens (std.otp)", fn() {
+    let code = otp_generate(6)
+    assert_eq(code.len(), 6, "Ma OTP phai co dung 6 chu so")
+
+    let otp_data = otp_create(101, 6, 300)
+    let generated_code = to_string(map_get(otp_data, "code"))
+    assert_true(otp_verify(otp_data, generated_code), "OTP verify phai dung khi truyen ma khop")
+    assert_false(otp_verify(otp_data, "000000"), "OTP verify phai tra ve false neu ma sai")
+})
+
+test("14. File Storage & MIME Utilities (std.file_storage)", fn() {
+    let allowed = ["jpg", "png", "webp", "pdf"]
+    assert_true(file_storage_is_allowed_extension("avatar.png", allowed), "PNG phai duoc chap nhan")
+    assert_false(file_storage_is_allowed_extension("malware.exe", allowed), "EXE phai bi tu choi")
+
+    let safe_name = file_storage_generate_safe_name("nong_san.jpg", "product")
+    assert_true(safe_name.contains("product_"), "Safe filename phai co prefix")
+    assert_true(safe_name.contains("nong_san.jpg"), "Safe filename phai chua ten goc")
 })

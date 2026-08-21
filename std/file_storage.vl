@@ -1,0 +1,38 @@
+// ========================================================================
+// Module: std.file_storage
+// Enterprise File & Asset Storage Utilities
+// ========================================================================
+
+fn file_storage_format_size(bytes: Int) -> String {
+    if bytes < 1024 {
+        return to_string(bytes) + " B"
+    }
+    if bytes < 1048576 {
+        let kb = bytes / 1024
+        return to_string(kb) + " KB"
+    }
+    let mb = bytes / 1048576
+    return to_string(mb) + " MB"
+}
+
+fn file_storage_is_allowed_extension(filename: String, allowed_exts) -> Bool {
+    if allowed_exts == none || len(allowed_exts) == 0 {
+        return true
+    }
+
+    let mut i = 0
+    while i < len(allowed_exts) {
+        let ext = to_string(allowed_exts[i])
+        if filename.contains("." + ext) {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn file_storage_generate_safe_name(original_filename: String, prefix: String = "upload") -> String {
+    let now = to_string(time_now())
+    let us = to_string(time_now_us() % 10000)
+    return prefix + "_" + now + "_" + us + "_" + original_filename
+}

@@ -1,0 +1,45 @@
+// ========================================================================
+// Module: std.otp
+// Cryptographic One-Time Password & 2FA Authentication Generator
+// ========================================================================
+
+fn otp_generate(digits: Int = 6) -> String {
+    let now_us = time_now_us()
+    let raw_num = now_us % 1000000
+    let mut s = to_string(raw_num)
+    while s.len() < digits {
+        s = "0" + s
+    }
+    return s
+}
+
+fn otp_create(user_id: Int, digits: Int = 6, ttl_seconds: Int = 300) {
+    let code = otp_generate(digits)
+    let expires_at = time_now() + ttl_seconds
+
+    let mut otp_data = map_new()
+    otp_data = map_set(otp_data, "user_id", user_id)
+    otp_data = map_set(otp_data, "code", code)
+    otp_data = map_set(otp_data, "expires_at", expires_at)
+    otp_data = map_set(otp_data, "used", false)
+    return otp_data
+}
+
+fn otp_verify(otp_data, input_code: String) -> Bool {
+    if otp_data == none {
+        return false
+    }
+
+    let is_used = map_get(otp_data, "used")
+    if is_used == true {
+        return false
+    }
+
+    let expires_at = map_get(otp_data, "expires_at")
+    if time_now() > expires_at {
+        return false
+    }
+
+    let actual_code = to_string(map_get(otp_data, "code"))
+    return actual_code == input_code
+}

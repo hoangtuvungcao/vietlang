@@ -1,0 +1,46 @@
+// ========================================================================
+// Module: std.email
+// Generic Transactional Email Builder & MIME Message Formatter
+// ========================================================================
+
+fn email_new(from_addr: String = "", to_addr: String = "", subject: String = "") {
+    let mut mail = map_new()
+    mail = map_set(mail, "from", from_addr)
+    mail = map_set(mail, "to", to_addr)
+    mail = map_set(mail, "subject", subject)
+    mail = map_set(mail, "body_text", "")
+    mail = map_set(mail, "body_html", "")
+    mail = map_set(mail, "headers", map_new())
+    mail = map_set(mail, "created_at", time_now())
+    return mail
+}
+
+fn email_set_html(mail, html: String) {
+    return map_set(mail, "body_html", html)
+}
+
+fn email_set_text(mail, text: String) {
+    return map_set(mail, "body_text", text)
+}
+
+fn email_add_header(mail, key: String, value: String) {
+    let mut headers = map_get(mail, "headers")
+    headers = map_set(headers, key, value)
+    return map_set(mail, "headers", headers)
+}
+
+fn email_render_simple_card(title: String, message: String, action_text: String = "", action_url: String = "") -> String {
+    let mut html = "<div style='font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden;'>" +
+                   "<div style='background: #1E293B; color: #FFFFFF; padding: 20px; text-align: center;'>" +
+                   "<h2 style='margin: 0;'>" + title + "</h2>" +
+                   "</div>" +
+                   "<div style='padding: 24px; color: #334155; line-height: 1.6;'>" +
+                   "<p>" + message + "</p>"
+    if action_text != "" && action_url != "" {
+        html = html + "<div style='text-align: center; margin: 24px 0;'>" +
+               "<a href='" + action_url + "' style='background: #2563EB; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>" +
+               action_text + "</a></div>"
+    }
+    html = html + "</div></div>"
+    return html
+}

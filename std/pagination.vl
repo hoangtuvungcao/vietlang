@@ -1,0 +1,67 @@
+// ========================================================================
+// Module: std.pagination
+// Enterprise REST API Pagination & Query Cursor Utility
+// ========================================================================
+
+fn pagination_new(page: Int = 1, page_size: Int = 10, total_items: Int = 0) {
+    let mut p = page
+    if p < 1 {
+        p = 1
+    }
+    let mut size = page_size
+    if size < 1 {
+        size = 10
+    }
+    if size > 100 {
+        size = 100
+    }
+
+    let mut total_pages = 1
+    if total_items > 0 {
+        total_pages = total_items / size
+        if (total_items % size) > 0 {
+            total_pages = total_pages + 1
+        }
+    }
+
+    let offset = (p - 1) * size
+    let has_next = p < total_pages
+    let has_prev = p > 1
+
+    let mut meta = map_new()
+    meta = map_set(meta, "page", p)
+    meta = map_set(meta, "page_size", size)
+    meta = map_set(meta, "total_items", total_items)
+    meta = map_set(meta, "total_pages", total_pages)
+    meta = map_set(meta, "offset", offset)
+    meta = map_set(meta, "limit", size)
+    meta = map_set(meta, "has_next", has_next)
+    meta = map_set(meta, "has_prev", has_prev)
+    return meta
+}
+
+fn pagination_slice(items_array, page: Int = 1, page_size: Int = 10) {
+    if items_array == none {
+        let mut empty_res = map_new()
+        empty_res = map_set(empty_res, "items", [])
+        empty_res = map_set(empty_res, "pagination", pagination_new(page, page_size, 0))
+        return empty_res
+    }
+
+    let total = len(items_array)
+    let meta = pagination_new(page, page_size, total)
+    let offset = map_get(meta, "offset")
+    let limit = map_get(meta, "limit")
+
+    let mut sliced = []
+    let mut i = offset
+    while i < total && i < (offset + limit) {
+        sliced = push(sliced, items_array[i])
+        i = i + 1
+    }
+
+    let mut res = map_new()
+    res = map_set(res, "items", sliced)
+    res = map_set(res, "pagination", meta)
+    return res
+}
