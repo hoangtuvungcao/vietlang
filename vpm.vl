@@ -1,22 +1,23 @@
 // ===================================================
-// VietLang Package Manager (vpm)
-// Enterprise Community Package & Toolchain Manager
+// VietLang Package Manager (vpm) v0.3.0
+// Decentralized Git & Local Package Management
 // Written 100% in pure VietLang
 // ===================================================
 
 let args = get_args()
 
 fn show_help() {
-    println("VietLang Package Manager (vpm) v0.2.0")
-    println("======================================")
+    println("VietLang Package Manager (vpm) v0.3.0")
+    println("Decentralized & Serverless Community Package Toolchain")
+    println("=======================================================")
     println("Usage:")
-    println("  vietlang vpm.vl init <name> [api|lib|microservice]  Initialize new package")
-    println("  vietlang vpm.vl install <module-name>               Add & install a module")
+    println("  vietlang vpm.vl init <name> [api|lib|microservice]  Initialize new project")
+    println("  vietlang vpm.vl install <git-url | pkg-name>        Install decentralized Git module")
+    println("  vietlang vpm.vl remove <module-name>                Remove an installed module")
+    println("  vietlang vpm.vl update <module-name>                Update Git module (git pull)")
     println("  vietlang vpm.vl list                                List installed modules")
-    println("  vietlang vpm.vl test                                Run all test suites")
-    println("  vietlang vpm.vl build                               Check & build source files")
-    println("  vietlang vpm.vl publish                             Validate & prepare release package")
     println("  vietlang vpm.vl info                                Show package manifest")
+    println("  vietlang vpm.vl publish                             Validate package for release")
     println("  vietlang vpm.vl help                                Show this help message")
     println("")
 }
@@ -49,11 +50,11 @@ fn vpm_init(pkg_name: String, template_type: String = "api") {
     // Write starter template based on type
     let mut starter_code = ""
     if template_type == "microservice" {
-        starter_code = "import std.http_router\nimport std.config\nimport std.rate_limiter\nimport std.jwt\n\nprintln(\"Starting " + pkg_name + " enterprise microservice...\")\n"
+        starter_code = "import std.http_router\nimport std.config\nimport std.rate_limiter\nimport std.jwt\nimport std.socket\n\nprintln(\"Starting " + pkg_name + " enterprise microservice...\")\n"
     } else if template_type == "lib" {
-        starter_code = "// " + pkg_name + " Library Module\nfn hello_vietlang() -> String {\n    return \"Hello from " + pkg_name + "!\"\n}\n"
+        starter_code = "// " + pkg_name + " Community Library\nfn hello_vietlang() -> String {\n    return \"Hello from " + pkg_name + "!\"\n}\n"
     } else {
-        starter_code = "import std.http_router\nimport std.validator\n\nprintln(\"Starting " + pkg_name + " REST API service on port 8080...\")\n"
+        starter_code = "import std.http_router\nimport std.validator\n\nprintln(\"Starting " + pkg_name + " REST API on port 8080...\")\n"
     }
     file_write(pkg_name + "/src/main.vl", starter_code)
 
@@ -72,9 +73,12 @@ fn vpm_init(pkg_name: String, template_type: String = "api") {
     println("  vietlang src/main.vl")
 }
 
-fn vpm_install(mod_name: String) {
-    if mod_name == "" {
-        println("Error: Module name required. Example: vietlang vpm.vl install auth_module")
+fn vpm_install(source: String) {
+    if source == "" {
+        println("Error: Module name or Git URL required.")
+        println("Examples:")
+        println("  vietlang vpm.vl install https://github.com/user/my_module.git")
+        println("  vietlang vpm.vl install local_auth_module")
         return none
     }
 
@@ -83,6 +87,34 @@ fn vpm_install(mod_name: String) {
         return none
     }
 
+    dir_create("modules")
+
+    let mut pkg_name = source
+    let is_git = source.starts_with("http://") || source.starts_with("https://") || source.starts_with("git@")
+
+    if is_git {
+        let mut clean_url = source
+        if source.ends_with(".git") {
+            clean_url = substring(source, 0, source.len() - 4)
+        }
+        let parts = clean_url.split("/")
+        pkg_name = parts[parts.len() - 1]
+
+        println("Cloning Git repository: " + source + " into modules/" + pkg_name + "...")
+        let clone_cmd = "git clone " + source + " modules/" + pkg_name
+        let res = system_cmd(clone_cmd)
+        if !map_get(res, "success") {
+            println("Git clone error: " + to_string(map_get(res, "stderr")))
+            return none
+        }
+    } else {
+        dir_create("modules/" + pkg_name)
+        dir_create("modules/" + pkg_name + "/src")
+        let stub_content = "// Community module: " + pkg_name + "\nfn info() -> String {\n    return \"Module " + pkg_name + "\"\n}\n"
+        file_write("modules/" + pkg_name + "/src/main.vl", stub_content)
+    }
+
+    // Update vietlang.json
     let raw = file_read("vietlang.json")
     let manifest = json_parse(raw)
     let mut deps = map_new()
@@ -90,16 +122,56 @@ fn vpm_install(mod_name: String) {
         deps = map_get(manifest, "dependencies")
     }
 
-    let new_deps = map_set(deps, mod_name, "latest")
+    let new_deps = map_set(deps, pkg_name, source)
     let updated_manifest = map_set(manifest, "dependencies", new_deps)
     file_write("vietlang.json", json_stringify(updated_manifest, true))
 
-    dir_create("modules")
-    dir_create("modules/" + mod_name)
-    let stub_content = "// Community module: " + mod_name + "\nprintln(\"Module " + mod_name + " loaded.\")\n"
-    file_write("modules/" + mod_name + "/main.vl", stub_content)
+    println("Successfully installed module '" + pkg_name + "'")
+    println("Usage in your code:")
+    println("  import modules." + pkg_name + ".src.main")
+}
 
-    println("Installed and registered module '" + mod_name + "' into modules/" + mod_name + " and vietlang.json")
+fn vpm_remove(mod_name: String) {
+    if mod_name == "" {
+        println("Error: Module name required.")
+        return none
+    }
+
+    if !file_exists("vietlang.json") {
+        println("Error: No vietlang.json manifest found.")
+        return none
+    }
+
+    let rm_cmd = "rm -rf modules/" + mod_name
+    system_cmd(rm_cmd)
+
+    let raw = file_read("vietlang.json")
+    let manifest = json_parse(raw)
+    if map_has(manifest, "dependencies") {
+        let deps = map_get(manifest, "dependencies")
+        let new_deps = map_remove(deps, mod_name)
+        let updated_manifest = map_set(manifest, "dependencies", new_deps)
+        file_write("vietlang.json", json_stringify(updated_manifest, true))
+    }
+
+    println("Removed module '" + mod_name + "' successfully.")
+}
+
+fn vpm_update(mod_name: String) {
+    if mod_name == "" {
+        println("Error: Module name required.")
+        return none
+    }
+
+    let target_dir = "modules/" + mod_name
+    if !file_exists(target_dir + "/.git") {
+        println("Module '" + mod_name + "' is not a Git repository.")
+        return none
+    }
+
+    let pull_cmd = "cd " + target_dir + " && git pull"
+    let res = system_cmd(pull_cmd)
+    println("Updated module '" + mod_name + "':\n" + to_string(map_get(res, "stdout")))
 }
 
 fn vpm_list() {
@@ -132,20 +204,21 @@ fn vpm_publish() {
     let src_content = file_read("src/main.vl")
     let checksum = sha256(src_content)
 
-    println("Publishing package to VietLang Community Registry:")
-    println("  Package Name: " + to_string(pkg_name))
-    println("  Version:      " + to_string(version))
-    println("  SHA256:       " + checksum)
-    println("  Status:       Ready for community release (vpm publish validated)")
+    println("Package Release Validation:")
+    println("  Package: " + to_string(pkg_name) + " v" + to_string(version))
+    println("  SHA256:  " + checksum)
+    println("  To share with the community:")
+    println("    1. Push your code to GitHub/GitLab: git push origin main")
+    println("    2. Anyone can install directly via: vietlang vpm.vl install <your-git-url>")
 }
 
 fn vpm_info() {
     if !file_exists("vietlang.json") {
-        println("Error: No vietlang.json manifest found in current directory.")
+        println("Error: No vietlang.json manifest found.")
         return none
     }
     let content = file_read("vietlang.json")
-    println("Current Package Manifest (vietlang.json):")
+    println("Package Manifest (vietlang.json):")
     println(content)
 }
 
@@ -165,11 +238,23 @@ if args.len() < 3 {
         }
         vpm_init(pkg_name, template_type)
     } else if command == "install" {
+        let mut source = ""
+        if args.len() >= 4 {
+            source = args[3]
+        }
+        vpm_install(source)
+    } else if command == "remove" {
         let mut mod_name = ""
         if args.len() >= 4 {
             mod_name = args[3]
         }
-        vpm_install(mod_name)
+        vpm_remove(mod_name)
+    } else if command == "update" {
+        let mut mod_name = ""
+        if args.len() >= 4 {
+            mod_name = args[3]
+        }
+        vpm_update(mod_name)
     } else if command == "list" {
         vpm_list()
     } else if command == "publish" {

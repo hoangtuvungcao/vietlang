@@ -450,6 +450,170 @@ pub fn builtin_uuid(_args: &[Value], _line: usize, _col: usize) -> VietResult<Va
     )))
 }
 
+/// RFC 3174 SHA-1 Digest implementation
+fn sha1_digest(data: &[u8]) -> [u8; 20] {
+    let mut h0: u32 = 0x67452301;
+    let mut h1: u32 = 0xEFCDAB89;
+    let mut h2: u32 = 0x98BADCFE;
+    let mut h3: u32 = 0x10325476;
+    let mut h4: u32 = 0xC3D2E1F0;
+
+    let ml = (data.len() as u64) * 8;
+    let mut msg = data.to_vec();
+    msg.push(0x80);
+    while (msg.len() * 8) % 512 != 448 {
+        msg.push(0);
+    }
+    msg.extend_from_slice(&ml.to_be_bytes());
+
+    for chunk in msg.chunks_exact(64) {
+        let mut w = [0u32; 80];
+        for i in 0..16 {
+            w[i] = u32::from_be_bytes([chunk[i*4], chunk[i*4+1], chunk[i*4+2], chunk[i*4+3]]);
+        }
+        for i in 16..80 {
+            w[i] = (w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16]).rotate_left(1);
+        }
+
+        let mut a = h0;
+        let mut b = h1;
+        let mut c = h2;
+        let mut d = h3;
+        let mut e = h4;
+
+        for i in 0..80 {
+            let (f, k) = match i {
+                0..=19 => ((b & c) | ((!b) & d), 0x5A827999),
+                20..=39 => (b ^ c ^ d, 0x6ED9EBA1),
+                40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1BBCDC),
+                _ => (b ^ c ^ d, 0xCA62C1D6),
+            };
+            let temp = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(w[i]);
+            e = d;
+            d = c;
+            c = b.rotate_left(30);
+            b = a;
+            a = temp;
+        }
+
+        h0 = h0.wrapping_add(a);
+        h1 = h1.wrapping_add(b);
+        h2 = h2.wrapping_add(c);
+        h3 = h3.wrapping_add(d);
+        h4 = h4.wrapping_add(e);
+    }
+
+    let mut out = [0u8; 20];
+    out[0..4].copy_from_slice(&h0.to_be_bytes());
+    out[4..8].copy_from_slice(&h1.to_be_bytes());
+    out[8..12].copy_from_slice(&h2.to_be_bytes());
+    out[12..16].copy_from_slice(&h3.to_be_bytes());
+    out[16..20].copy_from_slice(&h4.to_be_bytes());
+    out
+}
+
+fn base64_encode_bytes(bytes: &[u8]) -> String {
+    const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+
+        out.push(TABLE[(b0 >> 2) as usize] as char);
+        out.push(TABLE[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(TABLE[(((b1 & 0x0f) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[(b2 & 0x3f) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
+}
+
+pub fn builtin_sha1(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("sha1() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.as_bytes(), _ => return Err(VietError::type_error("sha1() expects string".into(), line, col)) };
+    let digest = sha1_digest(s);
+    let hex: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
+    Ok(Value::String(hex))
+}
+
+pub fn builtin_ws_accept_key(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("ws_accept_key() takes 1 argument (sec_websocket_key)".into(), line, col));
+    }
+    let key = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("ws_accept_key() expects string".into(), line, col)) };
+    let concat = format!("{}258EAFA5-E914-47DA-95CA-C5AB0DC85B11", key);
+    let digest = sha1_digest(concat.as_bytes());
+    let encoded = base64_encode_bytes(&digest);
+    Ok(Value::String(encoded))
+}
+
+pub fn builtin_tcp_send(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 3 || args.len() > 4 {
+        return Err(VietError::runtime_error("tcp_send() takes 3-4 arguments (host, port, payload, [timeout_ms])".into(), line, col));
+    }
+    let host = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("tcp_send() host must be String".into(), line, col)) };
+    let port = match &args[1] { Value::Int(n) => *n as u16, _ => return Err(VietError::type_error("tcp_send() port must be Int".into(), line, col)) };
+    let payload = match &args[2] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("tcp_send() payload must be String".into(), line, col)) };
+    let timeout_ms = if args.len() == 4 {
+        match &args[3] { Value::Int(n) => *n as u64, _ => 3000 }
+    } else {
+        3000
+    };
+
+    let addr = format!("{}:{}", host, port);
+    let timeout = std::time::Duration::from_millis(timeout_ms);
+    use std::net::ToSocketAddrs;
+    if let Ok(mut addrs) = addr.to_socket_addrs() {
+        if let Some(sock_addr) = addrs.next() {
+            match std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
+                Ok(mut stream) => {
+                    let _ = stream.set_read_timeout(Some(timeout));
+                    let _ = stream.write_all(payload.as_bytes());
+                    let _ = stream.flush();
+                    let mut resp = String::new();
+                    let mut buf = [0u8; 4096];
+                    if let Ok(n) = stream.read(&mut buf) {
+                        resp = String::from_utf8_lossy(&buf[..n]).to_string();
+                    }
+                    return Ok(Value::String(resp));
+                }
+                Err(e) => return Err(VietError::runtime_error(format!("TCP connection error: {}", e), line, col)),
+            }
+        }
+    }
+    Err(VietError::runtime_error(format!("Cannot resolve host '{}'", host), line, col))
+}
+
+pub fn builtin_udp_send(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 3 {
+        return Err(VietError::runtime_error("udp_send() takes 3 arguments (host, port, payload)".into(), line, col));
+    }
+    let host = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("udp_send() host must be String".into(), line, col)) };
+    let port = match &args[1] { Value::Int(n) => *n as u16, _ => return Err(VietError::type_error("udp_send() port must be Int".into(), line, col)) };
+    let payload = match &args[2] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("udp_send() payload must be String".into(), line, col)) };
+
+    match std::net::UdpSocket::bind("0.0.0.0:0") {
+        Ok(socket) => {
+            let addr = format!("{}:{}", host, port);
+            match socket.send_to(payload.as_bytes(), addr) {
+                Ok(_) => Ok(Value::Bool(true)),
+                Err(e) => Err(VietError::runtime_error(format!("UDP send error: {}", e), line, col)),
+            }
+        }
+        Err(e) => Err(VietError::runtime_error(format!("UDP bind error: {}", e), line, col)),
+    }
+}
+
 pub fn builtin_base64_encode(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.len() != 1 {
         return Err(VietError::runtime_error("base64_encode() takes 1 argument".into(), line, col));
@@ -1126,5 +1290,35 @@ pub fn builtin_str_split_lines(args: &[Value], line: usize, col: usize) -> VietR
     let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("str_split_lines() expects String".into(), line, col)) };
     let lines: Vec<Value> = s.lines().map(|l| Value::String(l.to_string())).collect();
     Ok(Value::Array(lines))
+}
+
+pub fn builtin_system_cmd(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("system_cmd() takes 1 argument (command)".into(), line, col));
+    }
+    let cmd_str = match &args[0] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("system_cmd() expects a string".into(), line, col)),
+    };
+    use std::process::Command;
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&cmd_str)
+        .output();
+
+    match output {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            let status = out.status.code().unwrap_or(-1);
+            let mut res = HashMap::new();
+            res.insert("exit_code".to_string(), Value::Int(status as i64));
+            res.insert("stdout".to_string(), Value::String(stdout));
+            res.insert("stderr".to_string(), Value::String(stderr));
+            res.insert("success".to_string(), Value::Bool(out.status.success()));
+            Ok(Value::Struct { type_name: "CommandResult".to_string(), fields: res })
+        }
+        Err(e) => Err(VietError::runtime_error(format!("Failed to execute command '{}': {}", cmd_str, e), line, col)),
+    }
 }
 

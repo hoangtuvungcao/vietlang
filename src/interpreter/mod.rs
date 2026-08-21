@@ -81,6 +81,8 @@ impl Interpreter {
 
             // std.crypto
             ("sha256", Some(1)),
+            ("sha1", Some(1)),
+            ("ws_accept_key", Some(1)),
             ("uuid", Some(0)),
             ("base64_encode", Some(1)),
             ("random_int", Some(2)),
@@ -138,7 +140,10 @@ impl Interpreter {
             ("sleep_ms", Some(1)),
             ("time_now_us", Some(0)),
             ("tcp_ping", None),
+            ("tcp_send", None),
+            ("udp_send", Some(3)),
             ("str_split_lines", Some(1)),
+            ("system_cmd", Some(1)),
         ];
 
         for (name, arity) in builtins {
@@ -1189,6 +1194,8 @@ impl Interpreter {
 
             // std.crypto
             "sha256" => crate::stdlib::builtin_hash_sha256(args, span.line, span.column),
+            "sha1" => crate::stdlib::builtin_sha1(args, span.line, span.column),
+            "ws_accept_key" => crate::stdlib::builtin_ws_accept_key(args, span.line, span.column),
             "uuid" => crate::stdlib::builtin_uuid(args, span.line, span.column),
             "base64_encode" => crate::stdlib::builtin_base64_encode(args, span.line, span.column),
             "random_int" => crate::stdlib::builtin_random_int(args, span.line, span.column),
@@ -1252,7 +1259,10 @@ impl Interpreter {
             "sleep_ms" => crate::stdlib::builtin_sleep_ms(args, span.line, span.column),
             "time_now_us" => crate::stdlib::builtin_time_now_us(args, span.line, span.column),
             "tcp_ping" => crate::stdlib::builtin_tcp_ping(args, span.line, span.column),
+            "tcp_send" => crate::stdlib::builtin_tcp_send(args, span.line, span.column),
+            "udp_send" => crate::stdlib::builtin_udp_send(args, span.line, span.column),
             "str_split_lines" => crate::stdlib::builtin_str_split_lines(args, span.line, span.column),
+            "system_cmd" => crate::stdlib::builtin_system_cmd(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

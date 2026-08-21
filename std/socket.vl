@@ -1,0 +1,16 @@
+// ===================================================
+// VietLang Low-Level Socket Library (std.socket)
+// TCP Client/Server and UDP Packet Communication
+// ===================================================
+
+fn socket_tcp_send(host: String, port: Int, message: String, timeout_ms: Int = 3000) -> String {
+    return tcp_send(host, port, message, timeout_ms)
+}
+
+fn socket_udp_send(host: String, port: Int, payload: String) -> Bool {
+    return udp_send(host, port, payload)
+}
+
+fn socket_ping(host: String, port: Int, timeout_ms: Int = 1000) -> Bool {
+    return tcp_ping(host, port, timeout_ms)
+}

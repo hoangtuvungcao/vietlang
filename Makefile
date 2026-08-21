@@ -52,6 +52,8 @@ demo: build
 	./target/release/vietlang examples/community_modules_demo.vl
 	@echo "\n--- enterprise_microservice.vl ---"
 	./target/release/vietlang examples/enterprise_microservice.vl
+	@echo "\n--- realtime_websocket_server.vl ---"
+	./target/release/vietlang examples/realtime_websocket_server.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"

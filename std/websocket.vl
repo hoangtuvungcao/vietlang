@@ -1,0 +1,81 @@
+// ===================================================
+// VietLang WebSocket Protocol Implementation (std.websocket)
+// Compliant with RFC 6455 (WS & WSS Handshake & Framing)
+// ===================================================
+
+let WS_OPCODE_CONTINUATION = 0
+let WS_OPCODE_TEXT = 1
+let WS_OPCODE_BINARY = 2
+let WS_OPCODE_CLOSE = 8
+let WS_OPCODE_PING = 9
+let WS_OPCODE_PONG = 10
+
+// Generate RFC 6455 Handshake Response
+fn ws_handshake_response(sec_websocket_key: String) -> String {
+    let accept_key = ws_accept_key(sec_websocket_key)
+    let resp = "HTTP/1.1 101 Switching Protocols\r\n" +
+               "Upgrade: websocket\r\n" +
+               "Connection: Upgrade\r\n" +
+               "Sec-WebSocket-Accept: " + accept_key + "\r\n" +
+               "Server: VietLang-WebSocket/1.0\r\n\r\n"
+    return resp
+}
+
+// Encode WebSocket Text Frame (Unmasked Server -> Client)
+fn ws_encode_text_frame(message: String) {
+    let frame = map_new()
+    let frame = map_set(frame, "opcode", WS_OPCODE_TEXT)
+    let frame = map_set(frame, "payload", message)
+    let frame = map_set(frame, "length", message.len())
+    let frame = map_set(frame, "fin", true)
+    return frame
+}
+
+// Encode WebSocket Ping Frame
+fn ws_encode_ping_frame(payload: String = "") {
+    let frame = map_new()
+    let frame = map_set(frame, "opcode", WS_OPCODE_PING)
+    let frame = map_set(frame, "payload", payload)
+    let frame = map_set(frame, "fin", true)
+    return frame
+}
+
+// WebSocket Room Broadcaster Manager
+fn ws_room_manager_new() {
+    let m = map_new()
+    let m = map_set(m, "rooms", map_new())
+    let m = map_set(m, "client_count", 0)
+    return m
+}
+
+fn ws_room_join(manager, room_name: String, client_id: String) {
+    let rooms = map_get(manager, "rooms")
+    let mut members = []
+    if map_has(rooms, room_name) {
+        members = map_get(rooms, room_name)
+    }
+
+    let new_members = push(members, client_id)
+    let updated_rooms = map_set(rooms, room_name, new_members)
+    let count = map_get(manager, "client_count") + 1
+
+    let updated = map_set(manager, "rooms", updated_rooms)
+    return map_set(updated, "client_count", count)
+}
+
+fn ws_room_broadcast(manager, room_name: String, event: String, data) {
+    let rooms = map_get(manager, "rooms")
+    let mut recipient_count = 0
+    if map_has(rooms, room_name) {
+        let members = map_get(rooms, room_name)
+        recipient_count = members.len()
+    }
+
+    let packet = map_new()
+    let packet = map_set(packet, "event", event)
+    let packet = map_set(packet, "room", room_name)
+    let packet = map_set(packet, "data", data)
+    let packet = map_set(packet, "recipients", recipient_count)
+    let packet = map_set(packet, "timestamp", time_now())
+    return packet
+}

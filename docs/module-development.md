@@ -1,33 +1,50 @@
-# VietLang Community Module Development & Distribution Guide
+# VietLang Decentralized Community Module Guide
 
-Learn how to build, test, package, and distribute reusable libraries and modules in the VietLang ecosystem.
+Learn how to develop, test, install, and distribute reusable modules in the VietLang ecosystem using decentralized Git repositories. No central server or account is required.
 
 ---
 
-## 1. Package Structure
+## 1. Decentralized Package Architecture
 
-Every standard VietLang package follows this directory layout:
+VietLang uses a **serverless, decentralized package model** (similar to Go and Deno):
+- Any Git repository (GitHub, GitLab, self-hosted Gitea) is directly installable as a package.
+- Packages are automatically cloned into your local `modules/` directory.
+- `vpm.vl` manages dependencies directly in `vietlang.json`.
+
+---
+
+## 2. Package Directory Layout
+
+Every VietLang package follows this standard layout:
 
 ```
-my_module/
+my_awesome_module/
 ├── vietlang.json         # Package manifest
 ├── src/
-│   ├── main.vl           # Primary entry point
-│   └── lib.vl            # Internal library logic
+│   ├── main.vl           # Primary public API entry point
+│   └── helper.vl         # Internal implementation logic
 ├── tests/
 │   └── main_test.vl      # Test suite
-└── README.md             # Documentation
+└── README.md             # Documentation & API reference
 ```
 
 ---
 
-## 2. Package Manifest (`vietlang.json`)
+## 3. Creating a Community Module
 
+Use `vpm.vl` with the `lib` template:
+
+```bash
+vietlang vpm.vl init vietlang_redis lib
+```
+
+This creates `vietlang.json`:
 ```json
 {
-  "name": "my_module",
+  "name": "vietlang_redis",
   "version": "0.1.0",
-  "description": "Custom backend utility module for VietLang",
+  "type": "lib",
+  "description": "High-performance Redis client for VietLang",
   "main": "src/main.vl",
   "dependencies": {},
   "license": "MIT"
@@ -36,45 +53,50 @@ my_module/
 
 ---
 
-## 3. Creating a Module
-
-Use the VietLang package manager (`vpm.vl`):
-
-```bash
-vietlang vpm.vl init my_module
-```
-
----
-
-## 4. Writing Reusable Functions
+## 4. Writing Public APIs and Logic
 
 In `src/main.vl`:
 
 ```rust
-fn format_currency(amount: Float, symbol: String = "VND") -> String {
-    return to_string(amount) + " " + symbol
+import std.socket
+
+fn redis_connect(host: String = "127.0.0.1", port: Int = 6379) {
+    let client = map_new()
+    let client = map_set(client, "host", host)
+    let client = map_set(client, "port", port)
+    return client
 }
 
-fn calculate_discount(price: Float, percent: Float) -> Float {
-    return price * (1.0 - percent / 100.0)
+fn redis_set(client, key: String, val: String) -> String {
+    let host = map_get(client, "host")
+    let port = map_get(client, "port")
+    let cmd = "*3\r\n$3\r\nSET\r\n$" + to_string(key.len()) + "\r\n" + key + "\r\n$" + to_string(val.len()) + "\r\n" + val + "\r\n"
+    return socket_tcp_send(host, port, cmd)
+}
+
+fn redis_get(client, key: String) -> String {
+    let host = map_get(client, "host")
+    let port = map_get(client, "port")
+    let cmd = "*2\r\n$3\r\nGET\r\n$" + to_string(key.len()) + "\r\n" + key + "\r\n"
+    return socket_tcp_send(host, port, cmd)
 }
 ```
 
 ---
 
-## 5. Testing Your Module
+## 5. Testing with `std.test`
 
 In `tests/main_test.vl`:
 
 ```rust
 import std.test
-import my_module
+import src.main
 
-suite("Currency Module Tests")
+suite("Redis Client Test Suite")
 
-test("Format currency with default symbol", fn() {
-    let result = format_currency(50000.0)
-    assert_eq(result, "50000 VND")
+test("Redis Client Config", fn() {
+    let client = redis_connect("127.0.0.1", 6379)
+    assert_eq(map_get(client, "port"), 6379, "Port mismatch")
 })
 
 test_summary()
@@ -87,11 +109,50 @@ vietlang tests/main_test.vl
 
 ---
 
-## 6. Using Your Module in Other Projects
+## 6. Publishing Your Module to the Community
 
-Place the module folder into the `modules/` directory of any VietLang project:
-
-```rust
-import modules.my_module.src.main
+1. Initialize Git and commit your files:
+```bash
+git init
+git add -A
+git commit -m "feat: initial release v0.1.0"
 ```
-Or import directly if installed via `vpm`.
+
+2. Validate package with `vpm`:
+```bash
+vietlang vpm.vl publish
+```
+
+3. Push to GitHub:
+```bash
+git remote add origin https://github.com/yourusername/vietlang_redis.git
+git push -u origin main
+```
+
+---
+
+## 7. Installing and Using Community Modules in Projects
+
+In any other VietLang project:
+
+### Install via Git URL:
+```bash
+vietlang vpm.vl install https://github.com/yourusername/vietlang_redis.git
+```
+
+### Import into your backend service:
+```rust
+import modules.vietlang_redis.src.main
+
+let r = redis_connect("127.0.0.1", 6379)
+println("Redis client ready")
+```
+
+### Update or Remove:
+```bash
+# Update module to latest git commit
+vietlang vpm.vl update vietlang_redis
+
+# Remove module
+vietlang vpm.vl remove vietlang_redis
+```
