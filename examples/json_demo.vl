@@ -11,7 +11,7 @@ println("--- Creating JSON ---\n")
 let user = map_new()
 let user = map_set(user, "name", "Van Trong")
 let user = map_set(user, "age", 25)
-let user = map_set(user, "email", "trong@vietlang.dev")
+let user = map_set(user, "email", "trong@example.com")
 let user = map_set(user, "active", true)
 let user = map_set(user, "skills", ["Rust", "Go", "VietLang"])
 
@@ -22,59 +22,78 @@ println(json_output)
 let json_compact = json_stringify(user, false)
 println("\nCompact: " + json_compact)
 
-// --- Parse JSON ---
-println("\n--- Parsing JSON ---\n")
+// Pretty print
+let pretty = json_stringify(user, true)
+println("\nPretty printed JSON:")
+println(pretty)
 
-let raw = "{\"name\": \"VietLang\", \"version\": \"0.1.0\", \"backend\": true}"
-let parsed = json_parse(raw)
-println("Parsed: " + to_string(parsed))
-println("Name: " + map_get(parsed, "name"))
-println("Version: " + map_get(parsed, "version"))
+// Parse JSON back
+let parsed = json_parse(pretty)
+println("\nParsed back name: " + map_get(parsed, "name"))
+println("Parsed back email: " + map_get(parsed, "email"))
 
-// --- Parse array ---
-let arr_json = "[1, 2, 3, 4, 5]"
-let arr = json_parse(arr_json)
-println("\nParsed array: " + to_string(arr))
-
-// --- Nested JSON ---
-let nested = "{\"user\": {\"name\": \"Trong\", \"address\": {\"city\": \"HCMC\"}}}"
-let nested_parsed = json_parse(nested)
-println("\nNested: " + to_string(nested_parsed))
-
-// --- API Response pattern ---
-println("\n--- API Response Pattern ---\n")
-
-fn api_response(status: Int, data, message: String) {
-    let resp = map_new()
-    let resp = map_set(resp, "status", status)
-    let resp = map_set(resp, "message", message)
-    let resp = map_set(resp, "data", data)
-    let resp = map_set(resp, "timestamp", time_now())
-    return json_stringify(resp, true)
-}
-
-let users_data = [
-    map_set(map_set(map_new(), "id", 1), "name", "Trong"),
-    map_set(map_set(map_new(), "id", 2), "name", "Minh"),
-    map_set(map_set(map_new(), "id", 3), "name", "Lan")
-]
-
-println("Success Response:")
-println(api_response(200, users_data, "OK"))
-
-println("\nError Response:")
-println(api_response(404, none, "User not found"))
-
-// --- Config file pattern ---
-println("\n--- Config File Pattern ---\n")
-
+// Complex nested structure
 let config = map_new()
-let config = map_set(config, "server_host", "0.0.0.0")
-let config = map_set(config, "server_port", 8080)
-let config = map_set(config, "db_url", "postgres://localhost:5432/mydb")
-let config = map_set(config, "db_pool_size", 20)
-let config = map_set(config, "log_level", "info")
-let config = map_set(config, "cors_origins", ["http://localhost:3000", "https://vietlang.dev"])
+let config = map_set(config, "app_name", "VietLang Server")
+let config = map_set(config, "port", 8080)
+let config = map_set(config, "debug", false)
+
+let db = map_new()
+let db = map_set(db, "host", "localhost")
+let db = map_set(db, "port", 5432)
+let db = map_set(db, "database", "production_db")
+let db = map_set(db, "pool_size", 20)
+
+let config = map_set(config, "database", db)
+
+let roles = ["admin", "moderator", "user"]
+let config = map_set(config, "roles", roles)
+
+let features = map_new()
+let features = map_set(features, "auth_v2", true)
+let features = map_set(features, "rate_limit", true)
+let features = map_set(features, "websockets", false)
+
+let config = map_set(config, "features", features)
+
+println("\n--- Complex Configuration ---")
+println(json_stringify(config, true))
+
+// JSON with arrays of objects
+let users = []
+let u1 = map_new()
+let u1 = map_set(u1, "id", 1)
+let u1 = map_set(u1, "name", "Trong")
+let u1 = map_set(u1, "role", "admin")
+
+let u2 = map_new()
+let u2 = map_set(u2, "id", 2)
+let u2 = map_set(u2, "name", "Minh")
+let u2 = map_set(u2, "role", "user")
+
+let u3 = map_new()
+let u3 = map_set(u3, "id", 3)
+let u3 = map_set(u3, "name", "Lan")
+let u3 = map_set(u3, "role", "user")
+
+let users = push(users, u1)
+let users = push(users, u2)
+let users = push(users, u3)
+
+let payload = map_new()
+let payload = map_set(payload, "total", 3)
+let payload = map_set(payload, "users", users)
+
+println("\n--- Users List Payload ---")
+println(json_stringify(payload, true))
+
+// Round-trip test
+let serialized = json_stringify(payload)
+let deserialized = json_parse(serialized)
+println("\nRound-trip total: " + to_string(map_get(deserialized, "total")))
+
+// CORS origins config
+let config = map_set(config, "cors_origins", ["http://localhost:3000", "https://api.example.com"])
 let config = map_set(config, "rate_limit_per_minute", 100)
 let config = map_set(config, "jwt_secret", sha256("my-secret-key"))
 

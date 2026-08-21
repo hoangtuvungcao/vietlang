@@ -73,7 +73,7 @@ test("Validator schema validation", fn() {
     let v = validator_add_rule(v, "email", "email")
     let v = validator_add_rule(v, "age", "min_val", 18)
 
-    let valid_data = map_set(map_set(map_new(), "email", "admin@vietlang.dev"), "age", 25)
+    let valid_data = map_set(map_set(map_new(), "email", "admin@example.com"), "age", 25)
     let res1 = validate(v, valid_data)
     assert_true(map_get(res1, "is_valid"), "Valid data should pass validation")
 

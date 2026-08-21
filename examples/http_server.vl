@@ -25,9 +25,9 @@ fn rate_limit_check(req) {
 // --- Route Handlers ---
 fn handle_users_list() {
     let users = [
-        map_set(map_set(map_new(), "name", "Trong"), "email", "trong@vietlang.dev"),
-        map_set(map_set(map_new(), "name", "Minh"), "email", "minh@vietlang.dev"),
-        map_set(map_set(map_new(), "name", "Lan"), "email", "lan@vietlang.dev")
+        map_set(map_set(map_new(), "name", "Trong"), "email", "trong@example.com"),
+        map_set(map_set(map_new(), "name", "Minh"), "email", "minh@example.com"),
+        map_set(map_set(map_new(), "name", "Lan"), "email", "lan@example.com")
     ]
     return json_stringify(users, true)
 }
@@ -36,7 +36,7 @@ fn handle_user_by_id(id: Int) {
     let user = map_new()
     let user = map_set(user, "id", id)
     let user = map_set(user, "name", "Trong")
-    let user = map_set(user, "email", "trong@vietlang.dev")
+    let user = map_set(user, "email", "trong@example.com")
     let user = map_set(user, "role", "admin")
     return json_stringify(user, true)
 }
@@ -50,7 +50,7 @@ fn handle_health() {
 }
 
 // --- Demo: show what the server would respond ---
-println(" Route Handlers Demo:\n")
+println("--- Route Handlers Demo ---\n")
 
 println("GET /health")
 println(handle_health())

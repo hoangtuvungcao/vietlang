@@ -18,7 +18,7 @@ println("Table: " + to_string(users_query))
 // Execute raw SQL
 println("\n--- Raw SQL Queries ---\n")
 db_query("CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(100), email VARCHAR(255), active BOOLEAN DEFAULT true)")
-db_query("INSERT INTO users (name, email) VALUES ('Trong', 'trong@vietlang.dev')")
+db_query("INSERT INTO users (name, email) VALUES ('Trong', 'trong@example.com')")
 db_query("INSERT INTO users (name, email) VALUES ('Minh', 'minh@example.com')")
 db_query("SELECT * FROM users WHERE active = true ORDER BY name LIMIT 10")
 db_query("UPDATE users SET active = false WHERE id = 2")
@@ -51,7 +51,7 @@ struct Order {
 
 // Simulate fetching data
 let users = [
-    User { id: 1, name: "Trong", email: "trong@vietlang.dev", active: true },
+    User { id: 1, name: "Trong", email: "trong@example.com", active: true },
     User { id: 2, name: "Minh", email: "minh@example.com", active: true },
     User { id: 3, name: "Lan", email: "lan@example.com", active: false }
 ]

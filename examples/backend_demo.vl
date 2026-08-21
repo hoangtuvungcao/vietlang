@@ -58,7 +58,7 @@ println("VietLang Backend Demo")
 println("========================\n")
 
 // Validate and create user
-let email = "trong@vietlang.dev"
+let email = "trong@example.com"
 if validate_email(email) {
     let user = create_user("Van Trong", email)
     println("User created: " + to_string(user))

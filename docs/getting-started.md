@@ -138,7 +138,7 @@ struct User {
     age: Int
 }
 
-let user = User { name: "Trong", email: "trong@vietlang.dev", age: 25 }
+let user = User { name: "Trong", email: "trong@example.com", age: 25 }
 println("User: " + user.name + " (" + to_string(user.age) + ")")
 ```
 
