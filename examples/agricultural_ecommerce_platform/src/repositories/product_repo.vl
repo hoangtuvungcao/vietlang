@@ -1,0 +1,50 @@
+// ========================================================================
+// Module: repositories/product_repo.vl
+// Data Access Object for Products, Categories, and Vouchers in SQLite
+// ========================================================================
+
+import std.db_sqlite
+
+fn product_repo_get_all(db, category_id: Int = 0, query: String = "", max_price: Int = 0) {
+    let q_lower = query.to_lowercase()
+    return sqlite_query(db, "products", fn(item) {
+        if category_id > 0 && map_get(item, "category_id") != category_id {
+            return false
+        }
+        if max_price > 0 && map_get(item, "price") > max_price {
+            return false
+        }
+        if q_lower != "" {
+            let name_lower = to_string(map_get(item, "name")).to_lowercase()
+            let origin_lower = to_string(map_get(item, "origin")).to_lowercase()
+            if !name_lower.contains(q_lower) && !origin_lower.contains(q_lower) {
+                return false
+            }
+        }
+        return true
+    })
+}
+
+fn product_repo_get_by_id(db, id: Int) {
+    let list = sqlite_query(db, "products", fn(p) {
+        return map_get(p, "id") == id
+    })
+    if list.len() > 0 {
+        return list[0]
+    }
+    return map_new()
+}
+
+fn product_repo_get_categories(db) {
+    return sqlite_query(db, "categories")
+}
+
+fn product_repo_get_voucher(db, code: String) {
+    let list = sqlite_query(db, "vouchers", fn(v) {
+        return map_get(v, "code") == code && map_get(v, "is_active") == true
+    })
+    if list.len() > 0 {
+        return list[0]
+    }
+    return map_new()
+}

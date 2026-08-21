@@ -1,0 +1,30 @@
+// ========================================================================
+// Module: repositories/user_repo.vl
+// Data Access Object for Users in SQLite
+// ========================================================================
+
+import std.db_sqlite
+
+fn user_repo_find_by_email(db, email: String) {
+    let list = sqlite_query(db, "users", fn(u) {
+        return map_get(u, "email") == email
+    })
+    if list.len() > 0 {
+        return list[0]
+    }
+    return map_new()
+}
+
+fn user_repo_find_by_id(db, id: Int) {
+    let list = sqlite_query(db, "users", fn(u) {
+        return map_get(u, "id") == id
+    })
+    if list.len() > 0 {
+        return list[0]
+    }
+    return map_new()
+}
+
+fn user_repo_create(db, user_map) {
+    return sqlite_insert(db, "users", user_map)
+}

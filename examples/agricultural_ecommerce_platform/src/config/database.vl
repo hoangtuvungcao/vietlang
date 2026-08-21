@@ -1,0 +1,58 @@
+// ========================================================================
+// Module: config/database.vl
+// SQLite Database Configuration, Schema Migration, and Seed Data
+// ========================================================================
+
+import std.db_sqlite
+import std.security
+
+fn db_init_and_migrate() {
+    let mut db = sqlite_open(":memory:")
+
+    // 1. Create Tables
+    db = sqlite_exec(db, "CREATE TABLE users (id INT, email TEXT, password_hash TEXT, name TEXT, role TEXT, created_at INT)")
+    db = sqlite_exec(db, "CREATE TABLE categories (id INT, code TEXT, name TEXT, icon TEXT)")
+    db = sqlite_exec(db, "CREATE TABLE products (id INT, category_id INT, name TEXT, price INT, unit TEXT, stock INT, origin TEXT, image TEXT, description TEXT)")
+    db = sqlite_exec(db, "CREATE TABLE vouchers (code TEXT, discount_type TEXT, discount_val INT, min_order INT, is_active BOOL)")
+    db = sqlite_exec(db, "CREATE TABLE orders (id INT, user_id INT, customer_name TEXT, phone TEXT, address TEXT, subtotal INT, discount INT, total INT, status TEXT, created_at INT)")
+    db = sqlite_exec(db, "CREATE TABLE order_items (order_id INT, product_id INT, product_name TEXT, unit_price INT, quantity INT, subtotal INT)")
+
+    // 2. Seed Admin & Customer Users
+    let u1 = map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 1), "email", "admin@nongsanviet.vn"), "password_hash", security_hash_password("Admin@123")), "name", "Quan Tri Vien"), "role", "ADMIN"), "created_at", time_now())
+    let u2 = map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 2), "email", "khachhang@gmail.com"), "password_hash", security_hash_password("Khach@123")), "name", "Nguyen Van An"), "role", "CUSTOMER"), "created_at", time_now())
+    db = sqlite_insert(db, "users", u1)
+    db = sqlite_insert(db, "users", u2)
+
+    // 3. Seed Categories
+    let c1 = map_set(map_set(map_set(map_set(map_new(), "id", 1), "code", "GAO_DAC_SAN"), "name", "Gao & Ngu Coc Huu Co"), "icon", "rice")
+    let c2 = map_set(map_set(map_set(map_set(map_new(), "id", 2), "code", "TRAI_CAY"), "name", "Trai Cay Dac San VietGAP"), "icon", "fruit")
+    let c3 = map_set(map_set(map_set(map_set(map_new(), "id", 3), "code", "CA_PHE_TRA"), "name", "Ca Phe & Tra Cao Cap"), "icon", "coffee")
+    let c4 = map_set(map_set(map_set(map_set(map_new(), "id", 4), "code", "RAU_CU_QUA"), "name", "Rau Cu Sach Da Lat"), "icon", "vegetable")
+    db = sqlite_insert(db, "categories", c1)
+    db = sqlite_insert(db, "categories", c2)
+    db = sqlite_insert(db, "categories", c3)
+    db = sqlite_insert(db, "categories", c4)
+
+    // 4. Seed Products
+    let p1 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 101), "category_id", 1), "name", "Gao ST25 Soc Trang Thuong Hang"), "price", 38000), "unit", "kg"), "stock", 500), "origin", "Soc Trang"), "image", "gao_st25.jpg"), "description", "Gao dat giai nhat the gioi, hat dai, com mem thom huong la dua tu nhien.")
+    let p2 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 102), "category_id", 2), "name", "Xoai Cat Hoa Loc Tien Giang"), "price", 85000), "unit", "kg"), "stock", 150), "origin", "Tien Giang"), "image", "xoai_hoa_loc.jpg"), "description", "Xoai cat chin vang thom ngot dam da, chuan VietGAP xuat khau.")
+    let p3 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 103), "category_id", 2), "name", "Sau Rieng Ri6 Ben Tre"), "price", 140000), "unit", "kg"), "stock", 90), "origin", "Ben Tre"), "image", "sau_rieng_ri6.jpg"), "description", "Com vang hat lep, beo ngay dac trung mien Tay Nam Bo.")
+    let p4 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 104), "category_id", 3), "name", "Ca Phe Robusta Buon Ma Thuot"), "price", 220000), "unit", "tui_500g"), "stock", 300), "origin", "Dak Lak"), "image", "caphe_robusta.jpg"), "description", "Ca phe rang moc 100% nguyen chat, huong vi dam da tinh hoa Tay Nguyen.")
+    let p5 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 105), "category_id", 3), "name", "Tra O Long Cau Dat Da Lat"), "price", 195000), "unit", "hop_250g"), "stock", 200), "origin", "Da Lat"), "image", "tra_olong.jpg"), "description", "Bup tra tuoi thu hai tren do cao 1650m, hau ngot thanh tao.")
+    let p6 = map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", 106), "category_id", 4), "name", "Dau Tay Da Lat Huu Co"), "price", 160000), "unit", "hop_500g"), "stock", 60), "origin", "Da Lat"), "image", "dau_tay.jpg"), "description", "Dau tay giong Nhat trong nha kinh cong nghe cao, vi chua ngot thanh mat.")
+    
+    db = sqlite_insert(db, "products", p1)
+    db = sqlite_insert(db, "products", p2)
+    db = sqlite_insert(db, "products", p3)
+    db = sqlite_insert(db, "products", p4)
+    db = sqlite_insert(db, "products", p5)
+    db = sqlite_insert(db, "products", p6)
+
+    // 5. Seed Vouchers
+    let v1 = map_set(map_set(map_set(map_set(map_set(map_new(), "code", "NONGSANVIET20"), "discount_type", "PERCENT"), "discount_val", 20), "min_order", 200000), "is_active", true)
+    let v2 = map_set(map_set(map_set(map_set(map_set(map_new(), "code", "FREESHIP"), "discount_type", "FIXED"), "discount_val", 30000), "min_order", 150000), "is_active", true)
+    db = sqlite_insert(db, "vouchers", v1)
+    db = sqlite_insert(db, "vouchers", v2)
+
+    return db
+}

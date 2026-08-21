@@ -68,6 +68,8 @@ demo: build
 	./target/release/vietlang --vm examples/bytecode_vm_demo.vl
 	@echo "\n--- agricultural_ecommerce_backend/tests/main_test.vl ---"
 	./target/release/vietlang examples/agricultural_ecommerce_backend/tests/main_test.vl
+	@echo "\n--- agricultural_ecommerce_platform/tests/full_system_test.vl ---"
+	./target/release/vietlang examples/agricultural_ecommerce_platform/tests/full_system_test.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"

@@ -1,0 +1,126 @@
+// ========================================================================
+// Module: services/order_service.vl
+// ACID Transactional Checkout Engine with Stock Deduction and Vouchers
+// ========================================================================
+
+import std.db_sqlite
+import examples.agricultural_ecommerce_platform.src.repositories.product_repo
+import examples.agricultural_ecommerce_platform.src.repositories.order_repo
+
+fn order_service_checkout(db, user_id: Int, customer_name: String, phone: String, address: String, items: Array, voucher_code: String = "") {
+    if items.len() == 0 {
+        let err = map_set(map_new(), "error", "Gio hang trong")
+        return map_set(err, "db", db)
+    }
+
+    // Step 1: Open ACID SQLite Transaction
+    let mut tx_db = sqlite_begin_transaction(db)
+
+    let mut subtotal = 0
+    let mut item_records = []
+
+    // Step 2: Validate stock for all items
+    let mut i = 0
+    while i < items.len() {
+        let cart_item = items[i]
+        let prod_id = map_get(cart_item, "product_id")
+        let qty = map_get(cart_item, "quantity")
+
+        let prod = product_repo_get_by_id(tx_db, prod_id)
+        if !map_has(prod, "id") {
+            tx_db = sqlite_rollback(tx_db)
+            let err = map_set(map_new(), "error", "San pham khong ton tai")
+            return map_set(err, "db", tx_db)
+        }
+
+        let current_stock = map_get(prod, "stock")
+        if current_stock < qty {
+            // Out of stock -> Rollback Transaction
+            tx_db = sqlite_rollback(tx_db)
+            let err = map_set(map_new(), "error", "San pham " + to_string(map_get(prod, "name")) + " khong du so luong trong kho")
+            return map_set(err, "db", tx_db)
+        }
+
+        let unit_price = map_get(prod, "price")
+        let item_subtotal = unit_price * qty
+        subtotal = subtotal + item_subtotal
+
+        let mut it_rec = map_new()
+        it_rec = map_set(it_rec, "product_id", prod_id)
+        it_rec = map_set(it_rec, "product_name", map_get(prod, "name"))
+        it_rec = map_set(it_rec, "unit_price", unit_price)
+        it_rec = map_set(it_rec, "quantity", qty)
+        it_rec = map_set(it_rec, "subtotal", item_subtotal)
+        item_records = item_records.push(it_rec)
+
+        i = i + 1
+    }
+
+    // Step 3: Voucher discount calculation
+    let mut discount = 0
+    if voucher_code != "" {
+        let v = product_repo_get_voucher(tx_db, voucher_code)
+        if map_has(v, "code") {
+            let min_order = map_get(v, "min_order")
+            if subtotal >= min_order {
+                let disc_type = to_string(map_get(v, "discount_type"))
+                let disc_val = map_get(v, "discount_val")
+                if disc_type == "PERCENT" {
+                    discount = (subtotal * disc_val) / 100
+                } else {
+                    discount = disc_val
+                }
+            }
+        }
+    }
+
+    let mut total = 0
+    if (subtotal - discount) > 0 {
+        total = subtotal - discount
+    }
+
+    // Step 4: Record Order and Order Items
+    let order_id = (time_now() % 900000) + 100000
+    let mut order_rec = map_new()
+    order_rec = map_set(order_rec, "id", order_id)
+    order_rec = map_set(order_rec, "user_id", user_id)
+    order_rec = map_set(order_rec, "customer_name", customer_name)
+    order_rec = map_set(order_rec, "phone", phone)
+    order_rec = map_set(order_rec, "address", address)
+    order_rec = map_set(order_rec, "subtotal", subtotal)
+    order_rec = map_set(order_rec, "discount", discount)
+    order_rec = map_set(order_rec, "total", total)
+    order_rec = map_set(order_rec, "status", "CONFIRMED")
+    order_rec = map_set(order_rec, "created_at", time_now())
+
+    tx_db = order_repo_insert_order(tx_db, order_rec)
+
+    let mut j = 0
+    while j < item_records.len() {
+        let mut it = item_records[j]
+        it = map_set(it, "order_id", order_id)
+        tx_db = order_repo_insert_item(tx_db, it)
+        j = j + 1
+    }
+
+    // Step 5: Commit ACID SQLite Transaction
+    tx_db = sqlite_commit(tx_db)
+
+    let mut res = map_new()
+    res = map_set(res, "success", true)
+    res = map_set(res, "order_id", order_id)
+    res = map_set(res, "subtotal", subtotal)
+    res = map_set(res, "discount", discount)
+    res = map_set(res, "total", total)
+    res = map_set(res, "status", "CONFIRMED")
+    res = map_set(res, "db", tx_db)
+    return res
+}
+
+fn order_service_get_order(db, id: Int) {
+    return order_repo_get_by_id(db, id)
+}
+
+fn order_service_get_all_orders(db) {
+    return order_repo_get_all(db)
+}

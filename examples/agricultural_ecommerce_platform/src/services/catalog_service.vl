@@ -1,0 +1,18 @@
+// ========================================================================
+// Module: services/catalog_service.vl
+// Business Logic for Categories, Products, and Filters
+// ========================================================================
+
+import examples.agricultural_ecommerce_platform.src.repositories.product_repo
+
+fn catalog_service_get_categories(db) {
+    return product_repo_get_categories(db)
+}
+
+fn catalog_service_get_products(db, category_id: Int = 0, query: String = "", max_price: Int = 0) {
+    return product_repo_get_all(db, category_id, query, max_price)
+}
+
+fn catalog_service_get_product_detail(db, id: Int) {
+    return product_repo_get_by_id(db, id)
+}

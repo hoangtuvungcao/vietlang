@@ -1,0 +1,25 @@
+// ========================================================================
+// Module: controllers/product_controller.vl
+// HTTP Endpoints for Catalog, Categories, and Products
+// ========================================================================
+
+import std.http_router
+import examples.agricultural_ecommerce_platform.src.services.catalog_service
+
+fn handle_list_categories(db) {
+    let cats = catalog_service_get_categories(db)
+    return response_json(200, cats, "Lay danh muc thanh cong")
+}
+
+fn handle_list_products(db, category_id: Int = 0, query: String = "", max_price: Int = 0) {
+    let prods = catalog_service_get_products(db, category_id, query, max_price)
+    return response_json(200, prods, "Lay danh sach san pham thanh cong")
+}
+
+fn handle_get_product_by_id(db, id: Int) {
+    let prod = catalog_service_get_product_detail(db, id)
+    if !map_has(prod, "id") {
+        return response_error(404, "Khong tim thay san pham")
+    }
+    return response_json(200, prod, "Chi tiet san pham")
+}

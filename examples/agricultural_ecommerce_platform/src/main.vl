@@ -1,0 +1,36 @@
+// ========================================================================
+// Nong San Viet (VietCleanAgri) Enterprise Backend Platform
+// Main Application Bootstrap & HTTP REST Server
+// ========================================================================
+
+import std.http_router
+import std.metrics
+import examples.agricultural_ecommerce_platform.src.config.database
+import examples.agricultural_ecommerce_platform.src.routes.api_router
+
+println("========================================================================")
+println("Nong San Viet Enterprise Platform — Starting Services...")
+println("========================================================================")
+
+// 1. Initialize SQLite Database & Schema Migrations
+let mut global_db = db_init_and_migrate()
+println("[Database] SQLite In-Memory Database Initialized & Seeded Successfully.")
+
+// 2. Metrics & Observability Counters
+let mut m = metrics_registry_new("nong_san_viet")
+m = metrics_inc_counter(m, "http_requests_total", 1.0)
+m = metrics_inc_counter(m, "database_connections_active", 1.0)
+
+// 3. Verify Health Probe
+let health_resp = api_dispatch_request(global_db, "GET", "/api/v1/health", map_new())
+println("[Health] Status: " + to_string(map_get(health_resp, "status_code")) + " OK")
+
+println("[Router] API Routes Registered:")
+println("  * GET  /api/v1/health")
+println("  * GET  /api/v1/categories")
+println("  * GET  /api/v1/products")
+println("  * POST /api/v1/orders/checkout")
+println("  * GET  /api/v1/admin/analytics")
+println("========================================================================")
+println("Nong San Viet Backend Ready to serve HTTP & Frontend SPA clients!")
+println("========================================================================")

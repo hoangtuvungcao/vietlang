@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nông Sản Việt — Hệ Thống Thương Mại Nông Sản Sạch & Hữu Cơ</title>
+  <meta name="description" content="Nền tảng thương mại điện tử nông sản ViệtGAP chất lượng cao, vận hành bởi VietLang Backend & SQLite ACID Storage.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <div class="brand-logo-mark">NV</div>
+        <div class="brand-text">
+          <span class="brand-title">NÔNG SẢN VIỆT</span>
+          <span class="brand-subtitle">VietLang Enterprise Backend</span>
+        </div>
+      </div>
+
+      <div class="nav-search-bar">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm gạo ST25, xoài cát, sầu riêng, cà phê..." autocomplete="off">
+        <button id="searchBtn" class="btn btn-search">Tìm kiếm</button>
+      </div>
+
+      <div class="nav-actions">
+        <button id="adminToggleBtn" class="btn btn-outline" title="Quản trị hệ thống">Quản Trị</button>
+        <button id="cartToggleBtn" class="btn btn-primary btn-cart">
+          <span>Giỏ Hàng</span>
+          <span id="cartBadge" class="cart-badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="main-layout">
+    
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <span class="badge-hero">Chuẩn VietGAP & Organic Quốc Tế</span>
+        <h1>Nông Sản Sạch Từ Nông Trại Đến Bàn Ăn</h1>
+        <p>Giao dịch an toàn và bảo toàn dữ liệu 100% qua hệ thống SQLite ACID Transactions trên nền tảng VietLang Backend.</p>
+        <div class="hero-voucher-pill">
+          <span>Mã giảm 20%: <strong>NONGSANVIET20</strong></span>
+          <span>Freeship từ 150k: <strong>FREESHIP</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Category Filter Chips -->
+    <section class="category-section">
+      <div class="section-header">
+        <h2>Danh Mục Nông Sản</h2>
+        <span class="section-meta" id="productCountMeta">Đang tải sản phẩm...</span>
+      </div>
+      <div class="category-chips" id="categoryChips">
+        <button class="chip active" data-category="0">Tất Cả</button>
+        <button class="chip" data-category="1">Gạo & Ngũ Cốc</button>
+        <button class="chip" data-category="2">Trái Cây VietGAP</button>
+        <button class="chip" data-category="3">Cà Phê & Trà</button>
+        <button class="chip" data-category="4">Rau Củ Quả</button>
+      </div>
+    </section>
+
+    <!-- Products Grid -->
+    <section class="products-section">
+      <div class="products-grid" id="productsGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Admin Analytics Section (Collapsible) -->
+    <section class="admin-panel" id="adminPanel" style="display: none;">
+      <div class="admin-header">
+        <h2>Bảng Điều Khiển Quản Trị Hệ Thống</h2>
+        <span class="badge-live">Live Database Stats</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Tổng Doanh Thu</span>
+          <span class="stat-value" id="statRevenue">0 VNĐ</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Tổng Đơn Hàng</span>
+          <span class="stat-value" id="statOrders">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Sản Phẩm Trong Kho</span>
+          <span class="stat-value" id="statProducts">6</span>
+        </div>
+        <div class="stat-card alert">
+          <span class="stat-label">Cảnh Báo Tồn Kho Thấp</span>
+          <span class="stat-value" id="statLowStock">0</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Slide-out Shopping Cart Drawer -->
+  <aside class="cart-drawer" id="cartDrawer">
+    <div class="cart-drawer-header">
+      <h3>Giỏ Hàng Của Bạn</h3>
+      <button id="closeCartBtn" class="btn-close">&times;</button>
+    </div>
+
+    <div class="cart-items-container" id="cartItemsList">
+      <p class="empty-cart-msg">Giỏ hàng của bạn đang trống.</p>
+    </div>
+
+    <div class="cart-drawer-footer">
+      <div class="voucher-input-box">
+        <input type="text" id="voucherInput" placeholder="Nhập mã ưu đãi (NONGSANVIET20)">
+        <button id="applyVoucherBtn" class="btn btn-secondary">Áp Dụng</button>
+      </div>
+      <div class="cart-summary-line">
+        <span>Tạm tính:</span>
+        <span id="cartSubtotalText">0 VNĐ</span>
+      </div>
+      <div class="cart-summary-line discount-line">
+        <span>Giảm giá:</span>
+        <span id="cartDiscountText">0 VNĐ</span>
+      </div>
+      <div class="cart-summary-line total-line">
+        <span>Tổng thanh toán:</span>
+        <span id="cartTotalText">0 VNĐ</span>
+      </div>
+      <button id="openCheckoutBtn" class="btn btn-primary btn-block" disabled>Tiến Hành Đặt Hàng</button>
+    </div>
+  </aside>
+  <div class="cart-backdrop" id="cartBackdrop"></div>
+
+  <!-- Checkout & ACID Transaction Modal -->
+  <div class="modal" id="checkoutModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Xác Nhận Đặt Hàng & Thanh Toán</h3>
+        <button id="closeModalBtn" class="btn-close">&times;</button>
+      </div>
+      <form id="checkoutForm" class="checkout-form">
+        <div class="form-group">
+          <label for="custName">Họ và Tên Khách Hàng</label>
+          <input type="text" id="custName" required placeholder="Ví dụ: Trần Văn Trọng">
+        </div>
+        <div class="form-group">
+          <label for="custPhone">Số Điện Thoại</label>
+          <input type="tel" id="custPhone" required placeholder="Ví dụ: 0901234567">
+        </div>
+        <div class="form-group">
+          <label for="custAddress">Địa Chỉ Nhận Hàng</label>
+          <input type="text" id="custAddress" required placeholder="Ví dụ: 123 Lê Lợi, Quận 1, TP. Hồ Chí Minh">
+        </div>
+        <div class="order-preview-box">
+          <div class="preview-row">
+            <span>Tổng tiền thanh toán:</span>
+            <strong id="modalOrderTotal">0 VNĐ</strong>
+          </div>
+          <small class="acid-guarantee">Bảo vệ giao dịch: SQLite ACID Rollback Engine được kích hoạt.</small>
+        </div>
+        <button type="submit" id="submitOrderBtn" class="btn btn-primary btn-block">Hoàn Tất Đặt Hàng</button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>Nông Sản Việt &copy; 2026 — Được xây dựng và vận hành hoàn toàn bởi <strong>VietLang Backend Framework</strong>.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

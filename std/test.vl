@@ -25,7 +25,7 @@ fn test(name: String, test_fn) {
 
 fn assert_eq(actual, expected, message: String = "") {
     if actual != expected {
-        let err_msg = "Assertion Failed: expected '" + to_string(expected) + "', got '" + to_string(actual) + "'"
+        let mut err_msg = "Assertion Failed: expected '" + to_string(expected) + "', got '" + to_string(actual) + "'"
         if message != "" {
             err_msg += " (" + message + ")"
         }
@@ -35,7 +35,7 @@ fn assert_eq(actual, expected, message: String = "") {
 
 fn assert_ne(actual, expected, message: String = "") {
     if actual == expected {
-        let err_msg = "Assertion Failed: expected values to differ, but both were '" + to_string(actual) + "'"
+        let mut err_msg = "Assertion Failed: expected values to differ, but both were '" + to_string(actual) + "'"
         if message != "" {
             err_msg += " (" + message + ")"
         }

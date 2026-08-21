@@ -1,0 +1,94 @@
+// ========================================================================
+// Integration & System Test Suite for Agricultural Platform
+// Tests: Auth, Catalog, ACID Checkout, Vouchers, and Admin Metrics
+// ========================================================================
+
+import std.test
+import examples.agricultural_ecommerce_platform.src.config.database
+import examples.agricultural_ecommerce_platform.src.routes.api_router
+import examples.agricultural_ecommerce_platform.src.services.auth_service
+
+suite("Nong San Viet Enterprise Platform — System Integration Suite")
+
+test("1. Database and Seed Data Migration Check", fn() {
+    let db = db_init_and_migrate()
+    let resp = api_dispatch_request(db, "GET", "/api/v1/categories", map_new())
+    assert_eq(map_get(resp, "status_code"), 200, "Lay danh muc phai tra ve 200")
+    let cats = map_get(resp, "data")
+    assert_eq(cats.len(), 4, "Phai co dung 4 danh muc nong san")
+})
+
+test("2. User Registration and Password Verification", fn() {
+    let db = db_init_and_migrate()
+    let reg_res = auth_service_register(db, "Tran Van B", "tranvanb@gmail.com", "Secret@2026")
+    assert_true(map_get(reg_res, "success"), "Dang ky tai khoan thanh cong")
+
+    let updated_db = map_get(reg_res, "db")
+    let login_res = auth_service_login(updated_db, "tranvanb@gmail.com", "Secret@2026")
+    assert_true(map_get(login_res, "success"), "Dang nhap tai khoan thanh cong")
+    assert_true(map_has(login_res, "token"), "Phai cap JWT Token hop le")
+})
+
+test("3. Product Filtering by Category and Search Keyword", fn() {
+    let db = db_init_and_migrate()
+    let filter_map = map_set(map_set(map_new(), "category_id", 1), "query", "ST25")
+    let resp = api_dispatch_request(db, "GET", "/api/v1/products", filter_map)
+    assert_eq(map_get(resp, "status_code"), 200, "Loc san pham thanh cong")
+    let prods = map_get(resp, "data")
+    assert_eq(prods.len(), 1, "Phai tim thay dung san pham Gao ST25")
+    assert_eq(map_get(prods[0], "name"), "Gao ST25 Soc Trang Thuong Hang", "Ten san pham phai khop")
+})
+
+test("4. ACID Transaction Checkout with Voucher Discount", fn() {
+    let db = db_init_and_migrate()
+    
+    // Order 10kg Gao ST25 (38,000 * 10 = 380,000 VND)
+    let item1 = map_set(map_set(map_new(), "product_id", 101), "quantity", 10)
+    let mut items = []
+    items = items.push(item1)
+
+    let mut body = map_new()
+    body = map_set(body, "user_id", 2)
+    body = map_set(body, "customer_name", "Nguyen Van An")
+    body = map_set(body, "phone", "0901234567")
+    body = map_set(body, "address", "123 Le Loi, Quan 1, TP.HCM")
+    body = map_set(body, "items", items)
+    body = map_set(body, "voucher", "NONGSANVIET20") // 20% discount on 380,000 -> 76,000 discount -> 304,000 total
+
+    let resp = api_dispatch_request(db, "POST", "/api/v1/orders/checkout", body)
+    assert_eq(map_get(resp, "status_code"), 201, "Dat hang thanh cong phai tra ve 201")
+    let order_data = map_get(resp, "data")
+    assert_eq(map_get(order_data, "subtotal"), 380000, "Subtotal phai la 380.000 VND")
+    assert_eq(map_get(order_data, "discount"), 76000, "Giam gia 20% phai la 76.000 VND")
+    assert_eq(map_get(order_data, "total"), 304000, "Total sau giam phai la 304.000 VND")
+})
+
+test("5. Out-of-Stock Checkout Triggers ACID Rollback", fn() {
+    let db = db_init_and_migrate()
+    
+    // Product 103 (Sau Rieng) only has 90kg in stock. Requesting 1000kg must fail & rollback
+    let item1 = map_set(map_set(map_new(), "product_id", 103), "quantity", 1000)
+    let mut items = []
+    items = items.push(item1)
+
+    let mut body = map_new()
+    body = map_set(body, "user_id", 2)
+    body = map_set(body, "customer_name", "Le Thi C")
+    body = map_set(body, "phone", "0987654321")
+    body = map_set(body, "address", "Da Nang")
+    body = map_set(body, "items", items)
+
+    let resp = api_dispatch_request(db, "POST", "/api/v1/orders/checkout", body)
+    assert_eq(map_get(resp, "status_code"), 400, "Het hang phai tra ve loi 400")
+})
+
+test("6. Admin Analytics and Low Stock Health Check", fn() {
+    let db = db_init_and_migrate()
+    let resp = api_dispatch_request(db, "GET", "/api/v1/admin/analytics", map_new())
+    assert_eq(map_get(resp, "status_code"), 200, "Lay thong ke admin thanh cong")
+    let data = map_get(resp, "data")
+    assert_eq(map_get(data, "total_products"), 6, "Tong cong 6 san pham")
+    assert_true(map_get(data, "low_stock_count") > 0, "Phai phat hien san pham ton kho thap (< 100)")
+})
+
+test_summary()

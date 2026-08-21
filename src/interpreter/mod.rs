@@ -404,6 +404,7 @@ impl Interpreter {
                 let joined = path.join("/");
                 let search_paths = vec![
                     format!("{}.vl", joined),
+                    format!("src/{}.vl", joined),
                     format!("std/{}.vl", joined),
                     format!("modules/{}.vl", joined),
                     format!("modules/{}/src/main.vl", joined),
@@ -905,8 +906,8 @@ impl Interpreter {
                 }
             }
             (Value::String(s), "trim") => Ok(Value::String(s.trim().to_string())),
-            (Value::String(s), "to_upper") => Ok(Value::String(s.to_uppercase())),
-            (Value::String(s), "to_lower") => Ok(Value::String(s.to_lowercase())),
+            (Value::String(s), "to_upper" | "to_uppercase") => Ok(Value::String(s.to_uppercase())),
+            (Value::String(s), "to_lower" | "to_lowercase") => Ok(Value::String(s.to_lowercase())),
             (Value::String(s), "starts_with") => {
                 if let Some(Value::String(prefix)) = args.first() {
                     Ok(Value::Bool(s.starts_with(prefix.as_str())))
@@ -939,6 +940,15 @@ impl Interpreter {
             // Array methods
             (Value::Array(arr), "len") => Ok(Value::Int(arr.len() as i64)),
             (Value::Array(arr), "is_empty") => Ok(Value::Bool(arr.is_empty())),
+            (Value::Array(arr), "push") => {
+                if let Some(item) = args.first() {
+                    let mut new_arr = arr.clone();
+                    new_arr.push(item.clone());
+                    Ok(Value::Array(new_arr))
+                } else {
+                    Err(VietError::type_error("push() expects an item argument".to_string(), span.line, span.column))
+                }
+            }
             (Value::Array(arr), "first") => {
                 Ok(arr.first().cloned().unwrap_or(Value::None))
             }

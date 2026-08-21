@@ -1,0 +1,59 @@
+// ========================================================================
+// Module: services/auth_service.vl
+// User Authentication, Password Verification, and JWT Token Issuing
+// ========================================================================
+
+import std.security
+import std.jwt
+import examples.agricultural_ecommerce_platform.src.repositories.user_repo
+
+fn auth_service_register(db, name: String, email: String, password: String, role: String = "CUSTOMER") {
+    let existing = user_repo_find_by_email(db, email)
+    if map_has(existing, "id") {
+        let err = map_set(map_new(), "error", "Email da ton tai tren he thong")
+        return map_set(err, "db", db)
+    }
+
+    let user_id = time_now() % 1000000
+    let pwd_hash = security_hash_password(password)
+
+    let mut user = map_new()
+    user = map_set(user, "id", user_id)
+    user = map_set(user, "email", email)
+    user = map_set(user, "password_hash", pwd_hash)
+    user = map_set(user, "name", name)
+    user = map_set(user, "role", role)
+    user = map_set(user, "created_at", time_now())
+
+    let updated_db = user_repo_create(db, user)
+
+    let token = jwt_sign(user_id, role, 86400)
+    let mut res = map_new()
+    res = map_set(res, "success", true)
+    res = map_set(res, "token", token)
+    res = map_set(res, "user", map_set(map_set(map_set(map_new(), "id", user_id), "name", name), "email", email))
+    res = map_set(res, "db", updated_db)
+    return res
+}
+
+fn auth_service_login(db, email: String, password: String) {
+    let user = user_repo_find_by_email(db, email)
+    if !map_has(user, "id") {
+        return map_set(map_new(), "error", "Sai email hoac mat khau")
+    }
+
+    let pwd_hash = to_string(map_get(user, "password_hash"))
+    if !security_verify_password(password, pwd_hash) {
+        return map_set(map_new(), "error", "Sai email hoac mat khau")
+    }
+
+    let user_id = map_get(user, "id")
+    let role = to_string(map_get(user, "role"))
+    let token = jwt_sign(user_id, role, 86400)
+
+    let mut res = map_new()
+    res = map_set(res, "success", true)
+    res = map_set(res, "token", token)
+    res = map_set(res, "user", map_set(map_set(map_set(map_new(), "id", user_id), "name", map_get(user, "name")), "role", role))
+    return res
+}
