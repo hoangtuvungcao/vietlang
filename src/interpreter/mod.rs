@@ -122,6 +122,18 @@ impl Interpreter {
             ("builtin_sqlite_query", None),
             ("builtin_sqlite_close", Some(1)),
 
+            // MySQL Native Driver Builtins
+            ("mysql_connect", None),
+            ("mysql_exec", Some(2)),
+            ("mysql_execute", None),
+            ("mysql_query", None),
+            ("mysql_close", Some(1)),
+            ("builtin_mysql_connect", None),
+            ("builtin_mysql_exec", Some(2)),
+            ("builtin_mysql_execute", None),
+            ("builtin_mysql_query", None),
+            ("builtin_mysql_close", Some(1)),
+
             // Concurrency
             ("spawn", None),
             ("channel", None),
@@ -1313,6 +1325,12 @@ impl Interpreter {
             "sqlite_execute" | "builtin_sqlite_execute" => crate::stdlib::builtin_sqlite_execute(args, span.line, span.column),
             "sqlite_query" | "builtin_sqlite_query" => crate::stdlib::builtin_sqlite_query(args, span.line, span.column),
             "sqlite_close" | "builtin_sqlite_close" => crate::stdlib::builtin_sqlite_close(args, span.line, span.column),
+
+            "mysql_connect" | "builtin_mysql_connect" => crate::stdlib::builtin_mysql_connect(args, span.line, span.column),
+            "mysql_exec" | "builtin_mysql_exec" => crate::stdlib::builtin_mysql_exec(args, span.line, span.column),
+            "mysql_execute" | "builtin_mysql_execute" => crate::stdlib::builtin_mysql_execute(args, span.line, span.column),
+            "mysql_query" | "builtin_mysql_query" => crate::stdlib::builtin_mysql_query(args, span.line, span.column),
+            "mysql_close" | "builtin_mysql_close" => crate::stdlib::builtin_mysql_close(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

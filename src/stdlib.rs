@@ -1699,4 +1699,277 @@ pub fn builtin_sqlite_close(args: &[Value], _line: usize, _col: usize) -> VietRe
     }
 }
 
+// ============================================================
+// std.db_mysql — Native Binary MySQL Engine (mysql crate)
+// ============================================================
+
+static MYSQL_REGISTRY: std::sync::Mutex<Option<HashMap<usize, mysql::Pool>>> = std::sync::Mutex::new(None);
+static MYSQL_ID_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+
+fn get_mysql_pool<F, R>(id: usize, f: F) -> VietResult<R>
+where
+    F: FnOnce(&mysql::Pool) -> VietResult<R>,
+{
+    let guard = MYSQL_REGISTRY.lock().unwrap();
+    if let Some(map) = guard.as_ref() {
+        if let Some(pool) = map.get(&id) {
+            f(pool)
+        } else {
+            Err(VietError::runtime_error(format!("MySQL Pool #{} not found or closed", id), 0, 0))
+        }
+    } else {
+        Err(VietError::runtime_error(format!("MySQL Pool #{} not found or closed", id), 0, 0))
+    }
+}
+
+pub fn builtin_mysql_connect(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    use mysql::prelude::*;
+
+    let dsn = if !args.is_empty() {
+        match &args[0] {
+            Value::String(s) => s.clone(),
+            _ => "mysql://root:@127.0.0.1:3306/agricultural_db".to_string(),
+        }
+    } else {
+        "mysql://root:@127.0.0.1:3306/agricultural_db".to_string()
+    };
+
+    let opts = mysql::Opts::from_url(&dsn).map_err(|e|
+        VietError::runtime_error(format!("Invalid MySQL DSN '{}': {}", dsn, e), line, col)
+    )?;
+
+    let pool = mysql::Pool::new(opts).map_err(|e|
+        VietError::runtime_error(format!("Cannot create MySQL connection pool for '{}': {}", dsn, e), line, col)
+    )?;
+
+    // Test connection
+    let _ = pool.get_conn().map_err(|e|
+        VietError::runtime_error(format!("Cannot connect to MySQL server '{}': {}", dsn, e), line, col)
+    )?;
+
+    let id = MYSQL_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    {
+        let mut guard = MYSQL_REGISTRY.lock().unwrap();
+        let map = guard.get_or_insert_with(HashMap::new);
+        map.insert(id, pool);
+    }
+
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), Value::Int(id as i64));
+    fields.insert("dsn".to_string(), Value::String(dsn));
+    fields.insert("driver".to_string(), Value::String("mysql".to_string()));
+    fields.insert("is_open".to_string(), Value::Bool(true));
+    fields.insert("engine".to_string(), Value::String("MySQL 8.x / MariaDB (Native Binary Driver)".to_string()));
+
+    Ok(Value::Struct {
+        type_name: "MySqlPool".to_string(),
+        fields,
+    })
+}
+
+pub fn builtin_mysql_exec(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    use mysql::prelude::*;
+
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("mysql_exec() takes 2 arguments (pool, sql)".into(), line, col));
+    }
+    let pool_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("mysql_exec() invalid pool struct".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("mysql_exec() expects connection pool".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("mysql_exec() expects SQL string".into(), line, col)),
+    };
+
+    get_mysql_pool(pool_id, |pool| {
+        let mut conn = pool.get_conn().map_err(|e|
+            VietError::runtime_error(format!("MySQL connection error: {}", e), line, col)
+        )?;
+        conn.query_drop(&sql).map_err(|e|
+            VietError::runtime_error(format!("MySQL exec error: {}", e), line, col)
+        )?;
+        Ok(Value::Bool(true))
+    })
+}
+
+pub fn builtin_mysql_execute(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    use mysql::prelude::*;
+
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("mysql_execute() takes 2+ arguments (pool, sql, [params])".into(), line, col));
+    }
+    let pool_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("mysql_execute() invalid pool".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("mysql_execute() expects connection pool".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("mysql_execute() expects SQL string".into(), line, col)),
+    };
+
+    let params_vec: Vec<mysql::Value> = if args.len() >= 3 {
+        match &args[2] {
+            Value::Array(arr) => {
+                arr.iter().map(|v| match v {
+                    Value::Int(i) => mysql::Value::Int(*i),
+                    Value::Float(f) => mysql::Value::Double(*f),
+                    Value::String(s) => mysql::Value::Bytes(s.as_bytes().to_vec()),
+                    Value::Bool(b) => mysql::Value::Int(if *b { 1 } else { 0 }),
+                    Value::None => mysql::Value::NULL,
+                    other => mysql::Value::Bytes(format!("{}", other).into_bytes()),
+                }).collect()
+            }
+            _ => vec![],
+        }
+    } else {
+        vec![]
+    };
+
+    get_mysql_pool(pool_id, |pool| {
+        let mut conn = pool.get_conn().map_err(|e|
+            VietError::runtime_error(format!("MySQL connection error: {}", e), line, col)
+        )?;
+        let stmt = conn.prep(&sql).map_err(|e|
+            VietError::runtime_error(format!("MySQL prepare error: {}", e), line, col)
+        )?;
+        conn.exec_drop(stmt, params_vec).map_err(|e|
+            VietError::runtime_error(format!("MySQL execute error: {}", e), line, col)
+        )?;
+        let affected = conn.affected_rows();
+        Ok(Value::Int(affected as i64))
+    })
+}
+
+pub fn builtin_mysql_query(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    use mysql::prelude::*;
+
+    if args.len() < 2 {
+        return Err(VietError::runtime_error("mysql_query() takes 2+ arguments (pool, sql, [params])".into(), line, col));
+    }
+    let pool_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Err(VietError::type_error("mysql_query() invalid pool".into(), line, col));
+            }
+        }
+        _ => return Err(VietError::type_error("mysql_query() expects connection pool".into(), line, col)),
+    };
+    let sql = match &args[1] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("mysql_query() expects SQL string".into(), line, col)),
+    };
+
+    let params_vec: Vec<mysql::Value> = if args.len() >= 3 {
+        match &args[2] {
+            Value::Array(arr) => {
+                arr.iter().map(|v| match v {
+                    Value::Int(i) => mysql::Value::Int(*i),
+                    Value::Float(f) => mysql::Value::Double(*f),
+                    Value::String(s) => mysql::Value::Bytes(s.as_bytes().to_vec()),
+                    Value::Bool(b) => mysql::Value::Int(if *b { 1 } else { 0 }),
+                    Value::None => mysql::Value::NULL,
+                    other => mysql::Value::Bytes(format!("{}", other).into_bytes()),
+                }).collect()
+            }
+            _ => vec![],
+        }
+    } else {
+        vec![]
+    };
+
+    get_mysql_pool(pool_id, |pool| {
+        let mut conn = pool.get_conn().map_err(|e|
+            VietError::runtime_error(format!("MySQL connection error: {}", e), line, col)
+        )?;
+
+        let rows: Vec<mysql::Row> = if params_vec.is_empty() {
+            conn.query(&sql).map_err(|e|
+                VietError::runtime_error(format!("MySQL query error '{}': {}", sql, e), line, col)
+            )?
+        } else {
+            let stmt = conn.prep(&sql).map_err(|e|
+                VietError::runtime_error(format!("MySQL prepare error '{}': {}", sql, e), line, col)
+            )?;
+            conn.exec(stmt, params_vec).map_err(|e|
+                VietError::runtime_error(format!("MySQL exec error '{}': {}", sql, e), line, col)
+            )?
+        };
+
+        let mut results = Vec::new();
+        for row in rows {
+            let mut row_map = HashMap::new();
+            let cols = row.columns_ref();
+            for (idx, col) in cols.iter().enumerate() {
+                let col_name = col.name_str().to_string();
+                let my_val: Option<mysql::Value> = row.get(idx);
+                let vl_val = match my_val {
+                    None | Some(mysql::Value::NULL) => Value::None,
+                    Some(mysql::Value::Int(i)) => Value::Int(i),
+                    Some(mysql::Value::UInt(u)) => Value::Int(u as i64),
+                    Some(mysql::Value::Float(f)) => Value::Float(f as f64),
+                    Some(mysql::Value::Double(d)) => Value::Float(d),
+                    Some(mysql::Value::Bytes(b)) => Value::String(String::from_utf8_lossy(&b).to_string()),
+                    Some(mysql::Value::Date(y, m, d, h, mi, s, _)) => {
+                        Value::String(format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", y, m, d, h, mi, s))
+                    }
+                    Some(mysql::Value::Time(is_neg, d, h, m, s, _)) => {
+                        Value::String(format!("{}{:02}:{:02}:{:02}", if is_neg { "-" } else { "" }, d * 24 + h as u32, m, s))
+                    }
+                };
+                row_map.insert(col_name, vl_val);
+            }
+            results.push(Value::Struct {
+                type_name: "Map".to_string(),
+                fields: row_map,
+            });
+        }
+
+        Ok(Value::Array(results))
+    })
+}
+
+pub fn builtin_mysql_close(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Ok(Value::Bool(false));
+    }
+    let pool_id = match &args[0] {
+        Value::Int(id) => *id as usize,
+        Value::Struct { fields, .. } => {
+            if let Some(Value::Int(id)) = fields.get("id") {
+                *id as usize
+            } else {
+                return Ok(Value::Bool(false));
+            }
+        }
+        _ => return Ok(Value::Bool(false)),
+    };
+
+    let mut guard = MYSQL_REGISTRY.lock().unwrap();
+    if let Some(map) = guard.as_mut() {
+        let removed = map.remove(&pool_id).is_some();
+        Ok(Value::Bool(removed))
+    } else {
+        Ok(Value::Bool(false))
+    }
+}
+
+
 
