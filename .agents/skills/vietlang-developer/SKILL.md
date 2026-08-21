@@ -41,7 +41,8 @@ When creating a production-grade VietLang service, AI agents and developers **MU
 
 ```text
 my_enterprise_app/
-├── vpm.json                      # Project manifest (dependencies, version, author)
+├── vietlang.json                 # Project manifest (scripts, main, dependencies, metadata)
+├── config.json (or .env)         # Runtime dynamic configuration
 ├── README.md                     # Documentation & API endpoints
 ├── data/                         # Persistent database files (SQLite)
 │   └── app.sqlite
@@ -60,6 +61,46 @@ my_enterprise_app/
     ├── routes/
     │   └── router.vl             # REST API routing, query/body parser & WebSocket handlers
     └── main.vl                   # Application entrypoint (server config, HTTP/2 & HTTP/3 listeners)
+```
+
+### 2.1 Project Manifest & npm-style Scripts (`vietlang.json`)
+
+Just like `package.json` in Node.js, `vietlang.json` defines your project's entrypoint, dependencies, and executable automation scripts:
+
+```json
+{
+  "name": "my_enterprise_app",
+  "version": "1.0.0",
+  "main": "src/main.vl",
+  "scripts": {
+    "start": "vietlang run src/main.vl",
+    "dev": "PORT=8080 vietlang run src/main.vl",
+    "build": "vietlang build src/main.vl -o app",
+    "build:win": "vietlang build src/main.vl -o app.exe --target windows",
+    "test": "vietlang check src/main.vl"
+  },
+  "dependencies": {
+    "sqlite": "1.0.0",
+    "http_router": "1.0.0",
+    "jwt": "1.0.0",
+    "validator": "1.0.0"
+  },
+  "license": "MIT"
+}
+```
+
+#### Running Scripts:
+```bash
+# Run the 'start' script (or 'main' entrypoint)
+vietlang start
+
+# Run the 'dev' script
+vietlang dev
+
+# Run any custom defined script (e.g. build, test, lint)
+vietlang run build
+vietlang run build:win
+vietlang run test
 ```
 
 ---

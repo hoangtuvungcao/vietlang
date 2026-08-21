@@ -121,12 +121,57 @@ fn main() {
             "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
+            "start" => {
+                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                if !pm::run_script("start", &extra_args) {
+                    if let Some(main_file) = pm::get_manifest_main() {
+                        run_file(&main_file);
+                    } else if std::path::Path::new("src/main.vl").exists() {
+                        run_file("src/main.vl");
+                    } else {
+                        eprintln!("\x1b[31mError:\x1b[0m No 'start' script or 'main' entry found in vietlang.json");
+                        std::process::exit(1);
+                    }
+                }
+            }
+            "dev" => {
+                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                if !pm::run_script("dev", &extra_args) {
+                    if let Some(main_file) = pm::get_manifest_main() {
+                        run_file(&main_file);
+                    } else if std::path::Path::new("src/main.vl").exists() {
+                        run_file("src/main.vl");
+                    } else {
+                        eprintln!("\x1b[31mError:\x1b[0m No 'dev' script or 'main' entry found in vietlang.json");
+                        std::process::exit(1);
+                    }
+                }
+            }
             "run" => {
                 if args.len() < 3 {
-                    eprintln!("Usage: vietlang run <file.vl>");
-                    std::process::exit(1);
+                    // Try running "start" or "main" from manifest
+                    if !pm::run_script("start", &[]) {
+                        if let Some(main_file) = pm::get_manifest_main() {
+                            run_file(&main_file);
+                        } else if std::path::Path::new("src/main.vl").exists() {
+                            run_file("src/main.vl");
+                        } else {
+                            eprintln!("Usage: vietlang run <file.vl | script_name>");
+                            std::process::exit(1);
+                        }
+                    }
+                } else {
+                    let target = &args[2];
+                    let extra_args: Vec<String> = if args.len() > 3 { args[3..].to_vec() } else { Vec::new() };
+                    if pm::run_script(target, &extra_args) {
+                        // Successfully executed script from vietlang.json
+                    } else if std::path::Path::new(target).exists() || target.ends_with(".vl") {
+                        run_file(target);
+                    } else {
+                        eprintln!("\x1b[31mError:\x1b[0m Script or file '{}' not found in vietlang.json / filesystem", target);
+                        std::process::exit(1);
+                    }
                 }
-                run_file(&args[2]);
             }
             "check" => {
                 if args.len() < 3 {
@@ -136,12 +181,17 @@ fn main() {
                 check_file(&args[2]);
             }
             "test" => {
-                let target = if args.len() >= 3 {
-                    &args[2]
+                let extra_args: Vec<String> = if args.len() > 2 { args[2..].to_vec() } else { Vec::new() };
+                if args.len() == 2 && pm::run_script("test", &extra_args) {
+                    // Ran test script from manifest
                 } else {
-                    "tests"
-                };
-                run_tests(target);
+                    let target = if args.len() >= 3 {
+                        &args[2]
+                    } else {
+                        "tests"
+                    };
+                    run_tests(target);
+                }
             }
             "--tokens" => {
                 if args.len() < 3 {

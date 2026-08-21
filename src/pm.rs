@@ -639,11 +639,17 @@ fn init_project(name: &str, template_type: &str) {
   "type": "{}",
   "description": "High-performance backend module built with VietLang",
   "main": "src/main.vl",
+  "scripts": {{
+    "start": "vietlang run src/main.vl",
+    "dev": "PORT=8080 vietlang run src/main.vl",
+    "build": "vietlang build src/main.vl -o {}_app",
+    "test": "vietlang test tests"
+  }},
   "dependencies": {{}},
   "license": "MIT"
 }}
 "#,
-        name, name, template_type
+        name, name, template_type, name
     );
     let _ = fs::write(format!("{}/vietlang.json", name), manifest);
 
@@ -897,3 +903,83 @@ fn ensure_manifest_dependency(pkg_name: &str, version: &str) {
         let _ = fs::write("vietlang.json", manifest);
     }
 }
+
+pub fn get_manifest_content() -> Option<String> {
+    if Path::new("vietlang.json").exists() {
+        fs::read_to_string("vietlang.json").ok()
+    } else if Path::new("vpm.json").exists() {
+        fs::read_to_string("vpm.json").ok()
+    } else {
+        None
+    }
+}
+
+pub fn get_manifest_main() -> Option<String> {
+    if let Some(content) = get_manifest_content() {
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("\"main\":") {
+                return Some(extract_json_str(trimmed));
+            }
+        }
+    }
+    None
+}
+
+pub fn get_manifest_script(script_name: &str) -> Option<String> {
+    if let Some(content) = get_manifest_content() {
+        let mut in_scripts = false;
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("\"scripts\":") {
+                in_scripts = true;
+                continue;
+            }
+            if in_scripts {
+                if trimmed.starts_with('}') {
+                    break;
+                }
+                let target_key = format!("\"{}\":", script_name);
+                if trimmed.starts_with(&target_key) {
+                    return Some(extract_json_str(trimmed));
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn run_script(script_name: &str, extra_args: &[String]) -> bool {
+    if let Some(cmd_str) = get_manifest_script(script_name) {
+        println!("\x1b[36m>\x1b[0m \x1b[32m{}\x1b[0m", cmd_str);
+        let mut full_cmd = cmd_str;
+        if !extra_args.is_empty() {
+            full_cmd.push(' ');
+            full_cmd.push_str(&extra_args.join(" "));
+        }
+        let status = if cfg!(windows) {
+            Command::new("cmd")
+                .args(["/C", &full_cmd])
+                .status()
+        } else {
+            Command::new("sh")
+                .args(["-c", &full_cmd])
+                .status()
+        };
+        match status {
+            Ok(s) => {
+                if !s.success() {
+                    std::process::exit(s.code().unwrap_or(1));
+                }
+                true
+            }
+            Err(e) => {
+                eprintln!("\x1b[31mError running script '{}':\x1b[0m {}", script_name, e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        false
+    }
+}
+
