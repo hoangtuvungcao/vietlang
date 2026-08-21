@@ -50,7 +50,13 @@ fn main() {
     } else {
         match args[1].as_str() {
             "--help" | "-h" => print_help(),
-            "--version" | "-v" => println!("VietLang v{}", VERSION),
+            "pkg" | "package" | "pm" => {
+                if args.len() >= 3 {
+                    pm::handle_vpm_command(&args[2..]);
+                } else {
+                    pm::handle_vpm_command(&[]);
+                }
+            }
             "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
