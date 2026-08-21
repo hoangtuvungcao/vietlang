@@ -161,7 +161,7 @@ fn sync_registry() {
 fn load_registry() -> HashMap<String, PackageIndexEntry> {
     let mut map = HashMap::new();
 
-    // Standard baseline catalog
+    // Standard baseline catalog (30+ official modules & drivers)
     let default_entries = [
         ("redis", "1.2.0", "High-performance Redis client & Pub/Sub broker", "https://github.com/hoangtuvungcao/vietlang_redis.git", "hoangtuvungcao"),
         ("postgres", "2.1.0", "Production-grade PostgreSQL driver with connection pool", "https://github.com/hoangtuvungcao/vietlang_postgres.git", "hoangtuvungcao"),
@@ -173,6 +173,32 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
         ("grpc", "0.8.5", "gRPC & Protobuf RPC microservice framework", "https://github.com/hoangtuvungcao/vietlang_grpc.git", "hoangtuvungcao"),
         ("kafka", "2.0.1", "Distributed event streaming partitioned consumer & producer", "https://github.com/hoangtuvungcao/vietlang_kafka.git", "hoangtuvungcao"),
         ("rabbitmq", "1.0.2", "AMQP RabbitMQ message broker client", "https://github.com/hoangtuvungcao/vietlang_rabbitmq.git", "hoangtuvungcao"),
+        ("saga", "1.0.0", "Distributed SAGA transaction coordinator with compensating rollbacks", "https://github.com/hoangtuvungcao/vietlang_saga.git", "hoangtuvungcao"),
+        ("retry", "1.0.0", "Exponential backoff retry policy with jitter", "https://github.com/hoangtuvungcao/vietlang_retry.git", "hoangtuvungcao"),
+        ("cron", "1.0.0", "Enterprise cron job scheduler engine", "https://github.com/hoangtuvungcao/vietlang_cron.git", "hoangtuvungcao"),
+        ("cache_lru", "1.0.0", "Fixed-capacity Least-Recently-Used cache with eviction", "https://github.com/hoangtuvungcao/vietlang_cache_lru.git", "hoangtuvungcao"),
+        ("sql_builder", "1.0.0", "Multi-table SQL Query Builder (INNER/LEFT JOIN, GROUP BY)", "https://github.com/hoangtuvungcao/vietlang_sql_builder.git", "hoangtuvungcao"),
+        ("metrics", "1.0.0", "Prometheus metrics exporter (Counters, Gauges)", "https://github.com/hoangtuvungcao/vietlang_metrics.git", "hoangtuvungcao"),
+        ("security", "1.0.0", "Password hashing, constant-time compare, CSRF, XSS filter", "https://github.com/hoangtuvungcao/vietlang_security.git", "hoangtuvungcao"),
+        ("crypto_advanced", "1.0.0", "Webhook HMAC-SHA256 signature verification & payload encryption", "https://github.com/hoangtuvungcao/vietlang_crypto_advanced.git", "hoangtuvungcao"),
+        ("kv_store", "1.0.0", "In-memory Redis engine (Atomic INCR, Hashes, TTL)", "https://github.com/hoangtuvungcao/vietlang_kv_store.git", "hoangtuvungcao"),
+        ("stream", "1.0.0", "Kafka-like partitioned stream broker with consumer offsets", "https://github.com/hoangtuvungcao/vietlang_stream.git", "hoangtuvungcao"),
+        ("http_pipeline", "1.0.0", "Onion-model middleware with automated Security Headers", "https://github.com/hoangtuvungcao/vietlang_http_pipeline.git", "hoangtuvungcao"),
+        ("websocket", "1.0.0", "WebSocket RFC 6455 framing & room broadcaster", "https://github.com/hoangtuvungcao/vietlang_websocket.git", "hoangtuvungcao"),
+        ("socket", "1.0.0", "Raw TCP/UDP low-level socket client", "https://github.com/hoangtuvungcao/vietlang_socket.git", "hoangtuvungcao"),
+        ("jwt", "1.0.0", "JWT authentication with Role-Based Access Control (RBAC)", "https://github.com/hoangtuvungcao/vietlang_jwt.git", "hoangtuvungcao"),
+        ("http_router", "1.0.0", "High-level web routing and JSON responses", "https://github.com/hoangtuvungcao/vietlang_http_router.git", "hoangtuvungcao"),
+        ("validator", "1.0.0", "Request payload validation rules", "https://github.com/hoangtuvungcao/vietlang_validator.git", "hoangtuvungcao"),
+        ("orm", "1.0.0", "SQL query builder and data layer", "https://github.com/hoangtuvungcao/vietlang_orm.git", "hoangtuvungcao"),
+        ("migration", "1.0.0", "Database schema migration versioning", "https://github.com/hoangtuvungcao/vietlang_migration.git", "hoangtuvungcao"),
+        ("rate_limiter", "1.0.0", "Token bucket DDoS protection", "https://github.com/hoangtuvungcao/vietlang_rate_limiter.git", "hoangtuvungcao"),
+        ("circuit_breaker", "1.0.0", "Fault-tolerance circuit breaker pattern", "https://github.com/hoangtuvungcao/vietlang_circuit_breaker.git", "hoangtuvungcao"),
+        ("telemetry", "1.0.0", "OpenTelemetry trace context and header propagation", "https://github.com/hoangtuvungcao/vietlang_telemetry.git", "hoangtuvungcao"),
+        ("health", "1.0.0", "Kubernetes /healthz and /readyz probe checkers", "https://github.com/hoangtuvungcao/vietlang_health.git", "hoangtuvungcao"),
+        ("event_bus", "1.0.0", "In-memory Pub/Sub event bus", "https://github.com/hoangtuvungcao/vietlang_event_bus.git", "hoangtuvungcao"),
+        ("queue", "1.0.0", "Asynchronous task queue with Dead-Letter Queue (DLQ)", "https://github.com/hoangtuvungcao/vietlang_queue.git", "hoangtuvungcao"),
+        ("config", "1.0.0", "Environment variables and .env loader", "https://github.com/hoangtuvungcao/vietlang_config.git", "hoangtuvungcao"),
+        ("multipart", "1.0.0", "Streaming multipart form-data and binary/text file upload decoder", "https://github.com/hoangtuvungcao/vietlang_multipart.git", "hoangtuvungcao"),
     ];
 
     for (name, ver, desc, src, author) in default_entries {

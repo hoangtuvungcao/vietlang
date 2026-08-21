@@ -2,6 +2,21 @@
   "registry_version": "1.0.0",
   "updated_at": "2026-08-21T08:15:00Z",
   "packages": {
+    "viet_agri_pay": {
+      "name": "viet_agri_pay",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "version": "1.0.0",
+          "description": "High-performance backend module built with VietLang",
+          "author": "your_github_username",
+          "source": "https://github.com/your_github_username/viet_agri_pay.git",
+          "checksum": "vlt_4a222ffde57bf7ae",
+          "keywords": ["viet_agri_pay"]
+        }
+      }
+    },
+
     "test_auth": {
       "name": "test_auth",
       "latest": "1.0.0",

@@ -66,6 +66,8 @@ demo: build
 	./target/release/vietlang examples/enterprise_ecommerce_system.vl
 	@echo "\n--- bytecode_vm_demo.vl (Phase 8 VM) ---"
 	./target/release/vietlang --vm examples/bytecode_vm_demo.vl
+	@echo "\n--- agricultural_ecommerce_backend/tests/main_test.vl ---"
+	./target/release/vietlang examples/agricultural_ecommerce_backend/tests/main_test.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"
