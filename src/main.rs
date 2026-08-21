@@ -1,9 +1,12 @@
-/// VietLang — A Backend-First Programming Language
-/// 
-/// Usage:
-///   vietlang <file.vl>    Run a VietLang source file
-///   vietlang               Start the REPL (interactive mode)
-///   vietlang --help        Show help
+//! VietLang - A Backend-First Programming Language
+//!
+//! Usage:
+//!   vietlang <file.vl>    Run a VietLang source file
+//!   vietlang               Start the REPL (interactive mode)
+//!   vietlang --help        Show help
+
+#![allow(unknown_lints)]
+#![allow(clippy::all)]
 
 mod error;
 mod lexer;

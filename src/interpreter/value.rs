@@ -1,5 +1,5 @@
-/// VietLang Runtime Values
-/// Defines all value types that can exist at runtime.
+//! VietLang Runtime Values
+//! Defines all value types that can exist at runtime.
 
 use std::collections::HashMap;
 use std::fmt;

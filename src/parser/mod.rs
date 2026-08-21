@@ -1,5 +1,5 @@
-/// VietLang Parser
-/// Recursive descent parser that converts tokens into an AST.
+//! VietLang Parser
+//! Recursive descent parser that converts tokens into an AST.
 
 pub mod ast;
 

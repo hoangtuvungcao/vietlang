@@ -1,5 +1,5 @@
-/// VietLang Environment
-/// Manages variable scoping with a stack of hash maps.
+//! VietLang Environment
+//! Manages variable scoping with a stack of hash maps.
 
 use std::collections::HashMap;
 use super::value::Value;

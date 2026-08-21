@@ -1,5 +1,5 @@
-/// VietLang Abstract Syntax Tree (AST)
-/// Defines all AST node types used by the parser and interpreter.
+//! VietLang Abstract Syntax Tree (AST)
+//! Defines all AST node types used by the parser and interpreter.
 
 use crate::lexer::token::Span;
 

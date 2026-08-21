@@ -1,5 +1,5 @@
-/// VietLang Virtual Machine (VM)
-/// High-performance stack-based bytecode interpreter for backend workloads.
+//! VietLang Virtual Machine (VM)
+//! High-performance stack-based bytecode interpreter for backend workloads.
 
 pub mod opcode;
 pub mod compiler;

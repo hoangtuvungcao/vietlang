@@ -1,5 +1,5 @@
-/// VietLang Lexer
-/// Converts source code into a stream of tokens.
+//! VietLang Lexer
+//! Converts source code into a stream of tokens.
 
 pub mod token;
 

@@ -1,5 +1,5 @@
-/// VietLang Bytecode Compiler
-/// Compiles VietLang AST into a Bytecode Chunk.
+//! VietLang Bytecode Compiler
+//! Compiles VietLang AST into a Bytecode Chunk.
 
 use std::collections::HashMap;
 use crate::error::{VietError, VietResult};
@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::parser::ast::*;
 use super::opcode::OpCode;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: Vec<Value>,
@@ -16,11 +16,7 @@ pub struct Chunk {
 
 impl Chunk {
     pub fn new() -> Self {
-        Chunk {
-            code: Vec::new(),
-            constants: Vec::new(),
-            lines: Vec::new(),
-        }
+        Chunk::default()
     }
 
     pub fn write_opcode(&mut self, op: OpCode, line: usize) {
@@ -39,6 +35,7 @@ impl Chunk {
     }
 }
 
+#[derive(Default)]
 pub struct Compiler {
     pub chunk: Chunk,
     globals: HashMap<String, usize>,
@@ -46,10 +43,7 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Self {
-        Compiler {
-            chunk: Chunk::new(),
-            globals: HashMap::new(),
-        }
+        Compiler::default()
     }
 
     pub fn compile(&mut self, program: &Program) -> VietResult<Chunk> {

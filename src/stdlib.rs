@@ -1,15 +1,15 @@
-/// VietLang Standard Library — Built-in Modules
-/// Provides backend-focused built-in functionality:
-/// - std.http: HTTP server & client
-/// - std.db: Database operations
-/// - std.json: JSON processing
-/// - std.crypto: Hashing, JWT, UUID
-/// - std.log: Structured logging
-/// - std.env: Environment variables
-/// - std.time: DateTime, Duration
-/// - std.io: File I/O
-/// - std.cache: In-memory caching
-/// - std.collections: HashMap, Set
+//! VietLang Standard Library - Built-in Modules
+//! Provides backend-focused built-in functionality:
+//! - std.http: HTTP server & client
+//! - std.db: Database operations
+//! - std.json: JSON processing
+//! - std.crypto: Hashing, JWT, UUID
+//! - std.log: Structured logging
+//! - std.env: Environment variables
+//! - std.time: DateTime, Duration
+//! - std.io: File I/O
+//! - std.cache: In-memory caching
+//! - std.collections: HashMap, Set
 
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH, Instant};

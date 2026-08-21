@@ -1,5 +1,5 @@
-/// VietLang Error Types
-/// Unified error handling for the compiler/interpreter.
+//! VietLang Error Types
+//! Unified error handling for the compiler/interpreter.
 
 use std::fmt;
 use crate::interpreter::value::Value;

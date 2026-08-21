@@ -1,5 +1,5 @@
-/// VietLang Interpreter
-/// Tree-walking interpreter that executes VietLang AST.
+//! VietLang Interpreter
+//! Tree-walking interpreter that executes VietLang AST.
 
 pub mod value;
 pub mod environment;
