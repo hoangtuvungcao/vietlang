@@ -234,25 +234,38 @@ test_summary()
 
 ## Package Manager (vpm)
 
-VietLang comes with `vpm.vl`, a full package manager written in pure VietLang:
+VietLang comes with `vpm.vl`, a decentralized package manager written in pure VietLang:
 
 ```bash
-# Initialize a new package
-vietlang vpm.vl init my_api
+# Initialize a new package (templates: lib | api | microservice)
+vietlang vpm.vl init my_service microservice
 
-# List installed modules
+# Search community modules
+vietlang vpm.vl search redis
+vietlang vpm.vl search postgres
+
+# Install any Git repository directly as a module
+vietlang vpm.vl install https://github.com/user/vietlang_redis.git
+
+# Inspect module exported API signatures
+vietlang vpm.vl docs std.db_sqlite
+
+# Verify package syntax and unit tests
+vietlang vpm.vl verify
+
+# List, update, or remove installed modules
 vietlang vpm.vl list
-
-# View package info
-vietlang vpm.vl info
+vietlang vpm.vl update vietlang_redis
+vietlang vpm.vl remove vietlang_redis
 ```
 
-## Self-Hosting Bootstrap
+## Self-Hosting Bootstrap & Bytecode Virtual Machine (VM)
 
-VietLang is designed for complete self-hosting (writing the VietLang compiler in VietLang itself):
+VietLang provides both a Tree-walking Interpreter and a high-performance stack-based Bytecode Virtual Machine (VM):
 
-- `bootstrap/lexer.vl`: 100% VietLang lexer that tokenizes VietLang source code (including itself)
+- `bootstrap/lexer.vl`: 100% VietLang lexer that tokenizes VietLang source code (including itself, 3,304 tokens)
 - `bootstrap/parser.vl`: 100% VietLang parser that produces an Abstract Syntax Tree (AST)
+- `--vm`: Execute source files using the Bytecode VM
 
 ```bash
 # Run self-hosted lexer on its own source
@@ -260,6 +273,9 @@ vietlang bootstrap/lexer.vl
 
 # Run self-hosted parser
 vietlang bootstrap/parser.vl
+
+# Execute via the Bytecode Virtual Machine
+vietlang --vm examples/bytecode_vm_demo.vl
 ```
 
 ## Project Structure
@@ -267,35 +283,43 @@ vietlang bootstrap/parser.vl
 ```
 vietlang/
 ├── src/
-│   ├── main.rs              # CLI and REPL
+│   ├── main.rs              # CLI, REPL, and Dispatcher
 │   ├── error.rs             # Error types & control flow signals
-│   ├── stdlib.rs            # Built-in standard library
+│   ├── stdlib.rs            # Built-in native standard library
 │   ├── lexer/               # Lexer & Token definitions
 │   ├── parser/              # Parser & AST definitions
-│   └── interpreter/         # Tree-walking interpreter & environment
-├── std/                     # Pure VietLang Community Standard Libraries
-│   ├── test.vl              # Unit testing framework
-│   ├── strings.vl           # String utilities
-│   ├── jwt.vl               # JWT signing & verification
-│   └── http_router.vl       # Web router & framework
+│   ├── interpreter/         # Tree-walking interpreter & environment
+│   └── vm/                  # Bytecode VM & compiler (OpCode stack machine)
+├── std/                     # 30 Pure VietLang Standard Libraries
+│   ├── db_sqlite.vl         # In-memory & file-backed SQLite relational engine
+│   ├── db_mysql.vl          # MySQL protocol and connection pool
+│   ├── db_postgres.vl       # PostgreSQL client and schema tools
+│   ├── multipart.vl         # Multipart form-data & file upload parser
+│   ├── saga.vl              # Distributed SAGA transaction coordinator
+│   ├── retry.vl             # Exponential backoff retry engine
+│   ├── kv_store.vl          # Redis-level in-memory KV engine
+│   ├── stream.vl            # Kafka-level partitioned stream broker
+│   ├── http_pipeline.vl     # Onion middleware & security headers
+│   ├── websocket.vl         # WebSocket RFC 6455 & room broadcaster
+│   ├── jwt.vl               # JWT signing & RBAC verification
+│   ├── http_router.vl       # Web router & framework
+│   └── ...                  # 30 modules total
 ├── bootstrap/               # Self-Hosting Compiler in VietLang
 │   ├── lexer.vl             # Self-hosted lexer
 │   └── parser.vl            # Self-hosted parser
-├── examples/                # Example applications
-│   ├── demo.vl
-│   ├── backend_demo.vl
-│   ├── http_server.vl
-│   ├── database.vl
-│   ├── concurrency.vl
-│   ├── file_io.vl
-│   ├── json_demo.vl
-│   ├── new_features_test.vl
-│   └── community_modules_demo.vl
+├── examples/                # Example backend systems
+│   ├── enterprise_ecommerce_system.vl
+│   ├── database_drivers_demo.vl
+│   ├── master_backend_enterprise.vl
+│   └── bytecode_vm_demo.vl
 ├── docs/                    # Complete documentation
 │   ├── getting-started.md
 │   ├── language-reference.md
-│   └── stdlib-reference.md
-├── vpm.vl                   # VietLang Package Manager
+│   ├── stdlib-reference.md
+│   ├── backend-cookbook.md
+│   ├── community-module-guide.md
+│   └── vietlang-handbook.md
+├── vpm.vl                   # Decentralized Package Manager
 ├── Makefile
 ├── CONTRIBUTING.md
 └── LICENSE
@@ -310,7 +334,7 @@ make build
 # Run all unit tests
 make test
 
-# Run all examples and demos
+# Run all examples, backend enterprise suites, and demos
 make demo
 ```
 
@@ -320,10 +344,10 @@ make demo
 - [x] Phase 2: Memory & Concurrency (Channels, Spawn, Mutex, Control Flow Signals)
 - [x] Phase 3: Standard Library (HTTP, DB, JSON, File I/O, Crypto, Logging, Env, Time, Collections)
 - [x] Phase 4: Extended Syntax (Compound Assignment += -= *= /= %=, Short-circuit && ||, Try/Catch)
-- [x] Phase 5: Community Standard Library in VietLang (std.test, std.strings, std.jwt, std.http_router)
-- [x] Phase 6: Package Manager (`vpm.vl`)
+- [x] Phase 5: Community Standard Library in VietLang (30 pure modules in `std.*`)
+- [x] Phase 6: Decentralized Package Manager (`vpm.vl` with search, docs, verify, install)
 - [x] Phase 7: Self-Hosting Bootstrap (Stage 1: `bootstrap/lexer.vl`, Stage 2: `bootstrap/parser.vl`)
-- [ ] Phase 8: Bytecode VM / Native Backend
+- [x] Phase 8: Bytecode VM / Native Stack-based Execution (`vietlang --vm`)
 
 ## License
 

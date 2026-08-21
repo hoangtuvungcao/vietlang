@@ -1,6 +1,6 @@
 # VietLang Standard Library (Stdlib) Master Reference
 
-Complete, exhaustive reference documentation for all built-in functions and 26 standard library modules in VietLang.
+Complete, exhaustive reference documentation for all built-in functions and 30 standard library modules in VietLang.
 
 Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
@@ -140,6 +140,9 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 - `ws_room_join(manager, room_name: String, client_id: String) -> Map`: Registers client to room.
 - `ws_room_broadcast(manager, room_name: String, event: String, data) -> Map`: Broadcasts message to room.
 
+### `std.multipart`
+- `multipart_parse(raw_body: String, boundary: String) -> Map`: Streaming multipart form-data and binary/text file upload decoder.
+
 ### `std.socket`
 - `socket_tcp_send(host: String, port: Int, message: String, timeout_ms: Int = 3000) -> String`: Raw TCP stream client.
 - `socket_udp_send(host: String, port: Int, payload: String) -> Bool`: Raw UDP packet sender.
@@ -148,6 +151,27 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 ---
 
 ## 7. Database & Migrations
+
+### `std.db_sqlite` (SQLite Relational Storage Engine)
+- `sqlite_open(db_path: String = ":memory:") -> Map`: Opens an in-memory or file-backed SQLite database.
+- `sqlite_exec(db, sql: String) -> Map`: Executes DDL SQL (such as `CREATE TABLE`).
+- `sqlite_insert(db, table_name: String, row_data: Map) -> Map`: Inserts a row into a table.
+- `sqlite_query(db, table_name: String, filter_fn = none) -> Array`: Queries rows with optional predicate.
+- `sqlite_begin_transaction(db) -> Map`: Takes an ACID snapshot for transactions.
+- `sqlite_commit(db) -> Map`: Commits pending changes.
+- `sqlite_rollback(db) -> Map`: Rolls back to pre-transaction snapshot on failure.
+
+### `std.db_mysql` (MySQL Protocol & Connection Pool)
+- `mysql_parse_dsn(dsn: String) -> Map`: Parses MySQL DSN strings (`user:pass@tcp(host:port)/db`).
+- `mysql_connect_pool(dsn: String) -> Map`: Creates a managed connection pool.
+- `mysql_exec(pool, sql_query: String, params = none) -> Map`: Executes parameterized query.
+- `mysql_ping(pool) -> Bool`: Probes MySQL server connectivity.
+
+### `std.db_postgres` (PostgreSQL Client & Schema Manager)
+- `postgres_parse_url(url: String) -> Map`: Parses PostgreSQL URL (`postgres://user:pass@host:5432/db`).
+- `postgres_connect(url: String) -> Map`: Connects to PostgreSQL server.
+- `postgres_query(client, query_sql: String, params = none) -> Map`: Executes SQL query.
+- `postgres_is_healthy(client) -> Bool`: Probes PostgreSQL connection health.
 
 ### `std.sql_builder`
 - `sql_query_new(table: String) -> Map`: Initializes SQL builder.

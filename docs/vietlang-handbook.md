@@ -204,13 +204,38 @@ println(u.format_display())
 
 ## 8. Standard Library & Built-in Modules
 
-- `std.http_router`: High-level web framework and routing.
-- `std.validator`: Request payload validation.
-- `std.jwt`: JWT authentication tokens.
-- `std.cache`: In-memory TTL caching.
-- `std.orm`: SQL query builder and data layer.
-- `std.strings`: String transformation tools.
-- `std.test`: Unit and integration testing framework.
+VietLang includes **30 pure-VietLang standard modules**:
+
+1. `std.db_sqlite`: SQLite in-memory and file-backed database engine with ACID transactions.
+2. `std.db_mysql`: MySQL connection protocol, pooling, and prepared queries.
+3. `std.db_postgres`: PostgreSQL client, connection management, and health checks.
+4. `std.multipart`: Streaming multipart form-data and file upload parser.
+5. `std.saga`: Distributed SAGA Transaction Coordinator with compensating rollbacks.
+6. `std.retry`: Exponential backoff retry policy with jitter.
+7. `std.cron`: Enterprise job scheduling engine.
+8. `std.cache_lru`: Fixed-capacity Least-Recently-Used cache with eviction.
+9. `std.sql_builder`: Multi-table SQL Query Builder (INNER/LEFT JOIN, GROUP BY).
+10. `std.metrics`: Prometheus Metrics Exporter (Counters, Gauges).
+11. `std.security`: Password hashing, constant-time compare, CSRF, XSS filter.
+12. `std.crypto_advanced`: Webhook HMAC-SHA256 signature verification and payload encryption.
+13. `std.kv_store`: In-memory Redis engine (Atomic `INCR`, Hashes, TTL).
+14. `std.stream`: Kafka-like partitioned stream engine with consumer offsets.
+15. `std.http_pipeline`: Onion-model middleware with automated Security Headers (CSP, HSTS).
+16. `std.websocket`: WebSocket RFC 6455 framing and room broadcaster.
+17. `std.socket`: Raw TCP/UDP low-level socket client.
+18. `std.jwt`: JWT authentication with Role-Based Access Control (RBAC).
+19. `std.http_router`: High-level web routing and JSON responses.
+20. `std.validator`: Request payload validation rules.
+21. `std.orm`: SQL query builder and data layer.
+22. `std.migration`: Database schema migration versioning.
+23. `std.rate_limiter`: Token bucket DDoS protection.
+24. `std.circuit_breaker`: Fault-tolerance circuit breaker pattern.
+25. `std.telemetry`: OpenTelemetry trace context and header propagation.
+26. `std.health`: Kubernetes `/healthz` and `/readyz` probe checkers.
+27. `std.event_bus`: In-memory Pub/Sub event bus.
+28. `std.queue`: Asynchronous task queue with Dead-Letter Queue (DLQ).
+29. `std.config`: Environment variables and `.env` loader.
+30. `std.test`: Complete unit testing assertions framework.
 
 ---
 
@@ -231,12 +256,31 @@ let state = mutex_new(0)
 
 ---
 
-## 10. Package Management with VPM
+## 10. Package Management with VPM (`vpm.vl`)
+
+VietLang features a **decentralized, serverless package manager**:
 
 ```bash
-# Create a new project
-vietlang vpm.vl init my_service
+# Initialize a new package (templates: lib | api | microservice)
+vietlang vpm.vl init my_service microservice
 
-# Run project
-vietlang src/main.vl
+# Search community packages
+vietlang vpm.vl search redis
+vietlang vpm.vl search postgres
+
+# Install any Git repository directly as a module
+vietlang vpm.vl install https://github.com/user/my_module.git
+
+# Inspect exported functions without opening code
+vietlang vpm.vl docs my_module
+
+# Verify code syntax and automated test suites
+vietlang vpm.vl verify
+
+# Update or remove modules
+vietlang vpm.vl update my_module
+vietlang vpm.vl remove my_module
+
+# Validate package before publishing
+vietlang vpm.vl publish
 ```
