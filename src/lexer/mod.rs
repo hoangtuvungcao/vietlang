@@ -223,6 +223,21 @@ impl Lexer {
                     'n' => value.push('\n'),
                     't' => value.push('\t'),
                     'r' => value.push('\r'),
+                    'e' => value.push('\x1b'),
+                    'x' => {
+                        let mut hex = String::new();
+                        if !self.is_at_end() { hex.push(self.advance()); }
+                        if !self.is_at_end() { hex.push(self.advance()); }
+                        if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                            value.push(byte as char);
+                        } else {
+                            return Err(VietError::lexer_error(
+                                format!("Invalid hex escape sequence: \\x{}", hex),
+                                self.line,
+                                self.column,
+                            ));
+                        }
+                    }
                     '\\' => value.push('\\'),
                     '"' => value.push('"'),
                     '{' => value.push('{'),
