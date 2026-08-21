@@ -1,0 +1,48 @@
+// ===================================================
+// VietLang Least-Recently-Used (LRU) Cache (std.cache_lru)
+// Fixed-capacity in-memory cache with LRU eviction policy
+// ===================================================
+
+fn lru_cache_new(capacity: Int = 100) {
+    let c = map_new()
+    let c = map_set(c, "capacity", capacity)
+    let c = map_set(c, "entries", map_new())
+    let c = map_set(c, "access_order", [])
+    return c
+}
+
+fn lru_cache_put(cache, key: String, val) {
+    let capacity = map_get(cache, "capacity")
+    let entries = map_get(cache, "entries")
+    let order = map_get(cache, "access_order")
+
+    let mut new_order = []
+    // Remove key if already in order
+    for k in order {
+        if k != key {
+            new_order = push(new_order, k)
+        }
+    }
+
+    // Evict oldest if capacity reached
+    let mut new_entries = entries
+    if new_order.len() >= capacity {
+        let oldest = new_order[0]
+        new_order = slice(new_order, 1)
+        new_entries = map_remove(new_entries, oldest)
+    }
+
+    new_order = push(new_order, key)
+    new_entries = map_set(new_entries, key, val)
+
+    let c2 = map_set(cache, "entries", new_entries)
+    return map_set(c2, "access_order", new_order)
+}
+
+fn lru_cache_get(cache, key: String, default_val = none) {
+    let entries = map_get(cache, "entries")
+    if map_has(entries, key) {
+        return map_get(entries, key)
+    }
+    return default_val
+}

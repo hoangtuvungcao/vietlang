@@ -152,6 +152,9 @@ impl Interpreter {
             ("encrypt_secret", Some(2)),
             ("decrypt_secret", Some(2)),
             ("ip_in_cidr", Some(2)),
+            ("hex_encode", Some(1)),
+            ("hex_decode", Some(1)),
+            ("crypto_random_hex", None),
         ];
 
         for (name, arity) in builtins {
@@ -1277,6 +1280,9 @@ impl Interpreter {
             "encrypt_secret" => crate::stdlib::builtin_encrypt_secret(args, span.line, span.column),
             "decrypt_secret" => crate::stdlib::builtin_decrypt_secret(args, span.line, span.column),
             "ip_in_cidr" => crate::stdlib::builtin_ip_in_cidr(args, span.line, span.column),
+            "hex_encode" => crate::stdlib::builtin_hex_encode(args, span.line, span.column),
+            "hex_decode" => crate::stdlib::builtin_hex_decode(args, span.line, span.column),
+            "crypto_random_hex" => crate::stdlib::builtin_crypto_random_hex(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

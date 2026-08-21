@@ -321,6 +321,67 @@ let is_allowed = http_check_ip_allowed(pipeline, client_ip)
 let response = http_build_response(200, payload_data)
 ```
 
+### 2.21 Distributed SAGA Coordinator (`std.saga`)
+```rust
+import std.saga
+
+let mut order_saga = saga_new("OrderFulfillment")
+order_saga = saga_add_step(order_saga, "ReserveStock", "StockReserved", "ReleaseStock")
+order_saga = saga_add_step(order_saga, "ChargePayment", "CardCharged", "RefundCard")
+
+// Trigger compensation rollback on failure
+let rollback = saga_compensate_all(order_saga)
+```
+
+### 2.22 Resilient Exponential Backoff Retry (`std.retry`)
+```rust
+import std.retry
+
+let policy = retry_policy_new(5, 100, 2.0)
+let delay_ms = retry_calculate_delay_ms(policy, attempt_number)
+sleep_ms(delay_ms)
+```
+
+### 2.23 Enterprise Cron Scheduler (`std.cron`)
+```rust
+import std.cron
+
+let mut scheduler = cron_scheduler_new()
+scheduler = cron_add_interval_job(scheduler, "sync_data", 300, "SYNC_PAYMENTS")
+scheduler = cron_trigger_job(scheduler, "sync_data")
+```
+
+### 2.24 Fixed-Capacity LRU Cache (`std.cache_lru`)
+```rust
+import std.cache_lru
+
+let mut cache = lru_cache_new(1000)
+cache = lru_cache_put(cache, "user:101", user_profile)
+let profile = lru_cache_get(cache, "user:101")
+```
+
+### 2.25 Advanced Multi-table SQL Builder (`std.sql_builder`)
+```rust
+import std.sql_builder
+
+let mut q = sql_query_new("orders")
+q = sql_select(q, ["orders.id", "users.name", "payments.amount"])
+q = sql_join(q, "INNER", "users", "orders.user_id = users.id")
+q = sql_where(q, "orders.status", "=", "PAID")
+q = sql_group_by(q, ["orders.id", "users.name"])
+let sql_str = sql_build(q)
+```
+
+### 2.26 Prometheus Metrics Exporter (`std.metrics`)
+```rust
+import std.metrics
+
+let mut reg = metrics_registry_new("payment_service")
+reg = metrics_inc_counter(reg, "http_requests_total", 1.0)
+reg = metrics_set_gauge(reg, "active_connections", 25.0)
+let text_export = metrics_to_prometheus(reg)
+```
+
 ---
 
 ## 3. Package Management with VPM (`vpm.vl`)

@@ -1474,3 +1474,49 @@ fn parse_ipv4(s: &str) -> Option<u32> {
     Some((o1 << 24) | (o2 << 16) | (o3 << 8) | o4)
 }
 
+pub fn builtin_hex_encode(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("hex_encode() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.as_bytes(), _ => return Err(VietError::type_error("hex_encode() expects String".into(), line, col)) };
+    let hex: String = s.iter().map(|b| format!("{:02x}", b)).collect();
+    Ok(Value::String(hex))
+}
+
+pub fn builtin_hex_decode(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("hex_decode() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("hex_decode() expects String".into(), line, col)) };
+    let clean = s.trim();
+    if clean.len() % 2 != 0 {
+        return Err(VietError::runtime_error("Invalid hex length".into(), line, col));
+    }
+    let mut bytes = Vec::new();
+    for i in (0..clean.len()).step_by(2) {
+        if let Ok(b) = u8::from_str_radix(&clean[i..i+2], 16) {
+            bytes.push(b);
+        } else {
+            return Err(VietError::runtime_error("Invalid hex character".into(), line, col));
+        }
+    }
+    Ok(Value::String(String::from_utf8_lossy(&bytes).to_string()))
+}
+
+pub fn builtin_crypto_random_hex(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let len = if args.len() == 1 {
+        match &args[0] { Value::Int(n) => *n as usize, _ => 16 }
+    } else {
+        16
+    };
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let mut seed = now.as_nanos() as u64;
+    let mut out = String::new();
+    for _ in 0..len {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let b = (seed >> 33) as u8;
+        out.push_str(&format!("{:02x}", b));
+    }
+    Ok(Value::String(out))
+}
+

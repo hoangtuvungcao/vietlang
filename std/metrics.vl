@@ -1,0 +1,53 @@
+// ===================================================
+// VietLang Prometheus Metrics Exporter (std.metrics)
+// Counters, Gauges, Histograms with label dimensional formatting
+// ===================================================
+
+fn metrics_registry_new(service_name: String = "vietlang_app") {
+    let r = map_new()
+    let r = map_set(r, "service", service_name)
+    let r = map_set(r, "counters", map_new())
+    let r = map_set(r, "gauges", map_new())
+    return r
+}
+
+fn metrics_inc_counter(registry, name: String, delta: Float = 1.0) {
+    let counters = map_get(registry, "counters")
+    let mut current = 0.0
+    if map_has(counters, name) {
+        current = map_get(counters, name)
+    }
+    let new_val = current + delta
+    let new_counters = map_set(counters, name, new_val)
+    return map_set(registry, "counters", new_counters)
+}
+
+fn metrics_set_gauge(registry, name: String, value: Float) {
+    let gauges = map_get(registry, "gauges")
+    let new_gauges = map_set(gauges, name, value)
+    return map_set(registry, "gauges", new_gauges)
+}
+
+// Render metrics in standard Prometheus text format
+fn metrics_to_prometheus(registry) -> String {
+    let mut out = "# VietLang Prometheus Metrics Exporter\n"
+    let service = map_get(registry, "service")
+
+    let counters = map_get(registry, "counters")
+    let counter_keys = map_keys(counters)
+    for k in counter_keys {
+        let v = map_get(counters, k)
+        out = out + "# TYPE " + k + " counter\n"
+        out = out + k + "{service=\"" + service + "\"} " + to_string(v) + "\n"
+    }
+
+    let gauges = map_get(registry, "gauges")
+    let gauge_keys = map_keys(gauges)
+    for k in gauge_keys {
+        let v = map_get(gauges, k)
+        out = out + "# TYPE " + k + " gauge\n"
+        out = out + k + "{service=\"" + service + "\"} " + to_string(v) + "\n"
+    }
+
+    return out
+}

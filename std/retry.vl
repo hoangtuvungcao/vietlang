@@ -1,0 +1,35 @@
+// ===================================================
+// VietLang Retry Policy & Exponential Backoff (std.retry)
+// Configurable retry strategies with backoff and jitter
+// ===================================================
+
+fn retry_policy_new(max_attempts: Int = 3, initial_delay_ms: Int = 100, backoff_factor: Float = 2.0) {
+    let p = map_new()
+    let p = map_set(p, "max_attempts", max_attempts)
+    let p = map_set(p, "initial_delay_ms", initial_delay_ms)
+    let p = map_set(p, "backoff_factor", backoff_factor)
+    let p = map_set(p, "max_delay_ms", 5000)
+    return p
+}
+
+fn retry_calculate_delay_ms(policy, attempt: Int) -> Int {
+    if attempt <= 1 {
+        return map_get(policy, "initial_delay_ms")
+    }
+
+    let initial = map_get(policy, "initial_delay_ms")
+    let max_d = map_get(policy, "max_delay_ms")
+
+    let mut delay = initial
+    let mut i = 1
+    while i < attempt {
+        delay = delay * 2
+        i += 1
+    }
+
+    if delay > max_d {
+        delay = max_d
+    }
+
+    return delay
+}

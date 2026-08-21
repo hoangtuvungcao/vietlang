@@ -58,6 +58,8 @@ demo: build
 	./target/release/vietlang examples/full_backend_suite.vl
 	@echo "\n--- king_of_backend_benchmark.vl ---"
 	./target/release/vietlang examples/king_of_backend_benchmark.vl
+	@echo "\n--- master_backend_enterprise.vl ---"
+	./target/release/vietlang examples/master_backend_enterprise.vl
 	@echo "\n--- bytecode_vm_demo.vl (Phase 8 VM) ---"
 	./target/release/vietlang --vm examples/bytecode_vm_demo.vl
 	@echo "\n--- bootstrap/parser.vl ---"

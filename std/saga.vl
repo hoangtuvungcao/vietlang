@@ -1,0 +1,57 @@
+// ===================================================
+// VietLang Distributed SAGA Transaction Coordinator (std.saga)
+// Orchestration of Multi-Service Transactions with Compensations
+// ===================================================
+
+fn saga_new(transaction_name: String) {
+    let s = map_new()
+    let s = map_set(s, "name", transaction_name)
+    let s = map_set(s, "id", uuid())
+    let s = map_set(s, "steps", [])
+    let s = map_set(s, "executed_steps", [])
+    let s = map_set(s, "status", "INITIAL")
+    return s
+}
+
+fn saga_add_step(saga, step_name: String, forward_action: String, compensate_action: String) {
+    let step = map_new()
+    let step = map_set(step, "name", step_name)
+    let step = map_set(step, "action", forward_action)
+    let step = map_set(step, "compensate", compensate_action)
+
+    let current = map_get(saga, "steps")
+    let new_steps = push(current, step)
+    return map_set(saga, "steps", new_steps)
+}
+
+fn saga_record_step_success(saga, step_name: String) {
+    let executed = map_get(saga, "executed_steps")
+    let new_executed = push(executed, step_name)
+    let updated = map_set(saga, "executed_steps", new_executed)
+    return map_set(updated, "status", "IN_PROGRESS")
+}
+
+// When a step fails, trigger compensating rollback for all executed steps in reverse order
+fn saga_compensate_all(saga) {
+    let executed = map_get(saga, "executed_steps")
+    let steps = map_get(saga, "steps")
+    let mut compensated_log = []
+
+    let mut i = executed.len()
+    while i > 0 {
+        i -= 1
+        let step_name = executed[i]
+        for s in steps {
+            if map_get(s, "name") == step_name {
+                let comp_action = map_get(s, "compensate")
+                compensated_log = push(compensated_log, "COMPENSATED: " + comp_action)
+            }
+        }
+    }
+
+    let res = map_new()
+    let res = map_set(res, "status", "ROLLED_BACK")
+    let res = map_set(res, "compensated_steps", compensated_log)
+    let res = map_set(res, "saga_id", map_get(saga, "id"))
+    return res
+}

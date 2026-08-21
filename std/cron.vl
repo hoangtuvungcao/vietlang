@@ -1,0 +1,53 @@
+// ===================================================
+// VietLang Enterprise Job Scheduler & Cron Engine (std.cron)
+// Task scheduling with recurring intervals and execution tracking
+// ===================================================
+
+fn cron_scheduler_new() {
+    let cs = map_new()
+    let cs = map_set(cs, "jobs", map_new())
+    let cs = map_set(cs, "execution_history", [])
+    return cs
+}
+
+fn cron_add_interval_job(scheduler, job_id: String, interval_seconds: Int, task_action: String) {
+    let job = map_new()
+    let job = map_set(job, "id", job_id)
+    let job = map_set(job, "interval_sec", interval_seconds)
+    let job = map_set(job, "action", task_action)
+    let job = map_set(job, "last_run", 0)
+    let job = map_set(job, "run_count", 0)
+
+    let jobs = map_get(scheduler, "jobs")
+    let new_jobs = map_set(jobs, job_id, job)
+    return map_set(scheduler, "jobs", new_jobs)
+}
+
+fn cron_should_run_job(job) -> Bool {
+    let now = time_now()
+    let last = map_get(job, "last_run")
+    let interval = map_get(job, "interval_sec")
+    return now - last >= interval
+}
+
+fn cron_trigger_job(scheduler, job_id: String) {
+    let jobs = map_get(scheduler, "jobs")
+    if !map_has(jobs, job_id) {
+        return scheduler
+    }
+
+    let job = map_get(jobs, job_id)
+    let count = map_get(job, "run_count") + 1
+    let now = time_now()
+
+    let updated_job = map_set(job, "last_run", now)
+    let updated_job = map_set(updated_job, "run_count", count)
+
+    let new_jobs = map_set(jobs, job_id, updated_job)
+    let history = map_get(scheduler, "execution_history")
+    let record = map_set(map_set(map_new(), "job_id", job_id), "timestamp", now)
+    let new_history = push(history, record)
+
+    let updated_s = map_set(scheduler, "jobs", new_jobs)
+    return map_set(updated_s, "execution_history", new_history)
+}

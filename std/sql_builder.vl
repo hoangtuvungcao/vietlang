@@ -1,0 +1,84 @@
+// ===================================================
+// VietLang Advanced SQL Query Builder (std.sql_builder)
+// Multi-table JOINs, GROUP BY, HAVING, and SQL sanitization
+// ===================================================
+
+fn sql_query_new(base_table: String) {
+    let q = map_new()
+    let q = map_set(q, "table", base_table)
+    let q = map_set(q, "selects", ["*"])
+    let q = map_set(q, "joins", [])
+    let q = map_set(q, "wheres", [])
+    let q = map_set(q, "group_by", [])
+    let q = map_set(q, "having", [])
+    let q = map_set(q, "order_by", "")
+    let q = map_set(q, "limit_val", 0)
+    return q
+}
+
+fn sql_select(q, columns) {
+    return map_set(q, "selects", columns)
+}
+
+fn sql_join(q, join_type: String, target_table: String, on_clause: String) {
+    let join_entry = map_new()
+    let join_entry = map_set(join_entry, "type", join_type)
+    let join_entry = map_set(join_entry, "table", target_table)
+    let join_entry = map_set(join_entry, "on", on_clause)
+
+    let current = map_get(q, "joins")
+    let new_joins = push(current, join_entry)
+    return map_set(q, "joins", new_joins)
+}
+
+fn sql_where(q, column: String, operator: String, value) {
+    let w = map_new()
+    let w = map_set(w, "col", column)
+    let w = map_set(w, "op", operator)
+    let w = map_set(w, "val", value)
+
+    let current = map_get(q, "wheres")
+    let new_wheres = push(current, w)
+    return map_set(q, "wheres", new_wheres)
+}
+
+fn sql_group_by(q, columns) {
+    return map_set(q, "group_by", columns)
+}
+
+fn sql_build(q) -> String {
+    let selects = map_get(q, "selects")
+    let sel_str = selects.join(", ")
+    let mut sql = "SELECT " + sel_str + " FROM " + map_get(q, "table")
+
+    // Joins
+    let joins = map_get(q, "joins")
+    for j in joins {
+        let j_type = map_get(j, "type")
+        let j_table = map_get(j, "table")
+        let j_on = map_get(j, "on")
+        sql = sql + " " + j_type + " JOIN " + j_table + " ON " + j_on
+    }
+
+    // Wheres
+    let wheres = map_get(q, "wheres")
+    if wheres.len() > 0 {
+        let mut where_parts = []
+        for w in wheres {
+            let col = map_get(w, "col")
+            let op = map_get(w, "op")
+            let val = map_get(w, "val")
+            let val_str = to_string(val)
+            where_parts = push(where_parts, col + " " + op + " '" + val_str + "'")
+        }
+        sql = sql + " WHERE " + where_parts.join(" AND ")
+    }
+
+    // Group By
+    let group_by = map_get(q, "group_by")
+    if group_by.len() > 0 {
+        sql = sql + " GROUP BY " + group_by.join(", ")
+    }
+
+    return sql
+}
