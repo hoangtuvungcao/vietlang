@@ -303,7 +303,7 @@ fn print_help() {
     println!("  vietlang                          Start REPL");
 }
 
-fn run_source(source: &str, _name: &str) {
+fn run_source(source: &str, name: &str) {
     let mut lexer = Lexer::new(source);
     let tokens = match lexer.tokenize() {
         Ok(tokens) => tokens,
@@ -323,6 +323,26 @@ fn run_source(source: &str, _name: &str) {
     };
 
     let mut interpreter = Interpreter::new();
+    if name != "<repl>" && name != "<inline>" {
+        let path = std::path::Path::new(name);
+        if let Some(parent) = path.parent() {
+            let mut curr = parent;
+            let mut found_root = None;
+            loop {
+                if curr.join("vietlang.json").exists() || curr.join("src").exists() {
+                    found_root = Some(curr.to_path_buf());
+                    break;
+                }
+                if let Some(p) = curr.parent() {
+                    curr = p;
+                } else {
+                    break;
+                }
+            }
+            interpreter.base_dir = found_root.or_else(|| Some(parent.to_path_buf()));
+        }
+    }
+
     match interpreter.execute(&program) {
         Ok(_) => {}
         Err(e) => {

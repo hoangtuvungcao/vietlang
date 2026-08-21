@@ -22,6 +22,8 @@ pub struct Interpreter {
     enum_defs: HashMap<String, Vec<EnumVariant>>,
     /// Track loaded module paths to prevent circular / duplicate execution
     loaded_modules: HashSet<String>,
+    /// Base directory for relative project imports
+    pub base_dir: Option<std::path::PathBuf>,
 }
 
 impl Interpreter {
@@ -31,6 +33,7 @@ impl Interpreter {
             struct_defs: HashMap::new(),
             enum_defs: HashMap::new(),
             loaded_modules: HashSet::new(),
+            base_dir: None,
         };
         interp.register_builtins();
         interp
@@ -456,6 +459,14 @@ impl Interpreter {
                     format!("modules/{}/mod.vl", joined),
                 ];
 
+                // Project root / Base Directory resolution
+                if let Some(ref bd) = self.base_dir {
+                    let bd_str = bd.to_string_lossy();
+                    search_paths.push(format!("{}/{}.vl", bd_str, joined));
+                    search_paths.push(format!("{}/src/{}.vl", bd_str, joined));
+                    search_paths.push(format!("{}/std/{}.vl", bd_str, joined));
+                }
+
                 // If path contains 'src', also search from 'src' onwards
                 if let Some(src_pos) = path.iter().position(|seg| seg == "src") {
                     let from_src = path[src_pos..].join("/");
@@ -463,6 +474,12 @@ impl Interpreter {
                     search_paths.push(format!("{}.vl", from_src));
                     search_paths.push(format!("{}.vl", after_src));
                     search_paths.push(format!("src/{}.vl", after_src));
+                    if let Some(ref bd) = self.base_dir {
+                        let bd_str = bd.to_string_lossy();
+                        search_paths.push(format!("{}/{}.vl", bd_str, from_src));
+                        search_paths.push(format!("{}/{}.vl", bd_str, after_src));
+                        search_paths.push(format!("{}/src/{}.vl", bd_str, after_src));
+                    }
                 }
 
                 // If path contains 'examples', also search relative to current repo
@@ -1470,7 +1487,6 @@ impl Interpreter {
 
         let mut bind_ip = "0.0.0.0".to_string();
         let mut port = 8080u16;
-        let mut protocol = "HTTP/1.1, HTTP/2, HTTP/3 (Alt-Svc)".to_string();
         let mut handler = None;
 
         match &args[0] {
@@ -1503,9 +1519,6 @@ impl Interpreter {
                 if let Some(Value::Int(p)) = fields.get("port") {
                     port = *p as u16;
                 }
-                if let Some(Value::String(pr)) = fields.get("protocol") {
-                    protocol = pr.clone();
-                }
                 if args.len() >= 2 {
                     handler = Some(args[1].clone());
                 }
@@ -1514,7 +1527,7 @@ impl Interpreter {
         }
 
         let addr = format!("{}:{}", bind_ip, port);
-        eprintln!("\x1b[32m[VietLang HTTP Engine]\x1b[0m Listening on http://{}:{} [Protocols: {}]", bind_ip, port, protocol);
+        eprintln!("\x1b[32m[VietLang]\x1b[0m Listening on http://{}:{}", bind_ip, port);
 
         let listener = TcpListener::bind(&addr).map_err(|e|
             VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), span.line, span.column)
