@@ -1,8 +1,8 @@
 {
   "name": "vietlang",
   "displayName": "VietLang - Backend Programming Language",
-  "description": "Official Visual Studio Code extension for VietLang: Syntax Highlighting, Code Snippets, Bracket Matching, and Language Support for High-Throughput Backend Development.",
-  "version": "0.1.0",
+  "description": "Official Visual Studio Code extension for VietLang: Syntax Highlighting, Custom File Icons (.vl), Code Snippets, Bracket Matching, and Language Support.",
+  "version": "0.1.1",
   "publisher": "hoangtuvungcao",
   "engines": {
     "vscode": "^1.75.0"
@@ -28,11 +28,13 @@
     "microservices",
     "database",
     "rest-api",
-    "websocket"
+    "websocket",
+    "icon-theme"
   ],
   "categories": [
     "Programming Languages",
-    "Snippets"
+    "Snippets",
+    "Themes"
   ],
   "contributes": {
     "languages": [
@@ -45,7 +47,18 @@
         "extensions": [
           ".vl"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/vl-file.svg",
+          "dark": "./icons/vl-file.svg"
+        }
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "vietlang-icons",
+        "label": "VietLang File Icons",
+        "path": "./icons/icon-theme.json"
       }
     ],
     "grammars": [

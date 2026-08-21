@@ -1,0 +1,14 @@
+{
+  "iconDefinitions": {
+    "_vietlang_file": {
+      "iconPath": "./vl-file.svg"
+    }
+  },
+  "file": "_vietlang_file",
+  "fileExtensions": {
+    "vl": "_vietlang_file"
+  },
+  "languageIds": {
+    "vietlang": "_vietlang_file"
+  }
+}

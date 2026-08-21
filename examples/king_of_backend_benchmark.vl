@@ -5,7 +5,7 @@
 // - Kafka-level Distributed Stream with Offset Batching (std.stream)
 // - Webhook Cryptography & Secret Payload Encryption (std.crypto_advanced)
 // - Onion Middleware Pipeline & Security Headers (std.http_pipeline)
-// - URL Encoding & CIDR IP Shielding
+// - URL Encoding & CIDR IP Shieldinge
 // ===================================================
 
 import std.test
