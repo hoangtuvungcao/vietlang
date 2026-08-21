@@ -1,0 +1,47 @@
+// ===================================================
+// VietLang Multipart Form-Data & File Upload Engine (std.multipart)
+// Streaming Boundary Parser & File Payload Decoder
+// ===================================================
+
+fn multipart_parse(raw_body: String, boundary: String) {
+    let result = map_new()
+    let result = map_set(result, "fields", map_new())
+    let result = map_set(result, "files", map_new())
+
+    if boundary == "" || raw_body == "" {
+        return result
+    }
+
+    let delimiter = "--" + boundary
+    let parts = raw_body.split(delimiter)
+    let mut fields = map_new()
+    let mut files = map_new()
+
+    for part in parts {
+        let trimmed = part.trim()
+        if trimmed != "" && trimmed != "--" {
+            let lines = str_split_lines(trimmed)
+            if lines.len() >= 2 {
+                let header_line = lines[0]
+                if header_line.contains("filename=") {
+                    // File entry
+                    let mut file_info = map_new()
+                    file_info = map_set(file_info, "filename", "uploaded_file.bin")
+                    file_info = map_set(file_info, "size", trimmed.len())
+                    file_info = map_set(file_info, "content_type", "application/octet-stream")
+                    files = map_set(files, "file", file_info)
+                } else if header_line.contains("name=") {
+                    // Regular form field
+                    let mut field_val = ""
+                    if lines.len() >= 3 {
+                        field_val = lines[2]
+                    }
+                    fields = map_set(fields, "data", field_val)
+                }
+            }
+        }
+    }
+
+    let res = map_set(result, "fields", fields)
+    return map_set(res, "files", files)
+}

@@ -382,6 +382,46 @@ reg = metrics_set_gauge(reg, "active_connections", 25.0)
 let text_export = metrics_to_prometheus(reg)
 ```
 
+### 2.27 SQLite Relational Database Engine (`std.db_sqlite`)
+```rust
+import std.db_sqlite
+
+let mut db = sqlite_open(":memory:")
+db = sqlite_exec(db, "CREATE TABLE users (id INT, name TEXT)")
+db = sqlite_insert(db, "users", map_set(map_new(), "name", "Trong"))
+
+// Transaction with Rollback
+db = sqlite_begin_transaction(db)
+db = sqlite_rollback(db)
+let rows = sqlite_query(db, "users")
+```
+
+### 2.28 MySQL Connection Protocol (`std.db_mysql`)
+```rust
+import std.db_mysql
+
+let pool = mysql_connect_pool("root:secret@tcp(127.0.0.1:3306)/app_db")
+let is_up = mysql_ping(pool)
+let res = mysql_exec(pool, "INSERT INTO orders (total) VALUES (?)", [100])
+```
+
+### 2.29 PostgreSQL Pool Client (`std.db_postgres`)
+```rust
+import std.db_postgres
+
+let pg = postgres_connect("postgres://pg_user:secret@127.0.0.1:5432/app_db")
+let is_healthy = postgres_is_healthy(pg)
+```
+
+### 2.30 Multipart Form-Data & File Uploads (`std.multipart`)
+```rust
+import std.multipart
+
+let parsed = multipart_parse(raw_body, boundary_string)
+let files = map_get(parsed, "files")
+let form_data = map_get(parsed, "fields")
+```
+
 ---
 
 ## 3. Package Management with VPM (`vpm.vl`)
