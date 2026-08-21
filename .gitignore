@@ -1,0 +1,18 @@
+# Build artifacts
+/target/
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VietLang temp files
+*.vl.bak
+/tmp/

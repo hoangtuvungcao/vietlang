@@ -1,0 +1,10 @@
+[package]
+name = "vietlang"
+version = "0.1.0"
+edition = "2021"
+description = "VietLang - A backend-first programming language"
+authors = ["VanTrong"]
+
+[[bin]]
+name = "vietlang"
+path = "src/main.rs"

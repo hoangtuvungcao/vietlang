@@ -1,0 +1,94 @@
+// ===================================
+// VietLang — JSON Processing Demo
+// ===================================
+
+println("📋 VietLang JSON Demo")
+println("======================\n")
+
+// --- Create JSON from data ---
+println("--- Creating JSON ---\n")
+
+let user = map_new()
+let user = map_set(user, "name", "Van Trong")
+let user = map_set(user, "age", 25)
+let user = map_set(user, "email", "trong@vietlang.dev")
+let user = map_set(user, "active", true)
+let user = map_set(user, "skills", ["Rust", "Go", "VietLang"])
+
+let json_output = json_stringify(user, true)
+println("User JSON (pretty):")
+println(json_output)
+
+let json_compact = json_stringify(user, false)
+println("\nCompact: " + json_compact)
+
+// --- Parse JSON ---
+println("\n--- Parsing JSON ---\n")
+
+let raw = "{\"name\": \"VietLang\", \"version\": \"0.1.0\", \"backend\": true}"
+let parsed = json_parse(raw)
+println("Parsed: " + to_string(parsed))
+println("Name: " + map_get(parsed, "name"))
+println("Version: " + map_get(parsed, "version"))
+
+// --- Parse array ---
+let arr_json = "[1, 2, 3, 4, 5]"
+let arr = json_parse(arr_json)
+println("\nParsed array: " + to_string(arr))
+
+// --- Nested JSON ---
+let nested = "{\"user\": {\"name\": \"Trong\", \"address\": {\"city\": \"HCMC\"}}}"
+let nested_parsed = json_parse(nested)
+println("\nNested: " + to_string(nested_parsed))
+
+// --- API Response pattern ---
+println("\n--- API Response Pattern ---\n")
+
+fn api_response(status: Int, data, message: String) {
+    let resp = map_new()
+    let resp = map_set(resp, "status", status)
+    let resp = map_set(resp, "message", message)
+    let resp = map_set(resp, "data", data)
+    let resp = map_set(resp, "timestamp", time_now())
+    return json_stringify(resp, true)
+}
+
+let users_data = [
+    map_set(map_set(map_new(), "id", 1), "name", "Trong"),
+    map_set(map_set(map_new(), "id", 2), "name", "Minh"),
+    map_set(map_set(map_new(), "id", 3), "name", "Lan")
+]
+
+println("Success Response:")
+println(api_response(200, users_data, "OK"))
+
+println("\nError Response:")
+println(api_response(404, none, "User not found"))
+
+// --- Config file pattern ---
+println("\n--- Config File Pattern ---\n")
+
+let config = map_new()
+let config = map_set(config, "server_host", "0.0.0.0")
+let config = map_set(config, "server_port", 8080)
+let config = map_set(config, "db_url", "postgres://localhost:5432/mydb")
+let config = map_set(config, "db_pool_size", 20)
+let config = map_set(config, "log_level", "info")
+let config = map_set(config, "cors_origins", ["http://localhost:3000", "https://vietlang.dev"])
+let config = map_set(config, "rate_limit_per_minute", 100)
+let config = map_set(config, "jwt_secret", sha256("my-secret-key"))
+
+let config_json = json_stringify(config, true)
+println("Server Config:")
+println(config_json)
+
+// Save to file
+file_write("/tmp/vietlang_server_config.json", config_json)
+println("\nConfig saved to /tmp/vietlang_server_config.json")
+
+// Read back
+let loaded = json_parse(file_read("/tmp/vietlang_server_config.json"))
+println("Loaded port: " + to_string(map_get(loaded, "server_port")))
+
+file_delete("/tmp/vietlang_server_config.json")
+println("\nJSON demo completed!")

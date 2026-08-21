@@ -1,0 +1,61 @@
+// ===================================
+// VietLang — File I/O Demo
+// ===================================
+
+println("📁 VietLang File I/O Demo")
+println("==========================\n")
+
+// --- Write files ---
+println("--- Writing Files ---\n")
+
+file_write("/tmp/vietlang_test.txt", "Hello from VietLang!\nThis is a test file.\n")
+println("✅ Created /tmp/vietlang_test.txt")
+
+file_write("/tmp/vietlang_config.json", json_stringify(
+    map_set(map_set(map_set(map_new(),
+        "host", "localhost"),
+        "port", 8080),
+        "debug", true),
+    true
+))
+println("Created /tmp/vietlang_config.json")
+
+// --- Read files ---
+println("\n--- Reading Files ---\n")
+let content = file_read("/tmp/vietlang_test.txt")
+println("File content: " + content)
+
+let config_raw = file_read("/tmp/vietlang_config.json")
+println("Config JSON: " + config_raw)
+
+// --- Append ---
+println("--- Appending ---\n")
+file_append("/tmp/vietlang_test.txt", "Appended line 1\n")
+file_append("/tmp/vietlang_test.txt", "Appended line 2\n")
+let updated = file_read("/tmp/vietlang_test.txt")
+println("Updated content:\n" + updated)
+
+// --- File operations ---
+println("--- File Operations ---\n")
+println("File exists: " + to_string(file_exists("/tmp/vietlang_test.txt")))
+println("Missing file: " + to_string(file_exists("/tmp/nonexistent.xyz")))
+
+// --- Directory operations ---
+println("--- Directory Operations ---\n")
+dir_create("/tmp/vietlang_project")
+dir_create("/tmp/vietlang_project/src")
+dir_create("/tmp/vietlang_project/tests")
+println("Created project directories")
+
+file_write("/tmp/vietlang_project/src/main.vl", "println(\"Hello World\")\n")
+file_write("/tmp/vietlang_project/src/utils.vl", "fn add(a, b) { return a + b }\n")
+
+let files = dir_list("/tmp/vietlang_project")
+println("Project structure: " + to_string(files))
+
+let src_files = dir_list("/tmp/vietlang_project/src")
+println("Source files: " + to_string(src_files))
+
+// --- Cleanup ---
+file_delete("/tmp/vietlang_test.txt")
+println("\nFile I/O demo completed!")

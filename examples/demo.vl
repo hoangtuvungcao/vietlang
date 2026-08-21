@@ -1,0 +1,138 @@
+// ===================================
+// VietLang Demo - Hello World & Basics
+// ===================================
+
+// 1. Variables
+let name = "VietLang"
+let version = 0.1
+let is_awesome = true
+
+println("Welcome to " + name + " v" + to_string(version) + "!")
+println("Is awesome? " + to_string(is_awesome))
+
+// 2. Mutable variables
+let mut counter = 0
+counter = counter + 1
+counter = counter + 1
+println("Counter: " + to_string(counter))
+
+// 3. Functions
+fn add(a: Int, b: Int) -> Int {
+    return a + b
+}
+
+fn greet(name: String) {
+    println("Hello, " + name + "!")
+}
+
+println("2 + 3 = " + to_string(add(2, 3)))
+greet("World")
+greet("Backend Developer")
+
+// 4. If/Else
+let score = 85
+if score >= 90 {
+    println("Grade: A")
+} else if score >= 80 {
+    println("Grade: B")
+} else if score >= 70 {
+    println("Grade: C")
+} else {
+    println("Grade: F")
+}
+
+// 5. Loops
+println("\n--- For Loop ---")
+for i in 1..6 {
+    println("  Iteration " + to_string(i))
+}
+
+println("\n--- While Loop ---")
+let mut n = 5
+while n > 0 {
+    println("  Countdown: " + to_string(n))
+    n = n - 1
+}
+println("Launch!")
+
+// 6. Arrays
+let fruits = ["apple", "banana", "cherry", "durian"]
+println("\nFruits: " + to_string(fruits))
+println("First: " + fruits[0])
+println("Last: " + fruits[-1])
+println("Length: " + to_string(fruits.len()))
+
+// 7. String methods
+let message = "  Hello, VietLang!  "
+println("\nString methods:")
+println("  Trimmed: '" + message.trim() + "'")
+println("  Upper: " + message.trim().to_upper())
+println("  Lower: " + message.trim().to_lower())
+println("  Contains 'Viet': " + to_string(message.contains("Viet")))
+
+// 8. Structs
+struct User {
+    name: String,
+    age: Int,
+    email: String
+}
+
+let user = User { name: "Trong", age: 25, email: "trong@example.com" }
+println("\nUser: " + user.name + " (age " + to_string(user.age) + ")")
+
+// 9. Pattern Matching
+fn describe_number(n: Int) -> String {
+    return match n {
+        0 => "zero",
+        1 => "one",
+        _ => "many"
+    }
+}
+
+println("\nPattern matching:")
+println("  0 is: " + describe_number(0))
+println("  1 is: " + describe_number(1))
+println("  42 is: " + describe_number(42))
+
+// 10. Higher-order functions
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+let doubled = numbers.map(fn(x) { return x * 2 })
+println("\nDoubled: " + to_string(doubled))
+
+let evens = numbers.filter(fn(x) { return x % 2 == 0 })
+println("Evens: " + to_string(evens))
+
+let sum = numbers.reduce(fn(acc, x) { return acc + x }, 0)
+println("Sum: " + to_string(sum))
+
+// 11. Nested functions
+fn fibonacci(n: Int) -> Int {
+    if n <= 1 {
+        return n
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+println("\nFibonacci sequence:")
+for i in 0..10 {
+    print(to_string(fibonacci(i)) + " ")
+}
+println("")
+
+// 12. FizzBuzz
+println("\nFizzBuzz (1-20):")
+for i in 1..21 {
+    if i % 15 == 0 {
+        print("FizzBuzz ")
+    } else if i % 3 == 0 {
+        print("Fizz ")
+    } else if i % 5 == 0 {
+        print("Buzz ")
+    } else {
+        print(to_string(i) + " ")
+    }
+}
+println("")
+
+println("\nAll demos completed successfully!")
