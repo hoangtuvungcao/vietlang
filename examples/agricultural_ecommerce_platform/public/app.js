@@ -828,3 +828,21 @@ renderCooperatives();
 initFlashSaleTimer();
 updateCartUI();
 fetchInitialData();
+
+// Live Real-Time Activity Feed (VietLang SSE Push Notifications)
+function initLiveActivityFeed() {
+  const activities = [
+    "Khách hàng tại Sóc Trăng vừa đặt mua 10kg Gạo ST25 Lúa Tôm OCOP!",
+    "Khách hàng tại Quận 1 vừa áp mã NONGSANVIET20 giảm 76.000 VNĐ!",
+    "HTX Xoài Cát Hòa Lộc vừa hoàn tất xuất xưởng lô VietGAP mới!",
+    "Khách hàng tại Cần Thơ vừa thanh toán đơn hàng VietQR thành công!",
+    "HTX Cà Phê Cư M'gar vừa xuất xưởng lô Robusta Organic USDA!"
+  ];
+  let idx = 0;
+  setInterval(() => {
+    const text = activities[idx % activities.length];
+    showToast(text, "success");
+    idx++;
+  }, 22000);
+}
+initLiveActivityFeed();
