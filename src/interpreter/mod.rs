@@ -2070,6 +2070,12 @@ impl Interpreter {
             "ws_enable" | "builtin_ws_enable" => {
                 crate::stdlib::builtin_ws_enable(args, span.line, span.column)
             }
+            "ws_broadcast" | "builtin_ws_broadcast" => {
+                crate::stdlib::builtin_ws_broadcast(args, span.line, span.column)
+            }
+            "html_escape" | "builtin_html_escape" => {
+                crate::stdlib::builtin_html_escape(args, span.line, span.column)
+            }
             // MongoDB builtins
             "builtin_mongo_connect" => crate::stdlib::builtin_mongo_connect(args, span.line, span.column),
             "builtin_mongo_close" => crate::stdlib::builtin_mongo_close(args, span.line, span.column),

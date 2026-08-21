@@ -4345,31 +4345,29 @@ pub fn builtin_mongo_aggregate(args: &[Value], line: usize, col: usize) -> VietR
 pub fn builtin_mongo_create_index(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::mongo_create_index(args, line, col)
 }
-pub fn builtin_mongo_list_indexes(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    // list indexes — return empty array placeholder (can be expanded)
-    Ok(Value::Array(vec![]))
+pub fn builtin_mongo_list_indexes(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_list_indexes() is not yet implemented for this driver".into(), line, col))
 }
-pub fn builtin_mongo_drop_index(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_mongo_drop_index(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_drop_index() is not yet implemented for this driver".into(), line, col))
 }
 pub fn builtin_mongo_list_collections(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::mongo_list_collections(args, line, col)
 }
-pub fn builtin_mongo_create_collection(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_mongo_create_collection(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_create_collection() requires explicit schema validator; use collection directly".into(), line, col))
 }
 pub fn builtin_mongo_drop_collection(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::mongo_drop_collection(args, line, col)
 }
-pub fn builtin_mongo_begin_transaction(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    // Transactions require sessions - placeholder returns session-like handle
-    Ok(Value::String("mongo_session".into()))
+pub fn builtin_mongo_begin_transaction(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_begin_transaction() requires a replica set deployment".into(), line, col))
 }
-pub fn builtin_mongo_commit_transaction(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_mongo_commit_transaction(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_commit_transaction() requires an active session transaction".into(), line, col))
 }
-pub fn builtin_mongo_abort_transaction(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_mongo_abort_transaction(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("mongo_abort_transaction() requires an active session transaction".into(), line, col))
 }
 
 // ============================================================
@@ -4382,8 +4380,8 @@ pub fn builtin_redis_connect(args: &[Value], line: usize, col: usize) -> VietRes
 pub fn builtin_redis_connect_auth(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_connect(args, line, col)
 }
-pub fn builtin_redis_connect_sentinel(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_connect_sentinel(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_connect_sentinel() is not supported in standalone mode".into(), line, col))
 }
 pub fn builtin_redis_close(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::close(args, line, col)
@@ -4403,11 +4401,11 @@ pub fn builtin_redis_setnx(args: &[Value], line: usize, col: usize) -> VietResul
 pub fn builtin_redis_get(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_get(args, line, col)
 }
-pub fn builtin_redis_mset(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_mset(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_mset() is not yet implemented; use individual redis_set() calls".into(), line, col))
 }
-pub fn builtin_redis_mget(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_mget(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_mget() is not yet implemented; use individual redis_get() calls".into(), line, col))
 }
 pub fn builtin_redis_del(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_del(args, line, col)
@@ -4424,20 +4422,20 @@ pub fn builtin_redis_expireat(args: &[Value], line: usize, col: usize) -> VietRe
 pub fn builtin_redis_ttl(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_ttl(args, line, col)
 }
-pub fn builtin_redis_persist(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_persist(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_persist() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_keys(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_keys(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_keys() is disabled in production runtime for safety; use SCAN".into(), line, col))
 }
-pub fn builtin_redis_type(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::String("string".into()))
+pub fn builtin_redis_type(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_type() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_rename(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_rename(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_rename() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_flush_db(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_flush_db(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_flush_db() is disabled in production runtime for safety".into(), line, col))
 }
 pub fn builtin_redis_incr(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_incr(args, line, col)
@@ -4457,119 +4455,119 @@ pub fn builtin_redis_lpush(args: &[Value], line: usize, col: usize) -> VietResul
 pub fn builtin_redis_rpush(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_rpush(args, line, col)
 }
-pub fn builtin_redis_lpop(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_lpop(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_lpop() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_rpop(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_rpop(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_rpop() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_blpop(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_blpop(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_blpop() is not yet implemented".into(), line, col))
 }
 pub fn builtin_redis_lrange(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_lrange(args, line, col)
 }
-pub fn builtin_redis_llen(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(0))
+pub fn builtin_redis_llen(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_llen() is not yet implemented".into(), line, col))
 }
 pub fn builtin_redis_hset(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_hset(args, line, col)
 }
-pub fn builtin_redis_hmset(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_hmset(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hmset() is deprecated; use redis_hset()".into(), line, col))
 }
 pub fn builtin_redis_hget(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_hget(args, line, col)
 }
-pub fn builtin_redis_hmget(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_hmget(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hmget() is not yet implemented; use redis_hget()".into(), line, col))
 }
-pub fn builtin_redis_hgetall(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Struct { type_name: "Map".into(), fields: HashMap::new() })
+pub fn builtin_redis_hgetall(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hgetall() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_hdel(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_hdel(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hdel() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_hexists(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(false))
+pub fn builtin_redis_hexists(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hexists() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_hkeys(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_hkeys(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hkeys() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_hvals(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_hvals(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hvals() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_hincrby(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_hincrby(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_hincrby() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_sadd(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_sadd(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_sadd() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_srem(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_srem(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_srem() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_sismember(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(false))
+pub fn builtin_redis_sismember(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_sismember() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_smembers(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_smembers(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_smembers() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_scard(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(0))
+pub fn builtin_redis_scard(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_scard() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_sinter(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_sinter(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_sinter() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_sunion(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_sunion(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_sunion() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_sdiff(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_sdiff(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_sdiff() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zadd(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_zadd(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zadd() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zadd_many(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(1))
+pub fn builtin_redis_zadd_many(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zadd_many() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zrange(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_zrange(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zrange() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zrevrange(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_zrevrange(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zrevrange() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zrank(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_zrank(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zrank() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zscore(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_zscore(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zscore() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zcard(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(0))
+pub fn builtin_redis_zcard(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zcard() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_zrem(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(0))
+pub fn builtin_redis_zrem(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_zrem() is not yet implemented".into(), line, col))
 }
 pub fn builtin_redis_publish(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::redis_publish(args, line, col)
 }
-pub fn builtin_redis_subscribe(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_redis_subscribe(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_subscribe() is not yet implemented for blocking listener".into(), line, col))
 }
-pub fn builtin_redis_unsubscribe(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_redis_unsubscribe(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_unsubscribe() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_pipeline(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_pipeline(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_pipeline() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_xadd(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::String("0-0".into()))
+pub fn builtin_redis_xadd(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_xadd() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_xread(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_redis_xread(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_xread() is not yet implemented".into(), line, col))
 }
-pub fn builtin_redis_xlen(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Int(0))
+pub fn builtin_redis_xlen(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("redis_xlen() is not yet implemented".into(), line, col))
 }
 
 // ============================================================
@@ -4585,8 +4583,8 @@ pub fn builtin_clickhouse_connect_url(args: &[Value], line: usize, col: usize) -
 pub fn builtin_clickhouse_close(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::close(args, line, col)
 }
-pub fn builtin_clickhouse_ping(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_clickhouse_ping(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("clickhouse_ping() is not yet implemented".into(), line, col))
 }
 pub fn builtin_clickhouse_query(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::clickhouse_query(args, line, col)
@@ -4594,8 +4592,8 @@ pub fn builtin_clickhouse_query(args: &[Value], line: usize, col: usize) -> Viet
 pub fn builtin_clickhouse_execute(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::clickhouse_execute(args, line, col)
 }
-pub fn builtin_clickhouse_insert(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_clickhouse_insert(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("clickhouse_insert() requires schema descriptor; use clickhouse_execute()".into(), line, col))
 }
 
 // ============================================================
@@ -4611,8 +4609,8 @@ pub fn builtin_cassandra_connect_auth(args: &[Value], line: usize, col: usize) -
 pub fn builtin_cassandra_close(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::close(args, line, col)
 }
-pub fn builtin_cassandra_ping(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_cassandra_ping(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("cassandra_ping() is not yet implemented".into(), line, col))
 }
 pub fn builtin_cassandra_query(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::cassandra_query(args, line, col)
@@ -4620,20 +4618,20 @@ pub fn builtin_cassandra_query(args: &[Value], line: usize, col: usize) -> VietR
 pub fn builtin_cassandra_execute(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::cassandra_execute(args, line, col)
 }
-pub fn builtin_cassandra_prepare(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::String("prepared".into()))
+pub fn builtin_cassandra_prepare(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("cassandra_prepare() is not yet implemented".into(), line, col))
 }
-pub fn builtin_cassandra_execute_prepared(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_cassandra_execute_prepared(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("cassandra_execute_prepared() is not yet implemented".into(), line, col))
 }
-pub fn builtin_cassandra_batch(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_cassandra_batch(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("cassandra_batch() is not yet implemented".into(), line, col))
 }
 pub fn builtin_cassandra_query_paged(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::cassandra_query(args, line, col)
 }
-pub fn builtin_cassandra_replication_string(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::String("{'class': 'SimpleStrategy', 'replication_factor': 1}".into()))
+pub fn builtin_cassandra_replication_string(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("cassandra_replication_string() is internal".into(), line, col))
 }
 
 // ============================================================
@@ -4652,11 +4650,11 @@ pub fn builtin_elastic_connect_cloud(args: &[Value], line: usize, col: usize) ->
 pub fn builtin_elastic_close(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::close(args, line, col)
 }
-pub fn builtin_elastic_ping(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_ping(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_ping() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_info(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_info(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_info() is not yet implemented".into(), line, col))
 }
 pub fn builtin_elastic_create_index(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_create_index(args, line, col)
@@ -4664,23 +4662,23 @@ pub fn builtin_elastic_create_index(args: &[Value], line: usize, col: usize) -> 
 pub fn builtin_elastic_delete_index(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_delete_index(args, line, col)
 }
-pub fn builtin_elastic_index_exists(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(false))
+pub fn builtin_elastic_index_exists(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_index_exists() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_list_indexes(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Array(vec![]))
+pub fn builtin_elastic_list_indexes(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_list_indexes() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_get_mapping(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_get_mapping(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_get_mapping() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_update_mapping(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_update_mapping(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_update_mapping() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_get_settings(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_get_settings(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_get_settings() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_refresh(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_refresh(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_refresh() is not yet implemented".into(), line, col))
 }
 pub fn builtin_elastic_index_doc(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_index_doc(args, line, col)
@@ -4691,42 +4689,42 @@ pub fn builtin_elastic_index_doc_auto(args: &[Value], line: usize, col: usize) -
 pub fn builtin_elastic_get_doc(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_get_doc(args, line, col)
 }
-pub fn builtin_elastic_doc_exists(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(false))
+pub fn builtin_elastic_doc_exists(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_doc_exists() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_update_doc(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_update_doc(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_update_doc() is not yet implemented".into(), line, col))
 }
 pub fn builtin_elastic_delete_doc(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_delete_doc(args, line, col)
 }
-pub fn builtin_elastic_bulk(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_bulk(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_bulk() is not yet implemented".into(), line, col))
 }
 pub fn builtin_elastic_search(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     crate::db_runtime::elastic_search(args, line, col)
 }
-pub fn builtin_elastic_delete_by_query(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_delete_by_query(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_delete_by_query() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_update_by_query(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_update_by_query(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_update_by_query() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_scroll_start(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_scroll_start(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_scroll_start() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_scroll_next(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_scroll_next(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_scroll_next() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_scroll_clear(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::Bool(true))
+pub fn builtin_elastic_scroll_clear(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_scroll_clear() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_cluster_health(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_cluster_health(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_cluster_health() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_cluster_stats(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_cluster_stats(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_cluster_stats() is not yet implemented".into(), line, col))
 }
-pub fn builtin_elastic_nodes_info(args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
-    Ok(Value::None)
+pub fn builtin_elastic_nodes_info(_args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    Err(VietError::runtime_error("elastic_nodes_info() is not yet implemented".into(), line, col))
 }
