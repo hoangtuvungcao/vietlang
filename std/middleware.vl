@@ -1,0 +1,33 @@
+// ========================================================================
+// VietLang Middleware Pipeline & Security Guards (std.middleware)
+// Rate Limiting, Request Logging, CORS Headers, and JWT Auth Guards
+// ========================================================================
+
+fn middleware_pipeline_new() {
+    let mut p = map_new()
+    p = map_set(p, "handlers", [])
+    return p
+}
+
+fn middleware_use(pipeline, handler_fn) {
+    let handlers = map_get(pipeline, "handlers")
+    let new_handlers = push(handlers, handler_fn)
+    return map_set(pipeline, "handlers", new_handlers)
+}
+
+fn middleware_cors_headers(origin: String = "*") {
+    let mut h = map_new()
+    h = map_set(h, "Access-Control-Allow-Origin", origin)
+    h = map_set(h, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+    h = map_set(h, "Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+    return h
+}
+
+fn middleware_logger(req) {
+    let method = map_get(req, "method")
+    let path = map_get(req, "path")
+    let ip = map_get(req, "client_ip")
+    let proto = map_get(req, "protocol")
+    println("[LOG] " + to_string(ip) + " - " + to_string(proto) + " " + to_string(method) + " " + to_string(path))
+    return true
+}

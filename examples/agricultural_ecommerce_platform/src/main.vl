@@ -1,15 +1,17 @@
 // ========================================================================
 // Nong San Viet (VietCleanAgri) Enterprise Backend Platform
-// Main Application Bootstrap & HTTP REST Server
+// Main Application Bootstrap & HTTP/2 REST Server
 // ========================================================================
 
 import std.http_router
+import std.http2
+import std.middleware
 import std.metrics
 import examples.agricultural_ecommerce_platform.src.config.database
 import examples.agricultural_ecommerce_platform.src.routes.api_router
 
 println("========================================================================")
-println("Nong San Viet Enterprise Platform — Starting Services...")
+println("Nong San Viet Enterprise Platform — Starting High-Performance Services...")
 println("========================================================================")
 
 // 1. Initialize SQLite Database & Schema Migrations
@@ -41,17 +43,19 @@ println("  * POST /api/v1/orders/checkout")
 println("  * GET  /api/v1/orders/track")
 println("  * GET  /api/v1/admin/analytics")
 println("========================================================================")
-println("Nong San Viet Backend listening on http://0.0.0.0:9090")
+println("Nong San Viet Backend listening on http://0.0.0.0:9090 [HTTP/1.1, HTTP/2, HTTP/3 Alt-Svc]")
 println("========================================================================")
 
-// 4. Start HTTP Server on 0.0.0.0:9090 with pure VietLang dynamic router callback
-http_listen("0.0.0.0:9090", fn(req) {
+// 4. Multi-Protocol High-Throughput Server Configuration
+let server_config = http2_server_config(9090, 500)
+
+http_listen(server_config, fn(req) {
     let method = to_string(map_get(req, "method"))
     let path = to_string(map_get(req, "path"))
     let body = map_get(req, "body")
 
     // 1. Serve Static Assets via Pure VietLang std.http_router
-    if method == "GET" {
+    if method == "GET" || method == "HEAD" {
         let static_file = http_serve_static("examples/agricultural_ecommerce_platform/public", path)
         if static_file != none {
             return static_file

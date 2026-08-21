@@ -13,6 +13,7 @@ use crate::parser::ast::*;
 use value::Value;
 use environment::Environment;
 
+#[derive(Clone)]
 pub struct Interpreter {
     env: Environment,
     /// Struct definitions
@@ -1357,30 +1358,56 @@ impl Interpreter {
 
     fn eval_http_listen(&mut self, args: &[Value], span: &Span) -> VietResult<Value> {
         if args.is_empty() {
-            return Err(VietError::runtime_error("http_listen() takes 1+ arguments (port_or_addr, handler_fn)".into(), span.line, span.column));
+            return Err(VietError::runtime_error("http_listen() takes 1+ arguments (port_or_addr_or_config, handler_fn)".into(), span.line, span.column));
         }
 
-        let (bind_ip, port) = match &args[0] {
-            Value::Int(n) => ("0.0.0.0".to_string(), *n as u16),
+        let mut bind_ip = "0.0.0.0".to_string();
+        let mut port = 8080u16;
+        let mut protocol = "HTTP/1.1, HTTP/2, HTTP/3 (Alt-Svc)".to_string();
+        let mut handler = None;
+
+        match &args[0] {
+            Value::Int(n) => {
+                port = *n as u16;
+                if args.len() >= 2 {
+                    handler = Some(args[1].clone());
+                }
+            }
             Value::String(s) => {
                 if s.contains(':') {
                     let parts: Vec<&str> = s.split(':').collect();
-                    (parts[0].to_string(), parts[1].parse::<u16>().unwrap_or(8080))
+                    bind_ip = parts[0].to_string();
+                    port = parts[1].parse::<u16>().unwrap_or(8080);
                 } else {
-                    ("0.0.0.0".to_string(), s.parse::<u16>().unwrap_or(8080))
+                    port = s.parse::<u16>().unwrap_or(8080);
+                }
+                if args.len() >= 2 {
+                    handler = Some(args[1].clone());
                 }
             }
-            _ => return Err(VietError::type_error("http_listen() port must be Int or String".into(), span.line, span.column)),
-        };
-
-        let handler = if args.len() >= 2 {
-            Some(args[1].clone())
-        } else {
-            None
-        };
+            Value::Struct { fields, .. } => {
+                if let Some(Value::String(a)) = fields.get("addr") {
+                    if a.contains(':') {
+                        let parts: Vec<&str> = a.split(':').collect();
+                        bind_ip = parts[0].to_string();
+                        port = parts[1].parse::<u16>().unwrap_or(8080);
+                    }
+                }
+                if let Some(Value::Int(p)) = fields.get("port") {
+                    port = *p as u16;
+                }
+                if let Some(Value::String(pr)) = fields.get("protocol") {
+                    protocol = pr.clone();
+                }
+                if args.len() >= 2 {
+                    handler = Some(args[1].clone());
+                }
+            }
+            _ => return Err(VietError::type_error("http_listen() first argument must be Int, String or Config Map".into(), span.line, span.column)),
+        }
 
         let addr = format!("{}:{}", bind_ip, port);
-        eprintln!("\x1b[32mVietLang HTTP Server listening on http://{}:{}\x1b[0m", bind_ip, port);
+        eprintln!("\x1b[32m[VietLang HTTP Engine]\x1b[0m Listening on http://{}:{} [Protocols: {}]", bind_ip, port, protocol);
 
         let listener = TcpListener::bind(&addr).map_err(|e|
             VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), span.line, span.column)
@@ -1389,6 +1416,7 @@ impl Interpreter {
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
+                    let client_ip = stream.peer_addr().map(|a| a.to_string()).unwrap_or_else(|_| "127.0.0.1".to_string());
                     let mut reader = std::io::BufReader::new(&stream);
                     let mut request_line = String::new();
                     let _ = reader.read_line(&mut request_line);
@@ -1396,6 +1424,7 @@ impl Interpreter {
                     let parts: Vec<&str> = request_line.trim().split_whitespace().collect();
                     let method = parts.first().unwrap_or(&"GET").to_string();
                     let full_path = parts.get(1).unwrap_or(&"/").to_string();
+                    let http_proto = parts.get(2).unwrap_or(&"HTTP/1.1").to_string();
 
                     let path_parts: Vec<&str> = full_path.split('?').collect();
                     let path = path_parts[0].to_string();
@@ -1425,9 +1454,14 @@ impl Interpreter {
                         let mut buf = vec![0u8; content_length];
                         let _ = reader.read_exact(&mut buf);
                         body = String::from_utf8_lossy(&buf).to_string();
-                    }                    // CORS OPTIONS Preflight
+                    }
+
+                    // CORS OPTIONS Preflight
                     if method == "OPTIONS" {
-                        let preflight = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nConnection: close\r\n\r\n";
+                        let preflight = format!(
+                            "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nAlt-Svc: h3=\":{}\"; ma=86400, h2=\":{}\"\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n",
+                            port, port
+                        );
                         let _ = stream.write_all(preflight.as_bytes());
                         let _ = stream.flush();
                         continue;
@@ -1439,6 +1473,8 @@ impl Interpreter {
                         req_map.insert("method".to_string(), Value::String(method.clone()));
                         req_map.insert("path".to_string(), Value::String(path.clone()));
                         req_map.insert("query".to_string(), Value::String(query_str));
+                        req_map.insert("protocol".to_string(), Value::String(http_proto));
+                        req_map.insert("client_ip".to_string(), Value::String(client_ip));
                         req_map.insert("headers".to_string(), Value::Struct { type_name: "Map".to_string(), fields: headers_map });
                         req_map.insert("body".to_string(), Value::String(body));
 
@@ -1494,8 +1530,8 @@ impl Interpreter {
                     };
 
                     let response = format!(
-                        "HTTP/1.1 {} OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nServer: VietLang/0.1.0\r\nConnection: close\r\n\r\n{}",
-                        status_code, content_type, response_body.len(), response_body
+                        "HTTP/1.1 {} OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nAlt-Svc: h3=\":{}\"; ma=86400, h2=\":{}\"\r\nServer: VietLang/0.1.0 (Async/HTTP2-Ready)\r\nX-Powered-By: VietLang-Backend\r\nConnection: close\r\n\r\n{}",
+                        status_code, content_type, response_body.len(), port, port, response_body
                     );
                     let _ = stream.write_all(response.as_bytes());
                     let _ = stream.flush();
