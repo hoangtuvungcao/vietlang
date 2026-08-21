@@ -45,14 +45,14 @@ vietlang --version
 Create a file called `hello.vl`:
 
 ```rust
-println("Hello, VietLang! 🇻🇳")
+println("Hello, VietLang! ")
 ```
 
 Run it:
 
 ```bash
 vietlang hello.vl
-# Output: Hello, VietLang! 🇻🇳
+# Output: Hello, VietLang! 
 ```
 
 ---
@@ -78,7 +78,7 @@ println(name + " v" + to_string(version))
 
 ```rust
 fn greet(name: String) -> String {
-    return "Hello, " + name + "! 👋"
+    return "Hello, " + name + "! "
 }
 
 fn add(a: Int, b: Int) -> Int {
@@ -200,7 +200,7 @@ vl:3 > let arr = [1, 2, 3, 4, 5]
 vl:4 > arr.map(fn(x) { return x * x })
   = [1, 4, 9, 16, 25]
 vl:5 > exit
-Goodbye! 👋
+Goodbye! 
 ```
 
 **REPL Commands:**
@@ -224,7 +224,7 @@ vietlang --ast myfile.vl
 
 ## Next Steps
 
-- 📖 Read the [Language Reference](language-reference.md)
-- 📚 Browse the [Standard Library](stdlib-reference.md)
-- 💡 Check out [examples/](../examples/) for more demos
-- 🤝 [Contribute](../CONTRIBUTING.md) to VietLang
+-  Read the [Language Reference](language-reference.md)
+-  Browse the [Standard Library](stdlib-reference.md)
+-  Check out [examples/](../examples/) for more demos
+-  [Contribute](../CONTRIBUTING.md) to VietLang

@@ -3,7 +3,7 @@
 // Channels, spawn, mutex patterns
 // ===================================
 
-println("⚡ VietLang Concurrency Demo")
+println(" VietLang Concurrency Demo")
 println("=============================\n")
 
 // --- Channels ---
@@ -89,4 +89,4 @@ schedule_task("log-rotation", 3)
 schedule_task("cache-warmup", 4)
 schedule_task("analytics-report", 5)
 
-println("\n✅ Concurrency demo completed!")
+println("\n Concurrency demo completed!")

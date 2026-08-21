@@ -1,0 +1,67 @@
+// ===================================================
+// Community Modules & Standard Library Test
+// Demonstrating VietLang module import and execution
+// ===================================================
+
+import std.test
+import std.strings
+import std.jwt
+import std.http_router
+
+suite("VietLang Community Library Suite")
+
+test("String pad_left and pad_right", fn() {
+    let padded = pad_left("42", 5, "0")
+    assert_eq(padded, "00042", "pad_left failed")
+
+    let r_padded = pad_right("vl", 6, "-")
+    assert_eq(r_padded, "vl----", "pad_right failed")
+})
+
+test("String snake_case and camel_case", fn() {
+    let sc = snake_case("UserProfile")
+    assert_eq(sc, "user_profile", "snake_case failed")
+
+    let cc = camel_case("user_first_name")
+    assert_eq(cc, "userFirstName", "camel_case failed")
+
+    let cap = capitalize("vietlang")
+    assert_eq(cap, "Vietlang", "capitalize failed")
+
+    let slug = slugify("Hello World VietLang 2026")
+    assert_eq(slug, "hello-world-vietlang-2026", "slugify failed")
+})
+
+test("JWT Sign and Verify", fn() {
+    let secret = "super-secret-backend-key-2026"
+    let user_payload = map_set(map_set(map_new(), "user_id", 101), "role", "admin")
+
+    let token = jwt_sign(user_payload, secret)
+    println("    Generated JWT: " + token)
+    assert_true(token.len() > 20, "JWT token should not be empty")
+
+    let verification = jwt_verify(token, secret)
+    assert_true(map_get(verification, "valid"), "JWT signature must be valid with correct secret")
+
+    let bad_verification = jwt_verify(token, "wrong-secret")
+    assert_false(map_get(bad_verification, "valid"), "JWT signature must fail with wrong secret")
+})
+
+test("HTTP Router construction", fn() {
+    let router = router_new()
+    let router = router_use(router, "cors_middleware")
+    let router = router_use(router, "auth_middleware")
+    let router = router_add_route(router, "GET", "/api/v1/users", "get_all_users")
+    let router = router_add_route(router, "POST", "/api/v1/users", "create_user")
+
+    let routes = map_get(router, "routes")
+    assert_eq(routes.len(), 2, "Router should have 2 routes")
+
+    let mw = map_get(router, "middlewares")
+    assert_eq(mw.len(), 2, "Router should have 2 middlewares")
+
+    let json_resp = response_json(200, map_set(map_new(), "id", 1))
+    assert_true(json_resp.contains("200"), "JSON response should contain status code")
+})
+
+test_summary()

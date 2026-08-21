@@ -632,7 +632,7 @@ pub fn builtin_http_listen(args: &[Value], line: usize, col: usize) -> VietResul
         _ => return Err(VietError::type_error("http_listen() port must be an integer".into(), line, col)),
     };
     let addr = format!("0.0.0.0:{}", port);
-    eprintln!("\x1b[32m🚀 VietLang HTTP Server listening on http://localhost:{}\x1b[0m", port);
+    eprintln!("\x1b[32m VietLang HTTP Server listening on http://localhost:{}\x1b[0m", port);
 
     let listener = TcpListener::bind(&addr).map_err(|e|
         VietError::runtime_error(format!("Cannot bind to {}: {}", addr, e), line, col)
@@ -874,3 +874,202 @@ pub fn builtin_range(args: &[Value], line: usize, col: usize) -> VietResult<Valu
     }
     Ok(Value::Array(result))
 }
+
+// ============================================================
+// String Character Operations (needed for self-hosting)
+// ============================================================
+
+pub fn builtin_char_at(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("char_at() takes 2 arguments (string, index)".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("char_at() expects a string".into(), line, col)) };
+    let idx = match &args[1] { Value::Int(n) => *n as usize, _ => return Err(VietError::type_error("char_at() index must be Int".into(), line, col)) };
+    let chars: Vec<char> = s.chars().collect();
+    if idx < chars.len() {
+        Ok(Value::String(chars[idx].to_string()))
+    } else {
+        Ok(Value::None)
+    }
+}
+
+pub fn builtin_char_code(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("char_code() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("char_code() expects a string".into(), line, col)) };
+    if let Some(ch) = s.chars().next() {
+        Ok(Value::Int(ch as i64))
+    } else {
+        Ok(Value::Int(0))
+    }
+}
+
+pub fn builtin_from_char_code(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("from_char_code() takes 1 argument".into(), line, col));
+    }
+    let code = match &args[0] { Value::Int(n) => *n as u32, _ => return Err(VietError::type_error("from_char_code() expects Int".into(), line, col)) };
+    match char::from_u32(code) {
+        Some(ch) => Ok(Value::String(ch.to_string())),
+        None => Ok(Value::String(String::new())),
+    }
+}
+
+pub fn builtin_substring(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 || args.len() > 3 {
+        return Err(VietError::runtime_error("substring() takes 2-3 arguments (string, start, [end])".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("substring() expects a string".into(), line, col)) };
+    let start = match &args[1] { Value::Int(n) => *n as usize, _ => return Err(VietError::type_error("substring() start must be Int".into(), line, col)) };
+    let chars: Vec<char> = s.chars().collect();
+    let end = if args.len() == 3 {
+        match &args[2] { Value::Int(n) => (*n as usize).min(chars.len()), _ => chars.len() }
+    } else {
+        chars.len()
+    };
+    if start <= end && start <= chars.len() {
+        Ok(Value::String(chars[start..end.min(chars.len())].iter().collect()))
+    } else {
+        Ok(Value::String(String::new()))
+    }
+}
+
+pub fn builtin_str_repeat(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("str_repeat() takes 2 arguments (string, count)".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("str_repeat() expects a string".into(), line, col)) };
+    let n = match &args[1] { Value::Int(n) => *n as usize, _ => return Err(VietError::type_error("str_repeat() count must be Int".into(), line, col)) };
+    Ok(Value::String(s.repeat(n)))
+}
+
+pub fn builtin_parse_int(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("parse_int() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("parse_int() expects a string".into(), line, col)) };
+    match s.trim().parse::<i64>() {
+        Ok(n) => Ok(Value::Int(n)),
+        Err(_) => Ok(Value::None),
+    }
+}
+
+pub fn builtin_parse_float(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("parse_float() takes 1 argument".into(), line, col));
+    }
+    let s = match &args[0] { Value::String(s) => s.clone(), _ => return Err(VietError::type_error("parse_float() expects a string".into(), line, col)) };
+    match s.trim().parse::<f64>() {
+        Ok(n) => Ok(Value::Float(n)),
+        Err(_) => Ok(Value::None),
+    }
+}
+
+// ============================================================
+// Array Operations
+// ============================================================
+
+pub fn builtin_array_sort(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("sort() takes 1 argument".into(), line, col));
+    }
+    let arr = match &args[0] {
+        Value::Array(a) => a.clone(),
+        _ => return Err(VietError::type_error("sort() expects an array".into(), line, col)),
+    };
+    let mut sorted = arr;
+    sorted.sort_by(|a, b| {
+        match (a, b) {
+            (Value::Int(x), Value::Int(y)) => x.cmp(y),
+            (Value::Float(x), Value::Float(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+            (Value::String(x), Value::String(y)) => x.cmp(y),
+            _ => std::cmp::Ordering::Equal,
+        }
+    });
+    Ok(Value::Array(sorted))
+}
+
+pub fn builtin_array_slice(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() < 2 || args.len() > 3 {
+        return Err(VietError::runtime_error("slice() takes 2-3 arguments (array, start, [end])".into(), line, col));
+    }
+    let arr = match &args[0] { Value::Array(a) => a.clone(), _ => return Err(VietError::type_error("slice() expects array".into(), line, col)) };
+    let start = match &args[1] { Value::Int(n) => *n as usize, _ => 0 };
+    let end = if args.len() == 3 {
+        match &args[2] { Value::Int(n) => (*n as usize).min(arr.len()), _ => arr.len() }
+    } else {
+        arr.len()
+    };
+    if start <= end && start <= arr.len() {
+        Ok(Value::Array(arr[start..end.min(arr.len())].to_vec()))
+    } else {
+        Ok(Value::Array(Vec::new()))
+    }
+}
+
+pub fn builtin_array_index_of(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 2 {
+        return Err(VietError::runtime_error("index_of() takes 2 arguments (array, value)".into(), line, col));
+    }
+    let arr = match &args[0] { Value::Array(a) => a.clone(), _ => return Err(VietError::type_error("index_of() expects array".into(), line, col)) };
+    for (i, item) in arr.iter().enumerate() {
+        if item == &args[1] {
+            return Ok(Value::Int(i as i64));
+        }
+    }
+    Ok(Value::Int(-1))
+}
+
+pub fn builtin_array_flat(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("flat() takes 1 argument".into(), line, col));
+    }
+    let arr = match &args[0] { Value::Array(a) => a.clone(), _ => return Err(VietError::type_error("flat() expects array".into(), line, col)) };
+    let mut result = Vec::new();
+    for item in arr {
+        match item {
+            Value::Array(inner) => result.extend(inner),
+            other => result.push(other),
+        }
+    }
+    Ok(Value::Array(result))
+}
+
+// ============================================================
+// Error handling
+// ============================================================
+
+pub fn builtin_throw(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    let msg = if !args.is_empty() {
+        format!("{}", args[0])
+    } else {
+        "Error".to_string()
+    };
+    Err(VietError::runtime_error(msg, line, col))
+}
+
+pub fn builtin_is_error(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.len() != 1 {
+        return Err(VietError::runtime_error("is_error() takes 1 argument".into(), line, col));
+    }
+    Ok(Value::Bool(matches!(&args[0], Value::None)))
+}
+
+// ============================================================
+// Process / System
+// ============================================================
+
+pub fn builtin_args(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let args: Vec<Value> = std::env::args().map(|a| Value::String(a)).collect();
+    Ok(Value::Array(args))
+}
+
+pub fn builtin_platform(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    Ok(Value::String(std::env::consts::OS.to_string()))
+}
+
+pub fn builtin_arch(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    Ok(Value::String(std::env::consts::ARCH.to_string()))
+}
+

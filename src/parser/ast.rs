@@ -108,6 +108,14 @@ pub enum Statement {
         alias: Option<String>,
         span: Span,
     },
+
+    /// `try { ... } catch err { ... }`
+    TryCatch {
+        try_body: Vec<Statement>,
+        catch_var: String,
+        catch_body: Vec<Statement>,
+        span: Span,
+    },
 }
 
 /// Expressions

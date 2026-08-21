@@ -2,14 +2,14 @@
 // VietLang — File I/O Demo
 // ===================================
 
-println("📁 VietLang File I/O Demo")
+println(" VietLang File I/O Demo")
 println("==========================\n")
 
 // --- Write files ---
 println("--- Writing Files ---\n")
 
 file_write("/tmp/vietlang_test.txt", "Hello from VietLang!\nThis is a test file.\n")
-println("✅ Created /tmp/vietlang_test.txt")
+println(" Created /tmp/vietlang_test.txt")
 
 file_write("/tmp/vietlang_config.json", json_stringify(
     map_set(map_set(map_set(map_new(),

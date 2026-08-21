@@ -1,4 +1,4 @@
-# Contributing to VietLang 🇻🇳
+# Contributing to VietLang 
 
 Thank you for your interest in contributing to VietLang! We welcome contributions from everyone.
 
@@ -104,7 +104,7 @@ chore: build, CI, etc.
 
 ## Code of Conduct
 
-Be respectful, inclusive, and constructive. We're building something together! 🤝
+Be respectful, inclusive, and constructive. We're building something together! 
 
 ## License
 

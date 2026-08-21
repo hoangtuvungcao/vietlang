@@ -38,32 +38,27 @@ const BANNER: &str = r#"
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    match args.len() {
-        1 => run_repl(),
-        2 => {
-            match args[1].as_str() {
-                "--help" | "-h" => print_help(),
-                "--version" | "-v" => println!("VietLang v{}", VERSION),
-                "--tokens" => {
+    if args.len() <= 1 {
+        run_repl();
+    } else {
+        match args[1].as_str() {
+            "--help" | "-h" => print_help(),
+            "--version" | "-v" => println!("VietLang v{}", VERSION),
+            "--tokens" => {
+                if args.len() < 3 {
                     eprintln!("Usage: vietlang --tokens <file.vl>");
                     std::process::exit(1);
                 }
-                file => run_file(file),
+                show_tokens(&args[2]);
             }
-        }
-        3 => {
-            match args[1].as_str() {
-                "--tokens" => show_tokens(&args[2]),
-                "--ast" => show_ast(&args[2]),
-                _ => {
-                    eprintln!("Unknown option: {}", args[1]);
+            "--ast" => {
+                if args.len() < 3 {
+                    eprintln!("Usage: vietlang --ast <file.vl>");
                     std::process::exit(1);
                 }
+                show_ast(&args[2]);
             }
-        }
-        _ => {
-            print_help();
-            std::process::exit(1);
+            file => run_file(file),
         }
     }
 }
@@ -151,7 +146,7 @@ fn run_repl() {
 
         match input {
             "exit" | "quit" => {
-                println!("\x1b[32mGoodbye! 👋\x1b[0m");
+                println!("\x1b[32mGoodbye! \x1b[0m");
                 break;
             }
             "help" => {

@@ -63,7 +63,6 @@ impl Lexer {
             ']' => TokenKind::RBracket,
             ',' => TokenKind::Comma,
             ';' => TokenKind::Semicolon,
-            '%' => TokenKind::Percent,
             '?' => TokenKind::Question,
             '&' => {
                 if self.match_char('&') {
@@ -79,16 +78,43 @@ impl Lexer {
                     TokenKind::Pipe
                 }
             }
-            '+' => TokenKind::Plus,
-            '*' => TokenKind::Star,
-            '/' => TokenKind::Slash,
 
-            // Two-character tokens
+            // Two-character and compound assignment tokens
+            '/' => {
+                if self.match_char('=') {
+                    TokenKind::SlashAssign
+                } else {
+                    TokenKind::Slash
+                }
+            }
+            '+' => {
+                if self.match_char('=') {
+                    TokenKind::PlusAssign
+                } else {
+                    TokenKind::Plus
+                }
+            }
             '-' => {
                 if self.match_char('>') {
                     TokenKind::Arrow
+                } else if self.match_char('=') {
+                    TokenKind::MinusAssign
                 } else {
                     TokenKind::Minus
+                }
+            }
+            '*' => {
+                if self.match_char('=') {
+                    TokenKind::StarAssign
+                } else {
+                    TokenKind::Star
+                }
+            }
+            '%' => {
+                if self.match_char('=') {
+                    TokenKind::PercentAssign
+                } else {
+                    TokenKind::Percent
                 }
             }
             '=' => {
@@ -110,6 +136,8 @@ impl Lexer {
             '<' => {
                 if self.match_char('=') {
                     TokenKind::LtEq
+                } else if self.match_char('<') {
+                    TokenKind::ShiftLeft
                 } else {
                     TokenKind::Lt
                 }
@@ -117,6 +145,8 @@ impl Lexer {
             '>' => {
                 if self.match_char('=') {
                     TokenKind::GtEq
+                } else if self.match_char('>') {
+                    TokenKind::ShiftRight
                 } else {
                     TokenKind::Gt
                 }
@@ -135,6 +165,8 @@ impl Lexer {
                     TokenKind::Dot
                 }
             }
+            '^' => TokenKind::Caret,
+            '~' => TokenKind::Tilde,
 
             // Newline
             '\n' => {

@@ -1,0 +1,94 @@
+// ===================================================
+// VietLang Standard String Utilities (std.strings)
+// Written in pure VietLang
+// ===================================================
+
+fn pad_left(s: String, target_len: Int, pad_char: String = " ") -> String {
+    let current_len = s.len()
+    if current_len >= target_len {
+        return s
+    }
+    let needed = target_len - current_len
+    return str_repeat(pad_char, needed) + s
+}
+
+fn pad_right(s: String, target_len: Int, pad_char: String = " ") -> String {
+    let current_len = s.len()
+    if current_len >= target_len {
+        return s
+    }
+    let needed = target_len - current_len
+    return s + str_repeat(pad_char, needed)
+}
+
+fn is_upper_char(ch: String) -> Bool {
+    let code = char_code(ch)
+    return code >= 65 && code <= 90
+}
+
+fn is_lower_char(ch: String) -> Bool {
+    let code = char_code(ch)
+    return code >= 97 && code <= 122
+}
+
+fn snake_case(s: String) -> String {
+    let chars = s.chars()
+    let mut result = ""
+    for i in 0..chars.len() {
+        let ch = chars[i]
+        if ch == "-" || ch == " " {
+            result += "_"
+        } else if is_upper_char(ch) {
+            if i > 0 && chars[i - 1] != "_" && chars[i - 1] != "-" && chars[i - 1] != " " {
+                result += "_"
+            }
+            result += ch.to_lower()
+        } else {
+            result += ch
+        }
+    }
+    return result
+}
+
+fn camel_case(s: String) -> String {
+    let chars = s.chars()
+    let mut result = ""
+    let mut capitalize_next = false
+    for i in 0..chars.len() {
+        let ch = chars[i]
+        if ch == "_" || ch == "-" || ch == " " {
+            capitalize_next = true
+        } else if capitalize_next {
+            result += ch.to_upper()
+            capitalize_next = false
+        } else {
+            result += ch.to_lower()
+        }
+    }
+    return result
+}
+
+fn capitalize(s: String) -> String {
+    if s.len() == 0 {
+        return s
+    }
+    let first = char_at(s, 0).to_upper()
+    let rest = substring(s, 1)
+    return first + rest
+}
+
+fn slugify(s: String) -> String {
+    let chars = s.to_lower().chars()
+    let mut result = ""
+    for ch in chars {
+        let code = char_code(ch)
+        if (code >= 97 && code <= 122) || (code >= 48 && code <= 57) {
+            result += ch
+        } else if ch == " " || ch == "_" || ch == "-" {
+            if result.len() > 0 && char_at(result, result.len() - 1) != "-" {
+                result += "-"
+            }
+        }
+    }
+    return result
+}

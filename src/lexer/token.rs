@@ -37,6 +37,7 @@ pub enum TokenKind {
     Await,
     Select,
     Try,
+    Catch,
     True,
     False,
     None,
@@ -49,6 +50,11 @@ pub enum TokenKind {
     Slash,       // /
     Percent,     // %
     Assign,      // =
+    PlusAssign,  // +=
+    MinusAssign, // -=
+    StarAssign,  // *=
+    SlashAssign, // /=
+    PercentAssign, // %=
     Eq,          // ==
     NotEq,       // !=
     Lt,          // <
@@ -69,6 +75,10 @@ pub enum TokenKind {
     Comma,       // ,
     Pipe,        // |
     Ampersand,   // &
+    Caret,       // ^
+    Tilde,       // ~
+    ShiftLeft,   // <<
+    ShiftRight,  // >>
 
     // === Delimiters ===
     LParen,      // (
@@ -105,8 +115,9 @@ impl TokenKind {
             "pub" => Some(TokenKind::Pub),
             "import" => Some(TokenKind::Import),
             "type" => Some(TokenKind::Type),
-            // spawn, async, await, select, try — reserved for future use
-            // Currently treated as builtin functions (identifiers)
+            "try" => Some(TokenKind::Try),
+            "catch" => Some(TokenKind::Catch),
+            // spawn, async, await, select — treated as builtin functions
             "true" => Some(TokenKind::True),
             "false" => Some(TokenKind::False),
             "none" => Some(TokenKind::None),

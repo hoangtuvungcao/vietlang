@@ -2,7 +2,7 @@
 // VietLang — Database & Query Builder Demo
 // ===================================
 
-println("🗄️  VietLang Database Demo")
+println("  VietLang Database Demo")
 println("==========================\n")
 
 // --- Connection simulation ---

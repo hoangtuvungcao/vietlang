@@ -74,14 +74,39 @@ impl Parser {
             TokenKind::Enum => self.parse_enum(is_pub)?,
             TokenKind::Impl => self.parse_impl()?,
             TokenKind::Import => self.parse_import()?,
+            TokenKind::Try => self.parse_try_catch()?,
             _ => {
                 let expr = self.parse_expression()?;
                 let span = expr.span().clone();
 
-                // Check for assignment
+                // Check for assignment or compound assignment
                 if self.check(&TokenKind::Assign) {
                     self.advance();
                     let value = self.parse_expression()?;
+                    Statement::Assignment { target: expr, value, span }
+                } else if self.check(&TokenKind::PlusAssign)
+                    || self.check(&TokenKind::MinusAssign)
+                    || self.check(&TokenKind::StarAssign)
+                    || self.check(&TokenKind::SlashAssign)
+                    || self.check(&TokenKind::PercentAssign)
+                {
+                    let op_token = self.advance();
+                    let op = match &op_token.kind {
+                        TokenKind::PlusAssign => BinaryOperator::Add,
+                        TokenKind::MinusAssign => BinaryOperator::Sub,
+                        TokenKind::StarAssign => BinaryOperator::Mul,
+                        TokenKind::SlashAssign => BinaryOperator::Div,
+                        TokenKind::PercentAssign => BinaryOperator::Mod,
+                        _ => unreachable!(),
+                    };
+                    let rhs = self.parse_expression()?;
+                    // Desugar: x += y  =>  x = x + y
+                    let value = Expression::BinaryOp {
+                        left: Box::new(expr.clone()),
+                        op,
+                        right: Box::new(rhs),
+                        span: span.clone(),
+                    };
                     Statement::Assignment { target: expr, value, span }
                 } else {
                     Statement::Expression { expr, span }
@@ -356,6 +381,21 @@ impl Parser {
         }
 
         Ok(Statement::Import { path, alias: None, span })
+    }
+
+    /// `try { body } catch err { handler }`
+    fn parse_try_catch(&mut self) -> VietResult<Statement> {
+        let span = self.current().span.clone();
+        self.expect(&TokenKind::Try)?;
+        self.expect(&TokenKind::LBrace)?;
+        let try_body = self.parse_block_body()?;
+        self.expect(&TokenKind::RBrace)?;
+        self.expect(&TokenKind::Catch)?;
+        let catch_var = self.expect_identifier()?;
+        self.expect(&TokenKind::LBrace)?;
+        let catch_body = self.parse_block_body()?;
+        self.expect(&TokenKind::RBrace)?;
+        Ok(Statement::TryCatch { try_body, catch_var, catch_body, span })
     }
 
     // ========================================

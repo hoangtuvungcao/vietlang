@@ -2,7 +2,7 @@
 // VietLang — JSON Processing Demo
 // ===================================
 
-println("📋 VietLang JSON Demo")
+println(" VietLang JSON Demo")
 println("======================\n")
 
 // --- Create JSON from data ---

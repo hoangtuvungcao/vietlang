@@ -1,0 +1,415 @@
+// ===================================================
+// VietLang Lexer -- Written in VietLang
+// Self-Hosting Bootstrap Stage 1
+// This lexer can tokenize VietLang source code
+// ===================================================
+
+// Keywords list
+let keywords_list = [
+    "let", "mut", "fn", "return", "if", "else", "match",
+    "for", "while", "in", "break", "continue",
+    "struct", "enum", "impl", "trait", "pub", "import", "type",
+    "try", "catch", "true", "false", "none", "self"
+]
+
+fn is_keyword(word: String) -> Bool {
+    for kw in keywords_list {
+        if kw == word {
+            return true
+        }
+    }
+    return false
+}
+
+fn is_alpha(ch: String) -> Bool {
+    let code = char_code(ch)
+    return (code >= 97 && code <= 122) || (code >= 65 && code <= 90) || code == 95
+}
+
+fn is_digit(ch: String) -> Bool {
+    let code = char_code(ch)
+    return code >= 48 && code <= 57
+}
+
+fn is_alnum(ch: String) -> Bool {
+    return is_alpha(ch) || is_digit(ch)
+}
+
+fn is_ws(ch: String) -> Bool {
+    let code = char_code(ch)
+    return code == 32 || code == 9 || code == 13
+}
+
+fn make_token(kind: String, value: String, line: Int, col: Int) {
+    let tok = map_new()
+    let tok = map_set(tok, "kind", kind)
+    let tok = map_set(tok, "value", value)
+    let tok = map_set(tok, "line", line)
+    let tok = map_set(tok, "col", col)
+    return tok
+}
+
+// ===================================================
+// The Lexer
+// ===================================================
+fn tokenize(source: String) {
+    let chars = source.chars()
+    let length = chars.len()
+    let mut pos = 0
+    let mut line = 1
+    let mut col = 1
+    let mut tokens = []
+
+    while pos < length {
+        let ch = chars[pos]
+        let code = char_code(ch)
+
+        if is_ws(ch) {
+            pos += 1
+            col += 1
+            continue
+        }
+
+        if code == 10 {
+            tokens = push(tokens, make_token("NEWLINE", "\\n", line, col))
+            pos += 1
+            line += 1
+            col = 1
+            continue
+        }
+
+        // Line comment
+        if ch == "/" && pos + 1 < length && chars[pos + 1] == "/" {
+            while pos < length && char_code(chars[pos]) != 10 {
+                pos += 1
+            }
+            continue
+        }
+
+        // Block comment
+        if ch == "/" && pos + 1 < length && chars[pos + 1] == "*" {
+            pos += 2
+            col += 2
+            let mut depth = 1
+            while pos < length && depth > 0 {
+                if chars[pos] == "/" && pos + 1 < length && chars[pos + 1] == "*" {
+                    depth += 1
+                    pos += 2
+                    col += 2
+                } else if chars[pos] == "*" && pos + 1 < length && chars[pos + 1] == "/" {
+                    depth -= 1
+                    pos += 2
+                    col += 2
+                } else {
+                    if char_code(chars[pos]) == 10 {
+                        line += 1
+                        col = 1
+                    } else {
+                        col += 1
+                    }
+                    pos += 1
+                }
+            }
+            continue
+        }
+
+        // String literal
+        if ch == "\"" {
+            let start_col = col
+            pos += 1
+            col += 1
+            let mut str_val = ""
+            while pos < length && chars[pos] != "\"" {
+                if chars[pos] == "\\" && pos + 1 < length {
+                    let next = chars[pos + 1]
+                    if next == "n" {
+                        str_val += "\n"
+                    } else if next == "t" {
+                        str_val += "\t"
+                    } else if next == "\\" {
+                        str_val += "\\"
+                    } else if next == "\"" {
+                        str_val += "\""
+                    } else {
+                        str_val += next
+                    }
+                    pos += 2
+                    col += 2
+                } else {
+                    str_val += chars[pos]
+                    pos += 1
+                    col += 1
+                }
+            }
+            pos += 1
+            col += 1
+            tokens = push(tokens, make_token("STRING", str_val, line, start_col))
+            continue
+        }
+
+        // Number literal
+        if is_digit(ch) {
+            let start_col = col
+            let mut num_str = ""
+            let mut is_float = false
+            while pos < length && (is_digit(chars[pos]) || chars[pos] == ".") {
+                if chars[pos] == "." {
+                    if is_float {
+                        break
+                    }
+                    if pos + 1 < length && is_digit(chars[pos + 1]) {
+                        is_float = true
+                    } else {
+                        break
+                    }
+                }
+                num_str += chars[pos]
+                pos += 1
+                col += 1
+            }
+            if is_float {
+                tokens = push(tokens, make_token("FLOAT", num_str, line, start_col))
+            } else {
+                tokens = push(tokens, make_token("INT", num_str, line, start_col))
+            }
+            continue
+        }
+
+        // Identifier or keyword
+        if is_alpha(ch) {
+            let start_col = col
+            let mut word = ""
+            while pos < length && is_alnum(chars[pos]) {
+                word += chars[pos]
+                pos += 1
+                col += 1
+            }
+            if is_keyword(word) {
+                tokens = push(tokens, make_token("KEYWORD", word, line, start_col))
+            } else {
+                tokens = push(tokens, make_token("IDENT", word, line, start_col))
+            }
+            continue
+        }
+
+        // Delimiters
+        if ch == "(" { tokens = push(tokens, make_token("LPAREN", "(", line, col)); pos += 1; col += 1; continue }
+        if ch == ")" { tokens = push(tokens, make_token("RPAREN", ")", line, col)); pos += 1; col += 1; continue }
+        if ch == "{" { tokens = push(tokens, make_token("LBRACE", "{", line, col)); pos += 1; col += 1; continue }
+        if ch == "}" { tokens = push(tokens, make_token("RBRACE", "}", line, col)); pos += 1; col += 1; continue }
+        if ch == "[" { tokens = push(tokens, make_token("LBRACKET", "[", line, col)); pos += 1; col += 1; continue }
+        if ch == "]" { tokens = push(tokens, make_token("RBRACKET", "]", line, col)); pos += 1; col += 1; continue }
+        if ch == "," { tokens = push(tokens, make_token("COMMA", ",", line, col)); pos += 1; col += 1; continue }
+        if ch == ";" { tokens = push(tokens, make_token("SEMICOLON", ";", line, col)); pos += 1; col += 1; continue }
+
+        // Two-char operators
+        if ch == ":" {
+            if pos + 1 < length && chars[pos + 1] == ":" {
+                tokens = push(tokens, make_token("OP", "::", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("COLON", ":", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "=" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "==", line, col)); pos += 2; col += 2
+            } else if pos + 1 < length && chars[pos + 1] == ">" {
+                tokens = push(tokens, make_token("OP", "=>", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "=", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "!" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "!=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "!", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "<" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "<=", line, col)); pos += 2; col += 2
+            } else if pos + 1 < length && chars[pos + 1] == "<" {
+                tokens = push(tokens, make_token("OP", "<<", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "<", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == ">" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", ">=", line, col)); pos += 2; col += 2
+            } else if pos + 1 < length && chars[pos + 1] == ">" {
+                tokens = push(tokens, make_token("OP", ">>", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", ">", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "+" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "+=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "+", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "-" {
+            if pos + 1 < length && chars[pos + 1] == ">" {
+                tokens = push(tokens, make_token("OP", "->", line, col)); pos += 2; col += 2
+            } else if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "-=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "-", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "*" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "*=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "*", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "/" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "/=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "/", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "%" {
+            if pos + 1 < length && chars[pos + 1] == "=" {
+                tokens = push(tokens, make_token("OP", "%=", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "%", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "." {
+            if pos + 1 < length && chars[pos + 1] == "." {
+                tokens = push(tokens, make_token("OP", "..", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("DOT", ".", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "&" {
+            if pos + 1 < length && chars[pos + 1] == "&" {
+                tokens = push(tokens, make_token("OP", "&&", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "&", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "|" {
+            if pos + 1 < length && chars[pos + 1] == "|" {
+                tokens = push(tokens, make_token("OP", "||", line, col)); pos += 2; col += 2
+            } else {
+                tokens = push(tokens, make_token("OP", "|", line, col)); pos += 1; col += 1
+            }
+            continue
+        }
+        if ch == "?" { tokens = push(tokens, make_token("OP", "?", line, col)); pos += 1; col += 1; continue }
+        if ch == "^" { tokens = push(tokens, make_token("OP", "^", line, col)); pos += 1; col += 1; continue }
+        if ch == "~" { tokens = push(tokens, make_token("OP", "~", line, col)); pos += 1; col += 1; continue }
+
+        // Unknown character
+        log_warn("Lexer: unknown char '" + ch + "' at " + to_string(line) + ":" + to_string(col))
+        pos += 1
+        col += 1
+    }
+
+    tokens = push(tokens, make_token("EOF", "", line, col))
+    return tokens
+}
+
+// ===================================================
+// Pretty-print tokens
+// ===================================================
+fn print_tokens(tokens) {
+    for tok in tokens {
+        let kind = map_get(tok, "kind")
+        let value = map_get(tok, "value")
+        let ln = map_get(tok, "line")
+        let cl = map_get(tok, "col")
+        if kind != "NEWLINE" && kind != "EOF" {
+            println("  " + kind + " '" + value + "' at " + to_string(ln) + ":" + to_string(cl))
+        }
+    }
+}
+
+// ===================================================
+// Test
+// ===================================================
+
+println("VietLang Self-Hosting Lexer")
+println("=============================\n")
+
+println("--- Test 1: Variables ---")
+let src1 = "let x = 42 + 3.14\nlet name = \"hello\""
+let tok1 = tokenize(src1)
+print_tokens(tok1)
+println("  Count: " + to_string(tok1.len()))
+
+println("\n--- Test 2: Function ---")
+let src2 = "fn add(a: Int, b: Int) -> Int {\n    return a + b\n}"
+let tok2 = tokenize(src2)
+print_tokens(tok2)
+
+println("\n--- Test 3: Control flow ---")
+let src3 = "if x > 0 {\n    println(\"positive\")\n} else {\n    println(\"negative\")\n}"
+let tok3 = tokenize(src3)
+print_tokens(tok3)
+
+println("\n--- Test 4: Operators ---")
+let src4 = "x += 5\ny -= 3\na == b\nc != d\n=> .."
+let tok4 = tokenize(src4)
+print_tokens(tok4)
+
+println("\n--- Test 5: Comments ---")
+let src5 = "let x = 10 // comment\n/* block */\nlet y = 20"
+let tok5 = tokenize(src5)
+print_tokens(tok5)
+
+println("\n--- Test 6: Self-tokenization ---")
+let self_source = file_read("bootstrap/lexer.vl")
+let self_tokens = tokenize(self_source)
+println("  Self-hosted lexer tokenized itself!")
+println("  Total tokens: " + to_string(self_tokens.len()))
+
+let mut kw_count = 0
+let mut ident_count = 0
+let mut op_count = 0
+let mut str_count = 0
+let mut num_count = 0
+for tok in self_tokens {
+    let kind = map_get(tok, "kind")
+    if kind == "KEYWORD" {
+        kw_count += 1
+    }
+    if kind == "IDENT" {
+        ident_count += 1
+    }
+    if kind == "OP" {
+        op_count += 1
+    }
+    if kind == "STRING" {
+        str_count += 1
+    }
+    if kind == "INT" {
+        num_count += 1
+    }
+}
+println("  Keywords:    " + to_string(kw_count))
+println("  Identifiers: " + to_string(ident_count))
+println("  Operators:   " + to_string(op_count))
+println("  Strings:     " + to_string(str_count))
+println("  Numbers:     " + to_string(num_count))
+
+println("\n=== Self-hosting lexer verification complete! ===")

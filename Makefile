@@ -9,7 +9,7 @@ help:
 	@echo "  make build     Build release binary"
 	@echo "  make debug     Build debug binary"
 	@echo "  make test      Run all tests"
-	@echo "  make demo      Run all examples"
+	@echo "  make demo      Run all examples and bootstrap tests"
 	@echo "  make install   Install to /usr/local/bin"
 	@echo "  make clean     Clean build artifacts"
 	@echo "  make release   Build release + strip binary"
@@ -19,7 +19,7 @@ help:
 # Build
 build:
 	cargo build --release
-	@echo "\n✅ Binary: target/release/vietlang ($$(du -h target/release/vietlang | cut -f1))"
+	@echo "\nBinary: target/release/vietlang ($$(du -h target/release/vietlang | cut -f1))"
 
 debug:
 	cargo build
@@ -27,7 +27,7 @@ debug:
 # Test
 test:
 	cargo test --all
-	@echo "\n✅ All tests passed!"
+	@echo "\nAll Rust unit tests passed!"
 
 # Run examples
 demo: build
@@ -46,12 +46,20 @@ demo: build
 	./target/release/vietlang examples/database.vl
 	@echo "\n--- concurrency.vl ---"
 	./target/release/vietlang examples/concurrency.vl
-	@echo "\n✅ All demos completed!"
+	@echo "\n--- new_features_test.vl ---"
+	./target/release/vietlang examples/new_features_test.vl
+	@echo "\n--- community_modules_demo.vl ---"
+	./target/release/vietlang examples/community_modules_demo.vl
+	@echo "\n--- bootstrap/parser.vl ---"
+	./target/release/vietlang bootstrap/parser.vl
+	@echo "\n--- bootstrap/lexer.vl ---"
+	./target/release/vietlang bootstrap/lexer.vl
+	@echo "\nAll demos and bootstrap tests completed successfully!"
 
 # Install
 install: build
 	sudo cp target/release/vietlang /usr/local/bin/vietlang
-	@echo "✅ Installed vietlang to /usr/local/bin/"
+	@echo "Installed vietlang to /usr/local/bin/"
 	@vietlang --version
 
 # Clean
@@ -62,9 +70,9 @@ clean:
 release:
 	cargo build --release
 	strip target/release/vietlang 2>/dev/null || true
-	@echo "\n✅ Release binary: target/release/vietlang ($$(du -h target/release/vietlang | cut -f1))"
+	@echo "\nRelease binary: target/release/vietlang ($$(du -h target/release/vietlang | cut -f1))"
 
 # Lint
 lint:
 	cargo clippy -- -D warnings
-	@echo "✅ No lint issues"
+	@echo "No lint issues"

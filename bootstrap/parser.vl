@@ -1,0 +1,337 @@
+// ===================================================
+// VietLang Parser -- Written 100% in VietLang
+// Self-Hosting Bootstrap Stage 2
+// Parses tokens into an AST (Abstract Syntax Tree)
+// ===================================================
+
+fn ast_node(node_type: String, data_map) {
+    return map_set(data_map, "node_type", node_type)
+}
+
+fn ast_literal(value, lit_type: String) {
+    let m = map_new()
+    let m = map_set(m, "value", value)
+    let m = map_set(m, "lit_type", lit_type)
+    return ast_node("Literal", m)
+}
+
+fn ast_identifier(name: String) {
+    let m = map_new()
+    let m = map_set(m, "name", name)
+    return ast_node("Identifier", m)
+}
+
+fn ast_binary_op(left, op: String, right) {
+    let m = map_new()
+    let m = map_set(m, "left", left)
+    let m = map_set(m, "op", op)
+    let m = map_set(m, "right", right)
+    return ast_node("BinaryOp", m)
+}
+
+fn ast_let_stmt(name: String, mutable: Bool, value) {
+    let m = map_new()
+    let m = map_set(m, "name", name)
+    let m = map_set(m, "mutable", mutable)
+    let m = map_set(m, "value", value)
+    return ast_node("LetStatement", m)
+}
+
+fn ast_fn_stmt(name: String, params, body) {
+    let m = map_new()
+    let m = map_set(m, "name", name)
+    let m = map_set(m, "params", params)
+    let m = map_set(m, "body", body)
+    return ast_node("FunctionStatement", m)
+}
+
+fn ast_call_expr(callee, args) {
+    let m = map_new()
+    let m = map_set(m, "callee", callee)
+    let m = map_set(m, "args", args)
+    return ast_node("CallExpression", m)
+}
+
+fn ast_return_stmt(value) {
+    let m = map_new()
+    let m = map_set(m, "value", value)
+    return ast_node("ReturnStatement", m)
+}
+
+fn ast_program(statements) {
+    let m = map_new()
+    let m = map_set(m, "statements", statements)
+    return ast_node("Program", m)
+}
+
+// ===================================================
+// Parser Implementation
+// ===================================================
+
+let mut parser_tokens = []
+let mut parser_pos = 0
+let mut parser_len = 0
+
+fn parser_init(tokens) {
+    parser_tokens = tokens
+    parser_pos = 0
+    parser_len = tokens.len()
+}
+
+fn parser_is_at_end() -> Bool {
+    if parser_pos >= parser_len {
+        return true
+    }
+    let tok = parser_tokens[parser_pos]
+    return map_get(tok, "kind") == "EOF"
+}
+
+fn parser_peek() {
+    if parser_pos < parser_len {
+        return parser_tokens[parser_pos]
+    }
+    return map_set(map_new(), "kind", "EOF")
+}
+
+fn parser_advance() {
+    if !parser_is_at_end() {
+        let tok = parser_tokens[parser_pos]
+        parser_pos += 1
+        return tok
+    }
+    return parser_peek()
+}
+
+fn parser_check(kind: String) -> Bool {
+    if parser_is_at_end() {
+        return false
+    }
+    let current_tok = parser_peek()
+    return map_get(current_tok, "kind") == kind
+}
+
+fn parser_check_val(kind: String, val: String) -> Bool {
+    if parser_is_at_end() {
+        return false
+    }
+    let current_tok = parser_peek()
+    return map_get(current_tok, "kind") == kind && map_get(current_tok, "value") == val
+}
+
+fn parser_skip_newlines() {
+    while parser_check("NEWLINE") {
+        parser_advance()
+    }
+}
+
+// Parse primary expression
+fn parse_primary() {
+    parser_skip_newlines()
+    let tok = parser_peek()
+    let kind = map_get(tok, "kind")
+    let val = map_get(tok, "value")
+
+    if kind == "INT" {
+        parser_advance()
+        return ast_literal(parse_int(val), "Int")
+    }
+    if kind == "FLOAT" {
+        parser_advance()
+        return ast_literal(parse_float(val), "Float")
+    }
+    if kind == "STRING" {
+        parser_advance()
+        return ast_literal(val, "String")
+    }
+    if kind == "IDENT" {
+        parser_advance()
+        return ast_identifier(val)
+    }
+    if kind == "LPAREN" {
+        parser_advance()
+        let expr = parse_expr()
+        if parser_check("RPAREN") {
+            parser_advance()
+        }
+        return expr
+    }
+
+    parser_advance()
+    return ast_literal(none, "None")
+}
+
+// Parse call or field access
+fn parse_call() {
+    let mut expr = parse_primary()
+
+    while true {
+        if parser_check("LPAREN") {
+            parser_advance()
+            let mut args = []
+            if !parser_check("RPAREN") {
+                args = push(args, parse_expr())
+                while parser_check("COMMA") {
+                    parser_advance()
+                    args = push(args, parse_expr())
+                }
+            }
+            if parser_check("RPAREN") {
+                parser_advance()
+            }
+            expr = ast_call_expr(expr, args)
+        } else {
+            break
+        }
+    }
+
+    return expr
+}
+
+// Parse factor (*, /, %)
+fn parse_factor() {
+    let mut left = parse_call()
+
+    while parser_check_val("OP", "*") || parser_check_val("OP", "/") || parser_check_val("OP", "%") {
+        let op_tok = parser_advance()
+        let op_str = map_get(op_tok, "value")
+        let right = parse_call()
+        left = ast_binary_op(left, op_str, right)
+    }
+
+    return left
+}
+
+// Parse term (+, -)
+fn parse_term() {
+    let mut left = parse_factor()
+
+    while parser_check_val("OP", "+") || parser_check_val("OP", "-") {
+        let op_tok = parser_advance()
+        let op_str = map_get(op_tok, "value")
+        let right = parse_factor()
+        left = ast_binary_op(left, op_str, right)
+    }
+
+    return left
+}
+
+// Parse comparison (==, !=, <, >, <=, >=)
+fn parse_comparison() {
+    let mut left = parse_term()
+
+    while parser_check_val("OP", "==") || parser_check_val("OP", "!=") || parser_check_val("OP", "<") || parser_check_val("OP", ">") || parser_check_val("OP", "<=") || parser_check_val("OP", ">=") {
+        let op_tok = parser_advance()
+        let op_str = map_get(op_tok, "value")
+        let right = parse_term()
+        left = ast_binary_op(left, op_str, right)
+    }
+
+    return left
+}
+
+// Top level expression entry point
+fn parse_expr() {
+    return parse_comparison()
+}
+
+// Parse a single statement
+fn parse_stmt() {
+    parser_skip_newlines()
+    let tok = parser_peek()
+    let kind = map_get(tok, "kind")
+    let val = map_get(tok, "value")
+
+    // let [mut] name = expr
+    if kind == "KEYWORD" && val == "let" {
+        parser_advance()
+        let mut is_mut = false
+        if parser_check_val("KEYWORD", "mut") {
+            parser_advance()
+            is_mut = true
+        }
+        let name_tok = parser_advance()
+        let var_name = map_get(name_tok, "value")
+        if parser_check_val("OP", "=") {
+            parser_advance()
+        }
+        let init_val = parse_expr()
+        return ast_let_stmt(var_name, is_mut, init_val)
+    }
+
+    // return [expr]
+    if kind == "KEYWORD" && val == "return" {
+        parser_advance()
+        let ret_val = parse_expr()
+        return ast_return_stmt(ret_val)
+    }
+
+    // Fallback: Expression statement
+    let expr = parse_expr()
+    return ast_node("ExpressionStatement", map_set(map_new(), "expr", expr))
+}
+
+// Parse entire program
+fn parse_program(tokens) {
+    parser_init(tokens)
+    let mut stmts = []
+
+    while !parser_is_at_end() {
+        parser_skip_newlines()
+        if parser_is_at_end() {
+            break
+        }
+        let stmt = parse_stmt()
+        stmts = push(stmts, stmt)
+        parser_skip_newlines()
+    }
+
+    return ast_program(stmts)
+}
+
+// ===================================================
+// Test the Self-Hosting Parser
+// ===================================================
+
+println("VietLang Self-Hosting Parser")
+println("=============================\n")
+
+// Test 1: Parse variable declarations & arithmetic
+println("--- Test 1: Let statement with arithmetic ---")
+let test_tokens_1 = [
+    map_set(map_set(map_new(), "kind", "KEYWORD"), "value", "let"),
+    map_set(map_set(map_new(), "kind", "IDENT"), "value", "x"),
+    map_set(map_set(map_new(), "kind", "OP"), "value", "="),
+    map_set(map_set(map_new(), "kind", "INT"), "value", "10"),
+    map_set(map_set(map_new(), "kind", "OP"), "value", "+"),
+    map_set(map_set(map_new(), "kind", "INT"), "value", "20"),
+    map_set(map_set(map_new(), "kind", "OP"), "value", "*"),
+    map_set(map_set(map_new(), "kind", "INT"), "value", "3"),
+    map_set(map_set(map_new(), "kind", "EOF"), "value", "")
+]
+
+let ast_1 = parse_program(test_tokens_1)
+println("Generated AST:")
+println(json_stringify(ast_1, true))
+
+let stmts_1 = map_get(ast_1, "statements")
+println("\nParsed " + to_string(stmts_1.len()) + " statements successfully!")
+assert(stmts_1.len() == 1)
+
+// Test 2: Function call parsing
+println("\n--- Test 2: Function call expression ---")
+let test_tokens_2 = [
+    map_set(map_set(map_new(), "kind", "IDENT"), "value", "println"),
+    map_set(map_set(map_new(), "kind", "LPAREN"), "value", "("),
+    map_set(map_set(map_new(), "kind", "STRING"), "value", "Hello from self-hosted VietLang!"),
+    map_set(map_set(map_new(), "kind", "RPAREN"), "value", ")"),
+    map_set(map_set(map_new(), "kind", "EOF"), "value", "")
+]
+
+let ast_2 = parse_program(test_tokens_2)
+println("Generated AST:")
+println(json_stringify(ast_2, true))
+
+let stmts_2 = map_get(ast_2, "statements")
+assert(stmts_2.len() == 1)
+
+println("\n=== Self-hosting parser verification complete! ===")

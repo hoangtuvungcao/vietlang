@@ -1,0 +1,45 @@
+// ===================================================
+// VietLang HTTP Router & Web Framework (std.http_router)
+// Written in pure VietLang
+// ===================================================
+
+fn router_new() {
+    let r = map_new()
+    let r = map_set(r, "routes", [])
+    let r = map_set(r, "middlewares", [])
+    return r
+}
+
+fn router_add_route(r, method: String, path: String, handler_name: String) {
+    let route = map_new()
+    let route = map_set(route, "method", method)
+    let route = map_set(route, "path", path)
+    let route = map_set(route, "handler", handler_name)
+
+    let current_routes = map_get(r, "routes")
+    let new_routes = push(current_routes, route)
+    return map_set(r, "routes", new_routes)
+}
+
+fn router_use(r, middleware_name: String) {
+    let current_mw = map_get(r, "middlewares")
+    let new_mw = push(current_mw, middleware_name)
+    return map_set(r, "middlewares", new_mw)
+}
+
+fn response_json(status: Int, data, message: String = "OK") -> String {
+    let resp = map_new()
+    let resp = map_set(resp, "status", status)
+    let resp = map_set(resp, "message", message)
+    let resp = map_set(resp, "data", data)
+    let resp = map_set(resp, "timestamp", time_now())
+    return json_stringify(resp, true)
+}
+
+fn response_error(status: Int, error_msg: String) -> String {
+    let resp = map_new()
+    let resp = map_set(resp, "status", status)
+    let resp = map_set(resp, "error", error_msg)
+    let resp = map_set(resp, "timestamp", time_now())
+    return json_stringify(resp, true)
+}

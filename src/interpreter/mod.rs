@@ -5,19 +5,11 @@ pub mod value;
 pub mod environment;
 
 use std::collections::HashMap;
-use crate::error::{VietError, VietResult};
+use crate::error::{VietError, VietResult, ErrorKind};
 use crate::lexer::token::Span;
 use crate::parser::ast::*;
 use value::Value;
 use environment::Environment;
-
-/// Signal for control flow (return, break, continue)
-#[derive(Debug)]
-enum Signal {
-    Return(Value),
-    Break,
-    Continue,
-}
 
 pub struct Interpreter {
     env: Environment,
@@ -116,6 +108,30 @@ impl Interpreter {
             ("spawn", None),
             ("channel", None),
             ("mutex_new", None),
+
+            // String character operations
+            ("char_at", Some(2)),
+            ("char_code", Some(1)),
+            ("from_char_code", Some(1)),
+            ("substring", None),
+            ("str_repeat", Some(2)),
+            ("parse_int", Some(1)),
+            ("parse_float", Some(1)),
+
+            // Array operations
+            ("sort", Some(1)),
+            ("slice", None),
+            ("index_of", Some(2)),
+            ("flat", Some(1)),
+
+            // Error handling
+            ("throw", None),
+            ("is_error", Some(1)),
+
+            // System
+            ("get_args", Some(0)),
+            ("platform", Some(0)),
+            ("arch", Some(0)),
         ];
 
         for (name, arity) in builtins {
@@ -240,10 +256,7 @@ impl Interpreter {
                     Some(expr) => self.evaluate_expression(expr)?,
                     None => Value::None,
                 };
-                Err(VietError::runtime_error(
-                    format!("__RETURN__:{}", self.value_to_return_str(&val)),
-                    0, 0,
-                ))
+                Err(VietError::return_signal(val))
             }
 
             Statement::If { condition, then_body, else_body, .. } => {
@@ -265,8 +278,8 @@ impl Interpreter {
                     }
                     match self.execute_block(body) {
                         Ok(_) => {}
-                        Err(e) if e.message == "__BREAK__" => break,
-                        Err(e) if e.message == "__CONTINUE__" => continue,
+                        Err(VietError { kind: ErrorKind::Break, .. }) => break,
+                        Err(VietError { kind: ErrorKind::Continue, .. }) => continue,
                         Err(e) => return Err(e),
                     }
                 }
@@ -294,11 +307,11 @@ impl Interpreter {
                     self.env.define(variable, item, false);
                     match self.execute_block_no_scope(body) {
                         Ok(_) => {}
-                        Err(e) if e.message == "__BREAK__" => {
+                        Err(VietError { kind: ErrorKind::Break, .. }) => {
                             self.env.pop_scope();
                             break;
                         }
-                        Err(e) if e.message == "__CONTINUE__" => {
+                        Err(VietError { kind: ErrorKind::Continue, .. }) => {
                             self.env.pop_scope();
                             continue;
                         }
@@ -313,11 +326,11 @@ impl Interpreter {
             }
 
             Statement::Break { .. } => {
-                Err(VietError::runtime_error("__BREAK__".to_string(), 0, 0))
+                Err(VietError::break_signal())
             }
 
             Statement::Continue { .. } => {
-                Err(VietError::runtime_error("__CONTINUE__".to_string(), 0, 0))
+                Err(VietError::continue_signal())
             }
 
             Statement::Struct { name, fields, .. } => {
@@ -364,10 +377,41 @@ impl Interpreter {
                 Ok(Value::None)
             }
 
-            Statement::Import { path, .. } => {
-                // For now, just acknowledge imports
-                let _module_path = path.join(".");
-                Ok(Value::None)
+            Statement::Import { path, span, .. } => {
+                // Import .vl files: `import utils` => loads `utils.vl`
+                // `import lib.math` => loads `lib/math.vl`
+                let file_path = format!("{}.vl", path.join("/"));
+                if std::path::Path::new(&file_path).exists() {
+                    let source = std::fs::read_to_string(&file_path).map_err(|e|
+                        VietError::runtime_error(format!("Cannot import '{}': {}", file_path, e), span.line, span.column)
+                    )?;
+                    let mut lexer = crate::lexer::Lexer::new(&source);
+                    let tokens = lexer.tokenize()?;
+                    let mut parser = crate::parser::Parser::new(tokens);
+                    let program = parser.parse()?;
+                    self.execute(&program)?;
+                    Ok(Value::None)
+                } else {
+                    // Built-in module, just acknowledge
+                    Ok(Value::None)
+                }
+            }
+
+            Statement::TryCatch { try_body, catch_var, catch_body, .. } => {
+                match self.execute_block(try_body) {
+                    Ok(val) => Ok(val),
+                    Err(err) => {
+                        if matches!(err.kind, ErrorKind::Return(_) | ErrorKind::Break | ErrorKind::Continue) {
+                            // Control flow signals pass through
+                            return Err(err);
+                        }
+                        self.env.push_scope();
+                        self.env.define(catch_var, Value::String(err.message.clone()), false);
+                        let result = self.execute_block_no_scope(catch_body);
+                        self.env.pop_scope();
+                        result
+                    }
+                }
             }
         }
     }
@@ -408,9 +452,31 @@ impl Interpreter {
             }
 
             Expression::BinaryOp { left, op, right, span } => {
-                let lval = self.evaluate_expression(left)?;
-                let rval = self.evaluate_expression(right)?;
-                self.evaluate_binary_op(&lval, op, &rval, span)
+                match op {
+                    BinaryOperator::And => {
+                        let lval = self.evaluate_expression(left)?;
+                        if !lval.is_truthy() {
+                            Ok(Value::Bool(false))
+                        } else {
+                            let rval = self.evaluate_expression(right)?;
+                            Ok(Value::Bool(rval.is_truthy()))
+                        }
+                    }
+                    BinaryOperator::Or => {
+                        let lval = self.evaluate_expression(left)?;
+                        if lval.is_truthy() {
+                            Ok(Value::Bool(true))
+                        } else {
+                            let rval = self.evaluate_expression(right)?;
+                            Ok(Value::Bool(rval.is_truthy()))
+                        }
+                    }
+                    _ => {
+                        let lval = self.evaluate_expression(left)?;
+                        let rval = self.evaluate_expression(right)?;
+                        self.evaluate_binary_op(&lval, op, &rval, span)
+                    }
+                }
             }
 
             Expression::UnaryOp { op, operand, span } => {
@@ -740,10 +806,7 @@ impl Interpreter {
 
                 match result {
                     Ok(val) => Ok(val),
-                    Err(e) if e.message.starts_with("__RETURN__:") => {
-                        let return_str = e.message.strip_prefix("__RETURN__:").unwrap();
-                        Ok(self.parse_return_value(return_str))
-                    }
+                    Err(VietError { kind: ErrorKind::Return(val), .. }) => Ok(val),
                     Err(e) => Err(e),
                 }
             }
@@ -1129,6 +1192,30 @@ impl Interpreter {
             "format" => crate::stdlib::builtin_format(args, span.line, span.column),
             "range" => crate::stdlib::builtin_range(args, span.line, span.column),
 
+            // String character operations
+            "char_at" => crate::stdlib::builtin_char_at(args, span.line, span.column),
+            "char_code" => crate::stdlib::builtin_char_code(args, span.line, span.column),
+            "from_char_code" => crate::stdlib::builtin_from_char_code(args, span.line, span.column),
+            "substring" => crate::stdlib::builtin_substring(args, span.line, span.column),
+            "str_repeat" => crate::stdlib::builtin_str_repeat(args, span.line, span.column),
+            "parse_int" => crate::stdlib::builtin_parse_int(args, span.line, span.column),
+            "parse_float" => crate::stdlib::builtin_parse_float(args, span.line, span.column),
+
+            // Array operations
+            "sort" => crate::stdlib::builtin_array_sort(args, span.line, span.column),
+            "slice" => crate::stdlib::builtin_array_slice(args, span.line, span.column),
+            "index_of" => crate::stdlib::builtin_array_index_of(args, span.line, span.column),
+            "flat" => crate::stdlib::builtin_array_flat(args, span.line, span.column),
+
+            // Error handling
+            "throw" => crate::stdlib::builtin_throw(args, span.line, span.column),
+            "is_error" => crate::stdlib::builtin_is_error(args, span.line, span.column),
+
+            // System
+            "get_args" => crate::stdlib::builtin_args(args, span.line, span.column),
+            "platform" => crate::stdlib::builtin_platform(args, span.line, span.column),
+            "arch" => crate::stdlib::builtin_arch(args, span.line, span.column),
+
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),
                 span.line, span.column,
@@ -1179,37 +1266,6 @@ impl Interpreter {
                     _ => None,
                 }
             }
-        }
-    }
-
-    // ========================================
-    // Return value encoding (simple approach for control flow)
-    // ========================================
-
-    fn value_to_return_str(&self, val: &Value) -> String {
-        match val {
-            Value::Int(n) => format!("int:{}", n),
-            Value::Float(f) => format!("float:{}", f),
-            Value::String(s) => format!("string:{}", s),
-            Value::Bool(b) => format!("bool:{}", b),
-            Value::None => "none:".to_string(),
-            _ => format!("display:{}", val),
-        }
-    }
-
-    fn parse_return_value(&self, s: &str) -> Value {
-        if let Some(rest) = s.strip_prefix("int:") {
-            Value::Int(rest.parse().unwrap_or(0))
-        } else if let Some(rest) = s.strip_prefix("float:") {
-            Value::Float(rest.parse().unwrap_or(0.0))
-        } else if let Some(rest) = s.strip_prefix("string:") {
-            Value::String(rest.to_string())
-        } else if let Some(rest) = s.strip_prefix("bool:") {
-            Value::Bool(rest == "true")
-        } else if s.starts_with("none:") {
-            Value::None
-        } else {
-            Value::String(s.to_string())
         }
     }
 }

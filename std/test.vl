@@ -1,0 +1,67 @@
+// ===================================================
+// VietLang Standard Testing Framework (std.test)
+// Written in pure VietLang for community test suites
+// ===================================================
+
+let mut test_passed_count = 0
+let mut test_failed_count = 0
+let mut current_suite_name = ""
+
+fn suite(name: String) {
+    current_suite_name = name
+    println("\n[SUITE] " + name)
+}
+
+fn test(name: String, test_fn) {
+    try {
+        test_fn()
+        test_passed_count += 1
+        println("  PASS: " + name)
+    } catch err {
+        test_failed_count += 1
+        println("  FAIL: " + name + " -> " + err)
+    }
+}
+
+fn assert_eq(actual, expected, message: String = "") {
+    if actual != expected {
+        let err_msg = "Assertion Failed: expected '" + to_string(expected) + "', got '" + to_string(actual) + "'"
+        if message != "" {
+            err_msg += " (" + message + ")"
+        }
+        throw(err_msg)
+    }
+}
+
+fn assert_ne(actual, expected, message: String = "") {
+    if actual == expected {
+        let err_msg = "Assertion Failed: expected values to differ, but both were '" + to_string(actual) + "'"
+        if message != "" {
+            err_msg += " (" + message + ")"
+        }
+        throw(err_msg)
+    }
+}
+
+fn assert_true(cond: Bool, message: String = "Expected condition to be true") {
+    if !cond {
+        throw("Assertion Failed: " + message)
+    }
+}
+
+fn assert_false(cond: Bool, message: String = "Expected condition to be false") {
+    if cond {
+        throw("Assertion Failed: " + message)
+    }
+}
+
+fn test_summary() {
+    println("\n==================================")
+    println("Test Summary:")
+    println("  Passed: " + to_string(test_passed_count))
+    println("  Failed: " + to_string(test_failed_count))
+    println("==================================")
+    if test_failed_count > 0 {
+        exit(1)
+    }
+}

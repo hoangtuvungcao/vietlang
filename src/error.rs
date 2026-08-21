@@ -2,6 +2,7 @@
 /// Unified error handling for the compiler/interpreter.
 
 use std::fmt;
+use crate::interpreter::value::Value;
 
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
@@ -10,6 +11,9 @@ pub enum ErrorKind {
     TypeError,
     RuntimeError,
     NameError,
+    Return(Value),
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone)]
@@ -44,16 +48,46 @@ impl VietError {
     pub fn name_error(message: String, line: usize, column: usize) -> Self {
         VietError::new(ErrorKind::NameError, message, line, column)
     }
+
+    pub fn return_signal(val: Value) -> Self {
+        VietError {
+            kind: ErrorKind::Return(val),
+            message: String::new(),
+            line: 0,
+            column: 0,
+        }
+    }
+
+    pub fn break_signal() -> Self {
+        VietError {
+            kind: ErrorKind::Break,
+            message: String::new(),
+            line: 0,
+            column: 0,
+        }
+    }
+
+    pub fn continue_signal() -> Self {
+        VietError {
+            kind: ErrorKind::Continue,
+            message: String::new(),
+            line: 0,
+            column: 0,
+        }
+    }
 }
 
 impl fmt::Display for VietError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let kind_str = match self.kind {
+        let kind_str = match &self.kind {
             ErrorKind::LexerError => "LexerError",
             ErrorKind::ParseError => "ParseError",
             ErrorKind::TypeError => "TypeError",
             ErrorKind::RuntimeError => "RuntimeError",
             ErrorKind::NameError => "NameError",
+            ErrorKind::Return(_) => "Return",
+            ErrorKind::Break => "Break",
+            ErrorKind::Continue => "Continue",
         };
         write!(
             f,

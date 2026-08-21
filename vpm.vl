@@ -1,0 +1,111 @@
+// ===================================================
+// VietLang Package Manager (vpm)
+// Written 100% in pure VietLang
+// Usage:
+//   vietlang vpm.vl init [name]
+//   vietlang vpm.vl install [git_url]
+//   vietlang vpm.vl test
+//   vietlang vpm.vl list
+// ===================================================
+
+let args = get_args()
+
+fn show_help() {
+    println("VietLang Package Manager (vpm) v0.1.0")
+    println("======================================")
+    println("Usage:")
+    println("  vietlang vpm.vl init <package-name>   Initialize a new VietLang package")
+    println("  vietlang vpm.vl install <module-url>  Install a community package")
+    println("  vietlang vpm.vl list                  List installed packages in modules/")
+    println("  vietlang vpm.vl info                  Show current package manifest")
+    println("  vietlang vpm.vl help                  Show this help message")
+    println("")
+}
+
+fn vpm_init(pkg_name: String) {
+    if pkg_name == "" {
+        println("Error: Package name required. Example: vietlang vpm.vl init my_backend")
+        return none
+    }
+
+    let manifest = map_new()
+    let manifest = map_set(manifest, "name", pkg_name)
+    let manifest = map_set(manifest, "version", "0.1.0")
+    let manifest = map_set(manifest, "description", "Backend service built with VietLang")
+    let manifest = map_set(manifest, "main", "src/main.vl")
+    let manifest = map_set(manifest, "dependencies", map_new())
+    let manifest = map_set(manifest, "license", "MIT")
+
+    // Create directories
+    dir_create(pkg_name)
+    dir_create(pkg_name + "/src")
+    dir_create(pkg_name + "/tests")
+    dir_create(pkg_name + "/modules")
+
+    // Write manifest
+    let manifest_json = json_stringify(manifest, true)
+    file_write(pkg_name + "/vietlang.json", manifest_json)
+
+    // Write starter template
+    let starter_code = "// " + pkg_name + " -- Main Entry Point\nimport std.test\nimport std.strings\n\nprintln(\"Starting " + pkg_name + " backend service...\")\n"
+    file_write(pkg_name + "/src/main.vl", starter_code)
+
+    // Write starter test
+    let test_code = "import std.test\n\nsuite(\"" + pkg_name + " Unit Tests\")\n\ntest(\"Basic sanity test\", fn() {\n    assert_eq(1 + 1, 2)\n})\n\ntest_summary()\n"
+    file_write(pkg_name + "/tests/main_test.vl", test_code)
+
+    println("Created new VietLang package '" + pkg_name + "' successfully:")
+    println("  " + pkg_name + "/vietlang.json")
+    println("  " + pkg_name + "/src/main.vl")
+    println("  " + pkg_name + "/tests/main_test.vl")
+    println("  " + pkg_name + "/modules/")
+    println("")
+    println("Get started:")
+    println("  cd " + pkg_name)
+    println("  vietlang src/main.vl")
+}
+
+fn vpm_list() {
+    if !file_exists("modules") {
+        println("No modules/ directory found.")
+        return none
+    }
+    let installed = dir_list("modules")
+    println("Installed community modules in modules/:")
+    for mod_name in installed {
+        println("  * " + mod_name)
+    }
+}
+
+fn vpm_info() {
+    if !file_exists("vietlang.json") {
+        println("Error: No vietlang.json manifest found in current directory.")
+        return none
+    }
+    let content = file_read("vietlang.json")
+    println("Current Package Manifest (vietlang.json):")
+    println(content)
+}
+
+// CLI Dispatcher
+if args.len() < 3 {
+    show_help()
+} else {
+    let command = args[2]
+    if command == "init" {
+        let mut pkg_name = "my_project"
+        if args.len() >= 4 {
+            pkg_name = args[3]
+        }
+        vpm_init(pkg_name)
+    } else if command == "list" {
+        vpm_list()
+    } else if command == "info" {
+        vpm_info()
+    } else if command == "help" {
+        show_help()
+    } else {
+        println("Unknown command: '" + command + "'")
+        show_help()
+    }
+}

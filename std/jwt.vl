@@ -1,0 +1,49 @@
+// ===================================================
+// VietLang JWT Library (std.jwt)
+// Pure VietLang JSON Web Token Generator & Verifier
+// ===================================================
+
+fn jwt_create_header() {
+    let header = map_new()
+    let header = map_set(header, "alg", "HS256")
+    let header = map_set(header, "typ", "JWT")
+    return header
+}
+
+fn jwt_sign(payload_map, secret: String) -> String {
+    let header = jwt_create_header()
+    let header_json = json_stringify(header)
+    let payload_json = json_stringify(payload_map)
+
+    let encoded_header = base64_encode(header_json)
+    let encoded_payload = base64_encode(payload_json)
+
+    let message = encoded_header + "." + encoded_payload
+    let signature = sha256(message + ":" + secret)
+
+    return message + "." + signature
+}
+
+fn jwt_verify(token: String, secret: String) {
+    let parts = token.split(".")
+    if parts.len() != 3 {
+        return map_set(map_new(), "valid", false)
+    }
+
+    let encoded_header = parts[0]
+    let encoded_payload = parts[1]
+    let expected_sig = parts[2]
+
+    let message = encoded_header + "." + encoded_payload
+    let actual_sig = sha256(message + ":" + secret)
+
+    if expected_sig != actual_sig {
+        return map_set(map_new(), "valid", false)
+    }
+
+    let result = map_new()
+    let result = map_set(result, "valid", true)
+    let result = map_set(result, "header_raw", encoded_header)
+    let result = map_set(result, "payload_raw", encoded_payload)
+    return result
+}

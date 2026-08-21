@@ -3,7 +3,7 @@
 // Built-in HTTP server, zero dependency
 // ===================================
 
-println("🌐 VietLang HTTP Server Example")
+println(" VietLang HTTP Server Example")
 println("================================\n")
 
 // --- Middleware simulation ---
@@ -50,7 +50,7 @@ fn handle_health() {
 }
 
 // --- Demo: show what the server would respond ---
-println("📋 Route Handlers Demo:\n")
+println(" Route Handlers Demo:\n")
 
 println("GET /health")
 println(handle_health())
