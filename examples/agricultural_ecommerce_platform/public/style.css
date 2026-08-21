@@ -63,47 +63,87 @@ body {
 }
 
 /* ========================================================================
-   1. Announcement Bar
+   1. Announcement / Top Bar
    ======================================================================== */
-.announcement-bar {
+.top-bar, .announcement-bar {
   background: linear-gradient(90deg, #064E3B 0%, #065F46 50%, #047857 100%);
-  padding: 10px 24px;
-  font-size: 13px;
+  padding: 8px 24px;
+  font-size: 12px;
   font-weight: 600;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  width: 100%;
+}
+
+.top-bar-container {
+  max-width: 1360px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  max-width: 100%;
 }
 
-.top-nav-links {
+.top-bar-left {
   display: flex;
-  gap: 18px;
   align-items: center;
+  gap: 10px;
+  color: #E6FFFA;
 }
 
-.nav-link-top {
-  color: #E6FFFA;
-  text-decoration: none;
+.top-bar-badge {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.top-bar-right, .top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-nav-btn, .nav-link-top {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 5px 12px;
+  border-radius: var(--radius-xs);
   font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
   transition: var(--transition-fast);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  text-decoration: none;
 }
 
-.nav-link-top:hover {
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.15);
+.top-nav-btn:hover, .nav-link-top:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.top-nav-btn.admin-btn {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #000000;
+  border: none;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.top-nav-btn.admin-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
 }
 
 /* ========================================================================
    2. Main Navigation Header
    ======================================================================== */
-.navbar {
+.main-header, .navbar {
   position: sticky;
   top: 0;
   z-index: 100;
@@ -111,33 +151,35 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 16px 24px;
+  padding: 14px 24px;
+  width: 100%;
   transition: var(--transition-fast);
 }
 
-.nav-container {
+.header-container, .nav-container {
   max-width: 1360px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .brand-logo-mark {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(135deg, #10B981, #047857);
   color: #FFFFFF;
-  font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;
   font-size: 18px;
   display: flex;
@@ -148,27 +190,28 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.brand-text {
+.brand-text-wrap, .brand-text {
   display: flex;
   flex-direction: column;
 }
 
 .brand-title {
-  font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 19px;
   letter-spacing: 0.5px;
   background: linear-gradient(90deg, #FFFFFF, #6EE7B7);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  line-height: 1.2;
 }
 
 .brand-tagline {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.1px;
   color: var(--color-primary-light);
-  margin-top: -2px;
+  line-height: 1;
+  margin-top: 3px;
 }
 
 /* Search Bar */

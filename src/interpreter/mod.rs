@@ -132,11 +132,12 @@ impl Interpreter {
             ("builtin_mysql_exec", Some(2)),
             ("builtin_mysql_execute", None),
             ("builtin_mysql_query", None),
-            // HTTP & Network Clients & WebSockets
+            // HTTP & Network Clients & WebSockets & Security
             ("http_fetch", None),
             ("csv_parse", Some(1)),
             ("csv_stringify", Some(1)),
             ("ws_broadcast", None),
+            ("html_escape", Some(1)),
 
             // Concurrency
             ("spawn", None),
@@ -1340,6 +1341,7 @@ impl Interpreter {
             "csv_parse" | "builtin_csv_parse" => crate::stdlib::builtin_csv_parse(args, span.line, span.column),
             "csv_stringify" | "builtin_csv_stringify" => crate::stdlib::builtin_csv_stringify(args, span.line, span.column),
             "ws_broadcast" | "builtin_ws_broadcast" => crate::stdlib::builtin_ws_broadcast(args, span.line, span.column),
+            "html_escape" | "builtin_html_escape" => crate::stdlib::builtin_html_escape(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),
@@ -1553,6 +1555,18 @@ impl Interpreter {
                         continue;
                     }
 
+                    // Rate Limiting check (max 300 requests/minute per IP)
+                    if !crate::stdlib::check_rate_limit(&client_ip, 300) {
+                        let rate_err = "{\"error\":\"Too Many Requests. Rate limit exceeded (300 req/min).\",\"status_code\":429}";
+                        let resp = format!(
+                            "HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nRetry-After: 60\r\nConnection: close\r\n\r\n{}",
+                            rate_err.len(), rate_err
+                        );
+                        let _ = stream.write_all(resp.as_bytes());
+                        let _ = stream.flush();
+                        continue;
+                    }
+
                     // Pure VietLang Request Dispatching
                     let (status_code, content_type, response_body) = if let Some(ref h) = handler {
                         let mut req_map = HashMap::new();
@@ -1616,7 +1630,7 @@ impl Interpreter {
                     };
 
                     let response = format!(
-                        "HTTP/1.1 {} OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nAlt-Svc: h3=\":{}\"; ma=86400, h2=\":{}\"\r\nServer: VietLang/0.1.0 (Async/HTTP2-Ready)\r\nX-Powered-By: VietLang-Backend\r\nConnection: close\r\n\r\n{}",
+                        "HTTP/1.1 {} OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: SAMEORIGIN\r\nX-XSS-Protection: 1; mode=block\r\nReferrer-Policy: strict-origin-when-cross-origin\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nAlt-Svc: h3=\":{}\"; ma=86400, h2=\":{}\"\r\nServer: VietLang-Enterprise/0.1.0\r\nX-Powered-By: VietLang-Backend\r\nConnection: close\r\n\r\n{}",
                         status_code, content_type, response_body.len(), port, port, response_body
                     );
                     let _ = stream.write_all(response.as_bytes());
