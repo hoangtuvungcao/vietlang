@@ -126,6 +126,9 @@ function renderProducts() {
         <span class="cert-badge">${prod.cert}</span>
         <span class="origin-badge">${prod.origin}</span>
       </div>
+      <div class="product-img-box" onclick="openProductDetail(${prod.id})">
+        <img src="${prod.image_data}" alt="${prod.name}" class="product-img-preview" loading="lazy">
+      </div>
       <h3 class="product-name" onclick="openProductDetail(${prod.id})">${prod.name}</h3>
       <div class="rating-line">
         <span>[${prod.rating.toFixed(1)} / 5.0]</span>
@@ -167,7 +170,10 @@ window.openProductDetail = function(productId) {
   modalProdContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       <div>
-        <div style="background: var(--bg-surface-elevated); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 16px;">
+        <div style="background: var(--bg-surface-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 16px; text-align: center;">
+          <img src="${prod.image_data}" alt="${prod.name}" style="width: 100%; height: auto; max-height: 220px; border-radius: var(--radius-sm); object-fit: contain;">
+        </div>
+        <div style="background: var(--bg-surface-elevated); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 16px;">
           <span class="cert-badge" style="margin-bottom: 8px; display: inline-block;">${prod.cert}</span>
           <h4 style="font-size: 18px; margin-bottom: 8px;">${prod.name}</h4>
           <p style="color: var(--color-primary-light); font-size: 20px; font-weight: 800; margin-bottom: 12px;">${formatVND(prod.price)} / ${prod.unit}</p>

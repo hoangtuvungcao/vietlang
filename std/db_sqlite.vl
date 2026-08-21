@@ -82,3 +82,43 @@ fn sqlite_commit(db) {
     let db2 = map_set(db, "tx_snapshot", none)
     return map_set(db2, "in_transaction", false)
 }
+
+fn sqlite_update(db, table_name: String, predicate_fn, update_fn) {
+    let tables = map_get(db, "tables")
+    if !map_has(tables, table_name) {
+        return db
+    }
+
+    let rows = map_get(tables, table_name)
+    let mut new_rows = []
+    for r in rows {
+        if predicate_fn(r) {
+            let updated = update_fn(r)
+            new_rows = push(new_rows, updated)
+        } else {
+            new_rows = push(new_rows, r)
+        }
+    }
+
+    let new_tables = map_set(tables, table_name, new_rows)
+    return map_set(db, "tables", new_tables)
+}
+
+fn sqlite_delete(db, table_name: String, predicate_fn) {
+    let tables = map_get(db, "tables")
+    if !map_has(tables, table_name) {
+        return db
+    }
+
+    let rows = map_get(tables, table_name)
+    let mut new_rows = []
+    for r in rows {
+        if !predicate_fn(r) {
+            new_rows = push(new_rows, r)
+        }
+    }
+
+    let new_tables = map_set(tables, table_name, new_rows)
+    return map_set(db, "tables", new_tables)
+}
+

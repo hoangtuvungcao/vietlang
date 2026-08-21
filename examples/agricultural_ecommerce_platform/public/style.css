@@ -481,6 +481,36 @@ body {
   box-shadow: var(--shadow-elevated);
 }
 
+.product-img-box {
+  width: 100%;
+  height: 160px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.product-img-box:hover {
+  border-color: var(--color-primary);
+}
+
+.product-img-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.product-img-box:hover .product-img-preview {
+  transform: scale(1.05);
+}
+
 .card-top-badges {
   display: flex;
   justify-content: space-between;
