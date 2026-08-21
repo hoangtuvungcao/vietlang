@@ -53,6 +53,9 @@ VietLang is designed from the ground up for **backend development**. It combines
 # Linux & macOS (Bash, Zsh, Fish) — Auto-detects CPU & sets PATH
 curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
 
+# macOS (via Homebrew)
+brew tap hoangtuvungcao/vietlang && brew install vietlang
+
 # Windows (PowerShell)
 iex (irm https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.ps1)
 ```

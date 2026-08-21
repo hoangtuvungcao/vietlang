@@ -354,10 +354,25 @@ vietlang publish
 
 ---
 
+### 🍎 macOS Installation Options (Apple Silicon M1-M4 & Intel)
+
+#### Option 1: Official 1-Line Installer (Recommended)
+```bash
+curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
+```
+
+#### Option 2: Homebrew
+```bash
+brew tap hoangtuvungcao/vietlang
+brew install vietlang
+```
+
+---
+
 ## 7. Learning Documentation Index
 
-- 📘 **[Getting Started 10-Minute Tutorial](file:///home/vantrong/Downloads/new_lang/docs/getting-started.md)**
-- 📕 **[Complete Language Syntax Reference](file:///home/vantrong/Downloads/new_lang/docs/language-reference.md)**
-- 📗 **[Standard Library Ecosystem (49 Modules)](file:///home/vantrong/Downloads/new_lang/docs/standard-library-ecosystem.md)**
-- 📙 **[Backend Cookbook & Real-World Recipes](file:///home/vantrong/Downloads/new_lang/docs/backend-cookbook.md)**
-- 🚀 **[Multi-Platform Installation & VS Code Guide](file:///home/vantrong/Downloads/new_lang/docs/installation-and-vscode-marketplace.md)**
+- 📘 **[Getting Started 10-Minute Tutorial](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/getting-started.md)**
+- 📕 **[Complete Language Syntax Reference](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/language-reference.md)**
+- 📗 **[Standard Library Ecosystem (49 Modules)](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/standard-library-ecosystem.md)**
+- 📙 **[Backend Cookbook & Real-World Recipes](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/backend-cookbook.md)**
+- 🚀 **[Multi-Platform Installation & VS Code Guide](https://github.com/hoangtuvungcao/vietlang/blob/main/docs/installation-and-vscode-marketplace.md)**

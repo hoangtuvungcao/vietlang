@@ -16,6 +16,13 @@ curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/instal
 - **Pre-syncs all 49 Standard Library Modules** into `~/.vietlang/std`.
 - **Zero sudo required**: Binary installed directly to `~/.vietlang/bin/vietlang`.
 
+### 🍺 macOS via Homebrew
+
+```bash
+brew tap hoangtuvungcao/vietlang
+brew install vietlang
+```
+
 ### 🪟 Windows (PowerShell)
 
 ```powershell
