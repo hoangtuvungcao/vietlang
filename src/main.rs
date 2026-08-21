@@ -54,6 +54,28 @@ fn main() {
             "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "list" | "ls" | "publish" | "verify" | "docs" | "info" | "sync" | "registry" => {
                 pm::handle_vpm_command(&args[1..]);
             }
+            "run" => {
+                if args.len() < 3 {
+                    eprintln!("Usage: vietlang run <file.vl>");
+                    std::process::exit(1);
+                }
+                run_file(&args[2]);
+            }
+            "check" => {
+                if args.len() < 3 {
+                    eprintln!("Usage: vietlang check <file.vl>");
+                    std::process::exit(1);
+                }
+                check_file(&args[2]);
+            }
+            "test" => {
+                let target = if args.len() >= 3 {
+                    &args[2]
+                } else {
+                    "tests"
+                };
+                run_tests(target);
+            }
             "--tokens" => {
                 if args.len() < 3 {
                     eprintln!("Usage: vietlang --tokens <file.vl>");
@@ -77,6 +99,63 @@ fn main() {
             }
             file => run_file(file),
         }
+    }
+}
+
+fn check_file(path: &str) {
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("\x1b[31mError:\x1b[0m Cannot read file '{}': {}", path, e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut parser = Parser::new(tokens);
+    match parser.parse() {
+        Ok(program) => {
+            println!("\x1b[32m[PASS]\x1b[0m Syntax and AST check passed for '{}' ({} statements)", path, program.statements.len());
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_tests(target: &str) {
+    let path = std::path::Path::new(target);
+    if path.is_file() {
+        run_file(target);
+    } else if path.is_dir() {
+        let mut count = 0;
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if let Some(ext) = p.extension() {
+                    if ext == "vl" {
+                        println!("\n\x1b[1;36m=== Running Test Suite: {} ===\x1b[0m", p.display());
+                        run_file(p.to_str().unwrap_or_default());
+                        count += 1;
+                    }
+                }
+            }
+        }
+        if count == 0 {
+            println!("No .vl test files found in '{}'", target);
+        }
+    } else {
+        eprintln!("Error: Path '{}' not found", target);
+        std::process::exit(1);
     }
 }
 

@@ -1,0 +1,37 @@
+// ========================================================================
+// VietLang Server-Sent Events (SSE) Real-Time Streaming (std.sse)
+// High-Throughput Push Notification Channel for Live Dashboards
+// ========================================================================
+
+fn sse_event_format(event_name: String, data_payload, id = none) -> String {
+    let mut out = ""
+    if id != none {
+        out = out + "id: " + to_string(id) + "\n"
+    }
+    if event_name != "" {
+        out = out + "event: " + event_name + "\n"
+    }
+
+    let mut payload_str = to_string(data_payload)
+    if type_of(data_payload) == "Struct" || type_of(data_payload) == "Array" {
+        payload_str = json_stringify(data_payload)
+    }
+
+    out = out + "data: " + payload_str + "\n\n"
+    return out
+}
+
+fn sse_create_response(event_content: String) {
+    let mut resp = map_new()
+    resp = map_set(resp, "status_code", 200)
+    resp = map_set(resp, "body", event_content)
+
+    let mut headers = map_new()
+    headers = map_set(headers, "Content-Type", "text/event-stream; charset=utf-8")
+    headers = map_set(headers, "Cache-Control", "no-cache")
+    headers = map_set(headers, "Connection", "keep-alive")
+    headers = map_set(headers, "Access-Control-Allow-Origin", "*")
+
+    resp = map_set(resp, "headers", headers)
+    return resp
+}

@@ -8,6 +8,8 @@ import examples.agricultural_ecommerce_platform.src.repositories.order_repo
 import examples.agricultural_ecommerce_platform.src.services.order_service
 import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
 import std.db_sqlite
+import std.openapi
+import std.sse
 
 fn api_response(status_code: Int, data, message: String = "OK") {
     let mut resp = map_new()
@@ -32,6 +34,24 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
         health_data = map_set(health_data, "engine", "VietLang SQLite ACID Relational DB")
         health_data = map_set(health_data, "version", "0.1.0-enterprise")
         return api_response(200, health_data, "System Operational")
+    }
+
+    if method == "GET" && path == "/api/v1/swagger.json" {
+        let mut spec = openapi_spec_new("Nong San Viet Enterprise Platform API", "1.0.0", "San Thuong Mai Dien Tu Nong San & OCOP Quoc Gia")
+        spec = openapi_add_path(spec, "/api/v1/health", "GET", "Kiem tra trang thai he thong", ["System"])
+        spec = openapi_add_path(spec, "/api/v1/categories", "GET", "Danh sach danh muc nong san", ["Catalog"])
+        spec = openapi_add_path(spec, "/api/v1/products", "GET", "Tra cuu & loc san pham da tieu chi", ["Catalog"])
+        spec = openapi_add_path(spec, "/api/v1/vouchers", "GET", "Danh sach ma giam gia & khuyen mai", ["Vouchers"])
+        spec = openapi_add_path(spec, "/api/v1/cooperatives", "GET", "Mang luoi Hop tac xa lien ket", ["Cooperatives"])
+        spec = openapi_add_path(spec, "/api/v1/orders/checkout", "POST", "Dat hang giao dich ACID", ["Orders"])
+        spec = openapi_add_path(spec, "/api/v1/orders/track", "GET", "Tra cuu don hang theo SDT", ["Orders"])
+        spec = openapi_add_path(spec, "/api/v1/admin/analytics", "GET", "Bao cao thong ke tong quan", ["Admin"])
+        return api_response(200, spec, "OpenAPI 3.0 Spec Generated")
+    }
+
+    if method == "GET" && path == "/api/v1/live/events" {
+        let ev = sse_event_format("order_placed", "Khach hang tai Soc Trang vua dat 10kg Gao ST25!", time_now())
+        return sse_create_response(ev)
     }
 
     if method == "GET" && path == "/api/v1/categories" {

@@ -1,0 +1,46 @@
+// ========================================================================
+// VietLang OpenAPI 3.0 & Swagger Documentation Generator (std.openapi)
+// ========================================================================
+
+fn openapi_spec_new(title: String, version: String = "1.0.0", description: String = "") {
+    let mut info = map_new()
+    info = map_set(info, "title", title)
+    info = map_set(info, "version", version)
+    info = map_set(info, "description", description)
+
+    let mut spec = map_new()
+    spec = map_set(spec, "openapi", "3.0.3")
+    spec = map_set(spec, "info", info)
+    spec = map_set(spec, "paths", map_new())
+    return spec
+}
+
+fn openapi_add_path(spec, path: String, method: String, summary: String, tags = [], desc: String = "") {
+    let mut paths_map = map_get(spec, "paths")
+    let m_lower = method.to_lower()
+
+    let mut op_detail = map_new()
+    op_detail = map_set(op_detail, "summary", summary)
+    op_detail = map_set(op_detail, "description", desc)
+    op_detail = map_set(op_detail, "tags", tags)
+
+    let mut resp_200 = map_new()
+    resp_200 = map_set(resp_200, "description", "Successful Operation")
+    let mut responses = map_new()
+    responses = map_set(responses, "200", resp_200)
+    op_detail = map_set(op_detail, "responses", responses)
+
+    let mut path_item = map_new()
+    if map_has(paths_map, path) {
+        path_item = map_get(paths_map, path)
+    }
+
+    path_item = map_set(path_item, m_lower, op_detail)
+    paths_map = map_set(paths_map, path, path_item)
+
+    return map_set(spec, "paths", paths_map)
+}
+
+fn openapi_to_json(spec) -> String {
+    return json_stringify(spec)
+}
