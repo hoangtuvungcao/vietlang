@@ -196,7 +196,7 @@ impl User {
     }
 }
 
-let u = User { id: 1, name: "Admin", email: "admin@vietlang.dev" }
+let u = User { id: 1, name: "Admin", email: "admin@example.com" }
 println(u.format_display())
 ```
 

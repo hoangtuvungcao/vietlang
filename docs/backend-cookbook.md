@@ -53,7 +53,7 @@ fn handle_get_profile(req) {
         return response_error(403, "Invalid or expired token")
     }
 
-    let profile = map_set(map_set(map_new(), "id", 1001), "email", "admin@vietlang.dev")
+    let profile = map_set(map_set(map_new(), "id", 1001), "email", "admin@example.com")
     return response_json(200, profile)
 }
 ```

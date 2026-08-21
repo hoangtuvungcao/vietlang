@@ -1,0 +1,58 @@
+// ===================================================
+// VietLang Security & Cryptography Shield (std.security)
+// Password hashing, constant-time comparison, CSRF & XSS sanitization
+// ===================================================
+
+fn security_hash_password(password: String, salt: String = "") -> String {
+    let mut actual_salt = salt
+    if actual_salt == "" {
+        actual_salt = substring(uuid(), 0, 16)
+    }
+    let combined = actual_salt + ":" + password
+    let hash = sha256(combined)
+    return actual_salt + "$" + hash
+}
+
+fn security_verify_password(password: String, stored_hash: String) -> Bool {
+    if !stored_hash.contains("$") {
+        return false
+    }
+    let parts = stored_hash.split("$")
+    let salt = parts[0]
+    let expected = parts[1]
+
+    let computed = sha256(salt + ":" + password)
+    return security_constant_time_compare(computed, expected)
+}
+
+// Constant-time string comparison to prevent timing attacks
+fn security_constant_time_compare(a: String, b: String) -> Bool {
+    if a.len() != b.len() {
+        return false
+    }
+    let mut diff = 0
+    let mut i = 0
+    while i < a.len() {
+        let ca = char_code(char_at(a, i))
+        let cb = char_code(char_at(b, i))
+        if ca != cb {
+            diff += 1
+        }
+        i += 1
+    }
+    return diff == 0
+}
+
+fn security_generate_csrf_token() -> String {
+    return sha256(uuid() + ":" + to_string(time_now_us()))
+}
+
+fn security_sanitize_html(input: String) -> String {
+    let mut out = input
+    out = out.replace("&", "&amp;")
+    out = out.replace("<", "&lt;")
+    out = out.replace(">", "&gt;")
+    out = out.replace("\"", "&quot;")
+    out = out.replace("'", "&#x27;")
+    return out
+}

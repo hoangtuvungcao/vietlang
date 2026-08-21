@@ -53,6 +53,5 @@ All major language changes, syntax additions, and core library proposals follow 
 ## 4. Developer Outreach & Community Channels
 
 - **Official GitHub**: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
-- **Documentation Hub**: [https://vietlang.dev/docs](https://vietlang.dev/docs)
-- **VietLang Playground**: WebAssembly-powered online browser sandbox.
+- **Documentation & Issues**: [https://github.com/hoangtuvungcao/vietlang#readme](https://github.com/hoangtuvungcao/vietlang#readme)
 - **VietLang Conference & Hackathons**: Annual backend engineering hackathons and community showcases.

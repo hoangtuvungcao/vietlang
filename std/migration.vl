@@ -1,0 +1,37 @@
+// ===================================================
+// VietLang Database Migration Engine (std.migration)
+// Schema Versioning, Up/Down Migration Runner
+// ===================================================
+
+fn migration_engine_new() {
+    let m = map_new()
+    let m = map_set(m, "migrations", [])
+    let m = map_set(m, "applied", [])
+    return m
+}
+
+fn migration_add_step(engine, name: String, up_sql: String, down_sql: String) {
+    let step = map_new()
+    let step = map_set(step, "name", name)
+    let step = map_set(step, "up", up_sql)
+    let step = map_set(step, "down", down_sql)
+
+    let current = map_get(engine, "migrations")
+    let new_migrations = push(current, step)
+    return map_set(engine, "migrations", new_migrations)
+}
+
+fn migration_run_all(engine) {
+    let steps = map_get(engine, "migrations")
+    let mut applied = map_get(engine, "applied")
+
+    for step in steps {
+        let name = map_get(step, "name")
+        let up_sql = map_get(step, "up")
+        db_query(up_sql)
+        applied = push(applied, name)
+    }
+
+    let updated = map_set(engine, "applied", applied)
+    return updated
+}

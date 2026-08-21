@@ -1,133 +1,262 @@
 ---
 name: vietlang-developer
-description: Comprehensive expert guide for AI agents and developers to build, test, and maintain backend microservices and community libraries using VietLang.
+description: Comprehensive expert guide for AI agents and developers to build, test, and maintain enterprise backend microservices, realtime systems, and community libraries using VietLang.
 ---
 
-# VietLang Developer Skill Guide
+# VietLang Developer & AI Agent Reference Manual
 
-VietLang is a backend-first, statically-analyzed, garbage-collected programming language optimized for high-throughput network services, microservices, and database APIs.
+VietLang is a **backend-first, high-concurrency, statically-analyzed programming language** designed for high-throughput microservices, real-time WebSocket systems, transactional databases, and decentralized package ecosystems.
+
+GitHub Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
 ---
 
-## 1. Core Syntax & Language Rules
+## 1. Language Rules & Critical Agent Guidelines
 
-### 1.1 Variables & Mutation
-- Immutable by default: `let name = "VietLang"`
-- Mutable variables: `let mut counter = 0`
-- Compound assignment: `counter += 1`, `x -= 2`, `y *= 3`, `z /= 4`, `mod %= 2`
-- Null literal: `none`
-- Boolean literals: `true`, `false`
+### 1.1 Variable Declarations & Mutation
+- **Immutable by default**: `let port = 8080`
+- **Mutable variables**: Must use `let mut variable_name = initial_value`
+- **Compound assignments**: `counter += 1`, `x -= 2`, `y *= 3`, `z /= 4`, `mod %= 2`
+- **Naming Rule**: Always use `snake_case` or lowercase for variable names (e.g., `let user_list = []`). Avoid all-uppercase variable names in expressions as they can be parsed as Struct constructors.
 
-### 1.2 Functions & Returns
-```rust
-fn add(a: Int, b: Int) -> Int {
-    return a + b
-}
+### 1.2 Statements vs Expressions
+- **If Statements**: `if` is parsed as a statement. To conditionally set a variable, write:
+  ```rust
+  let mut role = "guest"
+  if is_admin {
+      role = "admin"
+  }
+  ```
+- **Match Expressions**: `match` is a first-class expression:
+  ```rust
+  let status = match code {
+      200 => "OK",
+      404 => "Not Found",
+      _ => "Error"
+  }
+  ```
 
-// Anonymous functions / Closures
-let numbers = [1, 2, 3, 4]
-let doubled = numbers.map(fn(x) { return x * 2 })
-let evens = numbers.filter(fn(x) { return x % 2 == 0 })
-```
-
-### 1.3 Control Flow & Pattern Matching
-```rust
-// If-else
-if condition {
-    // then block
-} else {
-    // else block
-}
-
-// Loops
-while count < 10 {
-    count += 1
-}
-
-for item in items {
-    println(item)
-}
-
-// Match
-let label = match status_code {
-    200 => "OK",
-    404 => "Not Found",
-    500 => "Internal Server Error",
-    _ => "Unknown"
-}
-```
+### 1.3 Short-Circuit Logic & Signals
+- `&&` and `||` short-circuit safely (the right-hand side is not evaluated if the left determines the outcome).
+- `return`, `break`, and `continue` are first-class control flow signals that preserve complete data structures (Maps, Structs, Arrays, Closures).
 
 ### 1.4 Error Handling
 ```rust
 try {
-    let res = risky_io_operation()
-    println("Success: " + res)
+    let content = file_read("config.json")
+    let data = json_parse(content)
 } catch err {
-    log_error("Failed operation: " + err)
+    log_error("Config load error: " + err)
 }
 
-// Custom throw
-throw("Invalid credentials")
+// Throw custom runtime error
+if amount <= 0 {
+    throw("Invalid transaction amount")
+}
 ```
 
 ---
 
-## 2. Module System & Imports
+## 2. Complete Standard Library Reference (`std.*`)
 
-VietLang resolves modules across multiple search paths:
-1. `import path.to.file` -> loads `path/to/file.vl`
-2. `import std.test` -> loads standard library `std/test.vl`
-3. `import std.strings` -> loads `std/strings.vl`
-4. `import std.jwt` -> loads `std/jwt.vl`
-5. `import std.http_router` -> loads `std/http_router.vl`
-6. `import std.validator` -> loads `std/validator.vl`
-7. `import std.cache` -> loads `std/cache.vl`
-8. `import std.orm` -> loads `std/orm.vl`
+VietLang provides 16 pure VietLang standard modules in `std/`:
 
----
-
-## 3. Backend Architecture Best Practices
-
-### 3.1 REST API Controller Pattern
+### 2.1 Security & Cryptography (`std.security`)
 ```rust
-import std.test
-import std.strings
+import std.security
+
+// Salted password hashing
+let hash = security_hash_password("UserPassword123")
+let is_valid = security_verify_password("UserPassword123", hash)
+
+// Constant-time string comparison (prevents timing attacks)
+let match = security_constant_time_compare(token_a, token_b)
+
+// CSRF token & XSS sanitization
+let csrf = security_generate_csrf_token()
+let safe_html = security_sanitize_html(untrusted_user_input)
+```
+
+### 2.2 JWT Authentication & RBAC (`std.jwt`)
+```rust
 import std.jwt
+
+let claims = map_set(map_set(map_new(), "uid", 101), "roles", ["admin", "billing"])
+let token = jwt_sign(claims, "secret_key")
+
+let verify_res = jwt_verify(token, "secret_key")
+if map_get(verify_res, "valid") {
+    let payload = map_get(verify_res, "payload")
+}
+```
+
+### 2.3 Realtime WebSockets (`std.websocket`)
+```rust
+import std.websocket
+
+// RFC 6455 Handshake calculation
+let accept_key = ws_accept_key(sec_websocket_key)
+let response_header = ws_handshake_response(sec_websocket_key)
+
+// Frame encoding
+let text_frame = ws_encode_text_frame("Hello, Client!")
+let ping_frame = ws_encode_ping_frame()
+
+// Multi-room broadcasting hub
+let mut hub = ws_room_manager_new()
+hub = ws_room_join(hub, "general_room", "client_id_99")
+let packet = ws_room_broadcast(hub, "general_room", "CHAT_MESSAGE", message_data)
+```
+
+### 2.4 Low-Level Sockets & Networking (`std.socket`)
+```rust
+import std.socket
+
+// TCP client stream
+let resp = socket_tcp_send("127.0.0.1", 6379, "*1\r\n$4\r\nPING\r\n")
+
+// UDP datagram dispatch
+let ok = socket_udp_send("127.0.0.1", 9999, "METRICS_PACKET")
+
+// Port health check
+let is_alive = socket_ping("127.0.0.1", 5432)
+```
+
+### 2.5 HTTP Routing & Web APIs (`std.http_router`)
+```rust
 import std.http_router
+
+fn handle_api_request(req) {
+    let body = map_get(req, "body")
+    let headers = map_get(req, "headers")
+    return response_json(200, map_set(map_new(), "status", "success"))
+}
+```
+
+### 2.6 Request Payload Validation (`std.validator`)
+```rust
 import std.validator
 
-fn handle_get_users(req) {
-    let users = [
-        map_set(map_set(map_new(), "id", 1), "username", "admin"),
-        map_set(map_set(map_new(), "id", 2), "username", "developer")
-    ]
-    return response_json(200, users)
-}
+let v = validator_new()
+let v = validator_add_rule(v, "email", "required")
+let v = validator_add_rule(v, "email", "email")
+let v = validator_add_rule(v, "age", "min_val:18")
 
-fn handle_create_user(req) {
-    let v = validator_new()
-    let v = validator_add_rule(v, "email", "required")
-    let v = validator_add_rule(v, "email", "email")
-
-    let body = map_get(req, "body")
-    let validation_res = validate(v, body)
-    if !map_get(validation_res, "is_valid") {
-        return response_error(400, "Validation failed")
-    }
-
-    return response_json(201, map_set(map_new(), "created", true))
+let result = validate(v, request_body)
+if !map_get(result, "is_valid") {
+    let errors = map_get(result, "errors")
 }
 ```
 
-### 3.2 Testing Convention
-Always write test suites with `std.test`:
+### 2.7 Database ORM & Query Builder (`std.orm`)
+```rust
+import std.orm
+
+let q = query_builder_new("users")
+let q = qb_select(q, ["id", "username", "email", "created_at"])
+let q = qb_where(q, "status", "=", "ACTIVE")
+let q = qb_order_by(q, "created_at", "DESC")
+let q = qb_limit(q, 10)
+
+let sql = qb_to_sql(q)
+let rows = db_query(sql)
+
+let insert_sql = qb_insert_sql("users", user_data)
+```
+
+### 2.8 Database Schema Migrations (`std.migration`)
+```rust
+import std.migration
+
+let mut engine = migration_engine_new()
+engine = migration_add_step(engine, "001_init", "CREATE TABLE users (id INT);", "DROP TABLE users;")
+let migrated = migration_run_all(engine)
+```
+
+### 2.9 Rate Limiting Shield (`std.rate_limiter`)
+```rust
+import std.rate_limiter
+
+let limiter = rate_limiter_new(100, 10) // 100 burst tokens, 10 tokens/sec refill
+let check = rate_limit_allow(limiter, client_ip)
+if !map_get(check, "allowed") {
+    return response_error(429, "Too Many Requests")
+}
+let limiter = map_get(check, "limiter")
+```
+
+### 2.10 Circuit Breaker (`std.circuit_breaker`)
+```rust
+import std.circuit_breaker
+
+let mut cb = circuit_breaker_new(5, 30) // 5 failures opens circuit for 30s
+if !cb_can_execute(cb) {
+    return response_error(503, "Downstream service temporarily unavailable")
+}
+```
+
+### 2.11 OpenTelemetry Distributed Tracing (`std.telemetry`)
+```rust
+import std.telemetry
+
+let root_ctx = trace_context_new("order_microservice")
+let child_span = trace_create_child_span(root_ctx, "db_query")
+let finished = trace_end_span(child_span)
+let headers = trace_inject_headers(finished) // Injects X-Trace-Id, X-Span-Id
+```
+
+### 2.12 Background Task Queue with DLQ (`std.queue`)
+```rust
+import std.queue
+
+let mut q = queue_new()
+q = queue_push(q, "SEND_EMAIL", email_payload, 3)
+
+let pop_res = queue_pop(q)
+if map_get(pop_res, "has_task") {
+    let task = map_get(pop_res, "task")
+    q = map_get(pop_res, "queue")
+}
+```
+
+### 2.13 Kubernetes Health Probes (`std.health`)
+```rust
+import std.health
+
+let mut hc = health_checker_new("billing_service")
+hc = health_add_check(hc, "postgres", true)
+hc = health_add_check(hc, "redis", true)
+let report = health_get_report(hc) // Status: "UP" or "DOWN", uptime_seconds
+```
+
+### 2.14 Event-Driven Pub/Sub Bus (`std.event_bus`)
+```rust
+import std.event_bus
+
+let mut bus = event_bus_new()
+bus = event_subscribe(bus, "order.placed", "SendOrderConfirmation")
+let res = event_publish(bus, "order.placed", order_data)
+```
+
+### 2.15 Configuration & .env Loader (`std.config`)
+```rust
+import std.config
+
+let cfg = config_load(".env")
+let port = config_get_int(cfg, "PORT", 8080)
+let debug = config_get_bool(cfg, "DEBUG", false)
+```
+
+### 2.16 Testing Framework (`std.test`)
 ```rust
 import std.test
 
 suite("User Service Tests")
 
-test("User validation passes with valid email", fn() {
-    assert_true(1 == 1)
+test("Validation sanity", fn() {
+    assert_eq(1 + 1, 2, "Math error")
+    assert_true(true, "Condition failed")
+    assert_false(false, "Condition failed")
 })
 
 test_summary()
@@ -135,16 +264,39 @@ test_summary()
 
 ---
 
-## 4. Package Management with `vpm`
+## 3. Package Management with VPM (`vpm.vl`)
 
-- Initialize project: `vietlang vpm.vl init <project-name>`
-- List modules: `vietlang vpm.vl list`
-- Inspect manifest: `vietlang vpm.vl info`
+VietLang uses a **decentralized, serverless package model**. Any public or private Git repository is a module:
+
+```bash
+# Initialize a new project (templates: api | lib | microservice)
+vietlang vpm.vl init my_service microservice
+
+# Install module directly from any Git repository (GitHub/GitLab/Gitea)
+vietlang vpm.vl install https://github.com/user/vietlang_redis.git
+
+# Update or remove modules
+vietlang vpm.vl update vietlang_redis
+vietlang vpm.vl remove vietlang_redis
+
+# Publish & release validation
+vietlang vpm.vl publish
+```
 
 ---
 
-## 5. Coding Standards for Agents
+## 4. Running Programs & Bytecode VM
 
-- Strictly avoid all icons, emojis, or non-standard symbols in comments, string logs, and documentation.
-- Use explicit return values for all query/data manipulation routines.
-- Maintain test coverage for every newly introduced endpoint or module.
+```bash
+# Standard Tree-Walking Interpreter
+vietlang src/main.vl
+
+# High-Performance Bytecode Virtual Machine (Phase 8)
+vietlang --vm src/main.vl
+
+# Run Unit Tests
+cargo test --all
+
+# Run All Demos & Self-Hosting Bootstrap Tests
+make demo
+```

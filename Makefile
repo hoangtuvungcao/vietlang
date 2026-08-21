@@ -54,6 +54,8 @@ demo: build
 	./target/release/vietlang examples/enterprise_microservice.vl
 	@echo "\n--- realtime_websocket_server.vl ---"
 	./target/release/vietlang examples/realtime_websocket_server.vl
+	@echo "\n--- full_backend_suite.vl ---"
+	./target/release/vietlang examples/full_backend_suite.vl
 	@echo "\n--- bootstrap/parser.vl ---"
 	./target/release/vietlang bootstrap/parser.vl
 	@echo "\n--- bootstrap/lexer.vl ---"

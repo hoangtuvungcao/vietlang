@@ -1,0 +1,43 @@
+// ===================================================
+// VietLang Kubernetes Health & Readiness Engine (std.health)
+// Liveness, Readiness Probes & System Metrics Reporter
+// ===================================================
+
+fn health_checker_new(service_name: String = "vietlang_app") {
+    let hc = map_new()
+    let hc = map_set(hc, "service", service_name)
+    let hc = map_set(hc, "start_time", time_now())
+    let hc = map_set(hc, "checks", map_new())
+    let hc = map_set(hc, "status", "UP")
+    return hc
+}
+
+fn health_add_check(hc, component_name: String, is_healthy: Bool) {
+    let checks = map_get(hc, "checks")
+    let new_checks = map_set(checks, component_name, is_healthy)
+    
+    let mut overall = "UP"
+    let keys = map_keys(new_checks)
+    for k in keys {
+        if !map_get(new_checks, k) {
+            overall = "DOWN"
+        }
+    }
+
+    let hc2 = map_set(hc, "checks", new_checks)
+    return map_set(hc2, "status", overall)
+}
+
+fn health_get_report(hc) {
+    let now = time_now()
+    let start = map_get(hc, "start_time")
+    let uptime_sec = now - start
+
+    let report = map_new()
+    let report = map_set(report, "status", map_get(hc, "status"))
+    let report = map_set(report, "service", map_get(hc, "service"))
+    let report = map_set(report, "uptime_seconds", uptime_sec)
+    let report = map_set(report, "checks", map_get(hc, "checks"))
+    let report = map_set(report, "timestamp", now)
+    return report
+}

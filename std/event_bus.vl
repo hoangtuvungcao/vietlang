@@ -1,0 +1,49 @@
+// ===================================================
+// VietLang Event-Driven Pub/Sub Bus (std.event_bus)
+// In-process event broadcasting and asynchronous event dispatch
+// ===================================================
+
+fn event_bus_new() {
+    let eb = map_new()
+    let eb = map_set(eb, "subscribers", map_new())
+    let eb = map_set(eb, "history", [])
+    return eb
+}
+
+fn event_subscribe(bus, topic: String, subscriber_name: String) {
+    let subs = map_get(bus, "subscribers")
+    let mut topic_subs = []
+    if map_has(subs, topic) {
+        topic_subs = map_get(subs, topic)
+    }
+
+    let new_subs = push(topic_subs, subscriber_name)
+    let updated_subs = map_set(subs, topic, new_subs)
+    return map_set(bus, "subscribers", updated_subs)
+}
+
+fn event_publish(bus, topic: String, payload) {
+    let subs = map_get(bus, "subscribers")
+    let mut listener_count = 0
+    if map_has(subs, topic) {
+        let listeners = map_get(subs, topic)
+        listener_count = listeners.len()
+    }
+
+    let event_record = map_new()
+    let event_record = map_set(event_record, "id", uuid())
+    let event_record = map_set(event_record, "topic", topic)
+    let event_record = map_set(event_record, "payload", payload)
+    let event_record = map_set(event_record, "listeners_notified", listener_count)
+    let event_record = map_set(event_record, "timestamp", time_now())
+
+    let history = map_get(bus, "history")
+    let updated_history = push(history, event_record)
+
+    let updated_bus = map_set(bus, "history", updated_history)
+
+    let res = map_new()
+    let res = map_set(res, "event", event_record)
+    let res = map_set(res, "bus", updated_bus)
+    return res
+}

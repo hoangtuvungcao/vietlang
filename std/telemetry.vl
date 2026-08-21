@@ -1,0 +1,43 @@
+// ===================================================
+// VietLang OpenTelemetry & Distributed Tracing (std.telemetry)
+// Trace Context Propagation, Span Lifecycle & Latency Profiling
+// ===================================================
+
+fn trace_context_new(service_name: String = "vietlang_service") {
+    let ctx = map_new()
+    let ctx = map_set(ctx, "trace_id", sha256(uuid()))
+    let ctx = map_set(ctx, "span_id", substring(sha256(uuid()), 0, 16))
+    let ctx = map_set(ctx, "service_name", service_name)
+    let ctx = map_set(ctx, "start_time_us", time_now_us())
+    let ctx = map_set(ctx, "attributes", map_new())
+    return ctx
+}
+
+fn trace_create_child_span(parent_ctx, span_name: String) {
+    let span = map_new()
+    let span = map_set(span, "trace_id", map_get(parent_ctx, "trace_id"))
+    let span = map_set(span, "parent_span_id", map_get(parent_ctx, "span_id"))
+    let span = map_set(span, "span_id", substring(sha256(uuid()), 0, 16))
+    let span = map_set(span, "span_name", span_name)
+    let span = map_set(span, "service_name", map_get(parent_ctx, "service_name"))
+    let span = map_set(span, "start_time_us", time_now_us())
+    let span = map_set(span, "attributes", map_new())
+    return span
+}
+
+fn trace_end_span(span) {
+    let start = map_get(span, "start_time_us")
+    let now = time_now_us()
+    let duration_us = now - start
+    let duration_ms = duration_us / 1000
+
+    let finished = map_set(span, "duration_us", duration_us)
+    return map_set(finished, "duration_ms", duration_ms)
+}
+
+fn trace_inject_headers(span) {
+    let headers = map_new()
+    let headers = map_set(headers, "X-Trace-Id", map_get(span, "trace_id"))
+    let headers = map_set(headers, "X-Span-Id", map_get(span, "span_id"))
+    return headers
+}
