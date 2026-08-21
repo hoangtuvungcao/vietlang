@@ -3,60 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nông Sản Việt — Sàn Thương Mại Nông Sản Sạch, Hữu Cơ & OCOP Toàn Quốc</title>
-  <meta name="description" content="Nền tảng thương mại điện tử nông sản ViệtGAP, OCOP chất lượng cao từ các hợp tác xã hàng đầu, vận hành bởi VietLang Backend & SQLite ACID Storage Engine.">
+  <title>Nông Sản Việt — Sàn Thương Mại Nông Sản Sạch & OCOP Quốc Gia (VietLang Powered)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Top Announcement Bar -->
-  <div class="top-banner">
-    <div class="top-banner-content">
-      <span>Giao Hàng Nhanh Toàn Quốc — Miễn Phí Vận Chuyển Cho Đơn Từ 150.000 VNĐ</span>
-      <div class="top-banner-links">
-        <button id="navTrackOrderBtn" class="link-btn">Tra Cứu Đơn Hàng</button>
-        <button id="navAdminBtn" class="link-btn">Cổng Quản Trị / HTX</button>
-      </div>
+  <!-- Top Global Announcement Bar -->
+  <aside class="announcement-bar">
+    <span>Giao Hàng Nhanh Toàn Quốc — Miễn Phí Vận Chuyển Cho Đơn Từ 150.000 VNĐ</span>
+    <div class="top-nav-links">
+      <a href="#flashSaleSection" class="nav-link-top">Deal Sốc Vụ Mùa</a>
+      <a href="#cooperativesSection" class="nav-link-top">Hợp Tác Xã</a>
+      <a href="javascript:void(0)" id="navTrackOrderBtn" class="nav-link-top">Tra Cứu Đơn Hàng</a>
+      <a href="javascript:void(0)" id="navAdminBtn" class="nav-link-top">Cổng Quản Trị / HTX</a>
     </div>
-  </div>
+  </aside>
 
   <!-- Main Navigation Header -->
-  <header class="navbar" id="navbar">
+  <header class="navbar">
     <div class="nav-container">
       <div class="nav-brand" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <div class="brand-logo-mark">NV</div>
         <div class="brand-text">
           <span class="brand-title">NÔNG SẢN VIỆT</span>
-          <span class="brand-subtitle">VietLang Enterprise Backend</span>
+          <span class="brand-tagline">VIETLANG ENTERPRISE BACKEND</span>
         </div>
       </div>
 
-      <div class="nav-search-bar">
+      <!-- Quick Search Bar -->
+      <div class="search-bar">
         <input type="text" id="searchInput" placeholder="Tìm kiếm gạo ST25, xoài cát Hòa Lộc, sầu riêng Ri6, mật ong U Minh..." autocomplete="off">
-        <button id="searchBtn" class="btn btn-search">Tìm kiếm</button>
+        <button id="searchBtn" class="btn-search">Tìm kiếm</button>
       </div>
 
-      <div class="nav-actions">
-        <button id="cartToggleBtn" class="btn btn-primary btn-cart">
-          <span>Giỏ Hàng</span>
-          <span id="cartBadge" class="cart-badge">0</span>
-        </button>
-      </div>
+      <!-- Cart Button with Counter -->
+      <button class="cart-btn" id="cartToggleBtn">
+        <span>Giỏ Hàng</span>
+        <span class="cart-badge" id="cartBadge">0</span>
+      </button>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="hero-container">
-      <div class="hero-badge">Chuẩn Nông Nghiệp Xanh & OCOP Quốc Gia</div>
-      <h1>Nông Sản Sạch Tinh Hoa Đất Việt</h1>
-      <p>Kết nối trực tiếp các Hợp Tác Xã nông nghiệp uy tín trên toàn quốc. Cam kết chất lượng 100% không hóa chất độc hại, vận hành trên nền tảng VietLang Backend siêu tốc và an toàn.</p>
+  <!-- Hero Banner -->
+  <section class="hero-banner">
+    <div class="hero-content">
+      <div class="hero-badge">CHUẨN NÔNG NGHIỆP XANH & OCOP QUỐC GIA</div>
+      <h1 class="hero-title">Nông Sản Sạch Tinh Hoa Đất Việt</h1>
+      <p class="hero-subtitle">Kết nối trực tiếp 6+ Hợp Tác Xã nông nghiệp uy tín trên toàn quốc. Cam kết chất lượng 100% không hóa chất độc hại, vận hành trên nền tảng VietLang Backend siêu tốc và an toàn.</p>
       
-      <!-- Voucher Promo Ribbon -->
-      <div class="promo-ribbon">
+      <!-- Promo Vouchers Strip -->
+      <div class="promo-strip">
         <div class="promo-pill" onclick="copyVoucher('NONGSANVIET20')">
           <span class="promo-label">MÃ GIẢM 20%:</span>
           <strong>NONGSANVIET20</strong>
@@ -115,12 +114,35 @@
     </div>
   </section>
 
+  <!-- Flash Sale 24H Deals -->
+  <section class="flash-sale-section" id="flashSaleSection">
+    <div class="flash-sale-container">
+      <div class="flash-sale-header">
+        <div class="flash-sale-title">
+          <span class="flash-tag">FLASH SALE 24H</span>
+          <h2>Ưu Đãi Vụ Mùa Tươi Ngon — Giảm Đến 30%</h2>
+        </div>
+        <div class="flash-timer-box">
+          <span>Kết thúc sau:</span>
+          <div class="flash-timer" id="flashTimer">05 : 42 : 19</div>
+        </div>
+      </div>
+      <div class="flash-sale-grid" id="flashSaleGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+  </section>
+
   <!-- Catalog & Main Content Layout -->
   <main class="main-layout">
     
     <!-- Filter Control Center -->
     <section class="controls-section">
-      
+      <div class="controls-header">
+        <h2>Danh Mục Nông Sản Đạt Chuẩn Xuất Khẩu</h2>
+        <p class="controls-desc">Lọc nhanh theo chủng loại, vùng canh tác và các chứng nhận chất lượng quốc gia.</p>
+      </div>
+
       <!-- Category Tabs -->
       <div class="category-tabs" id="categoryTabs">
         <button class="cat-btn active" data-cat="0">Tất Cả Sản Phẩm</button>
@@ -141,6 +163,7 @@
             <option value="Mien Tay">Miền Tây Nam Bộ</option>
             <option value="Tay Nguyen">Tây Nguyên</option>
             <option value="Mien Bac">Miền Bắc</option>
+            <option value="Mien Trung">Miền Trung</option>
             <option value="Dong Nam Bo">Đông Nam Bộ</option>
           </select>
         </div>
@@ -150,7 +173,9 @@
           <select id="certSelect">
             <option value="">Tất cả chứng nhận</option>
             <option value="OCOP 5 Sao">OCOP 5 Sao</option>
+            <option value="OCOP 4 Sao">OCOP 4 Sao</option>
             <option value="VietGAP">VietGAP</option>
+            <option value="GlobalGAP">GlobalGAP</option>
             <option value="Organic USDA">Organic USDA</option>
           </select>
         </div>
@@ -161,7 +186,7 @@
             <option value="default">Mới nhất / Phổ biến</option>
             <option value="price_asc">Giá: Thấp đến Cao</option>
             <option value="price_desc">Giá: Cao đến Thấp</option>
-            <option value="rating_desc">Đánh giá cao nhất</option>
+            <option value="rating">Đánh giá cao nhất</option>
           </select>
         </div>
 
@@ -176,6 +201,20 @@
 
   </main>
 
+  <!-- Cooperative Direct Network Section -->
+  <section class="cooperatives-section" id="cooperativesSection">
+    <div class="coops-container">
+      <div class="coops-header">
+        <span class="coops-badge">MẠNG LƯỚI HỢP TÁC XÃ</span>
+        <h2>Kết Nối Trực Tiếp Nông Hộ & Nhà Vườn</h2>
+        <p>100% sản phẩm được bao tiêu trực tiếp từ các Hợp Tác Xã đạt chuẩn, bảo đảm giá tốt nhất cho người tiêu dùng và sinh kế bền vững cho bà con nông dân.</p>
+      </div>
+      <div class="coops-grid" id="cooperativesGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+  </section>
+
   <!-- Product Detail Modal (Quick View & Reviews) -->
   <div class="modal" id="productModal">
     <div class="modal-card modal-large">
@@ -183,110 +222,93 @@
         <h3 id="modalProdTitle">Chi Tiết Nông Sản</h3>
         <button class="btn-close" onclick="closeProductModal()">&times;</button>
       </div>
-      <div class="modal-body product-detail-layout" id="modalProdContent">
-        <!-- Injected dynamically -->
+      <div class="modal-body" id="modalProdContent">
+        <!-- Dynamically injected -->
       </div>
     </div>
   </div>
 
-  <!-- Slide-out Shopping Cart Drawer -->
-  <aside class="cart-drawer" id="cartDrawer">
-    <div class="cart-drawer-header">
+  <!-- Cart Drawer -->
+  <div class="cart-backdrop" id="cartBackdrop"></div>
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
       <h3>Giỏ Hàng Nông Sản</h3>
-      <button class="btn-close" onclick="closeCart()">&times;</button>
+      <button class="btn-close" onclick="toggleCart()">&times;</button>
+    </div>
+    
+    <div class="cart-body" id="cartItemsList">
+      <!-- Injected by app.js -->
     </div>
 
-    <div class="cart-items-container" id="cartItemsList">
-      <p class="empty-cart-msg">Giỏ hàng của bạn đang trống.</p>
-    </div>
-
-    <div class="cart-drawer-footer">
-      <div class="voucher-input-box">
-        <input type="text" id="voucherInput" placeholder="Nhập mã giảm giá (NONGSANVIET20)">
-        <button id="applyVoucherBtn" class="btn btn-secondary">Áp Dụng</button>
+    <div class="cart-footer">
+      <div class="voucher-box">
+        <input type="text" id="voucherInput" placeholder="Nhập mã giảm giá..." uppercase>
+        <button class="btn btn-secondary btn-sm" id="applyVoucherBtn">Áp Dụng</button>
       </div>
 
       <div class="cart-summary-line">
         <span>Tạm tính:</span>
-        <span id="cartSubtotalText">0 VNĐ</span>
+        <strong id="cartSubtotalText">0 VNĐ</strong>
       </div>
-      <div class="cart-summary-line discount-line">
+      <div class="cart-summary-line">
         <span>Giảm giá:</span>
-        <span id="cartDiscountText">0 VNĐ</span>
+        <strong id="cartDiscountText" style="color: var(--color-danger);">0 VNĐ</strong>
       </div>
       <div class="cart-summary-line">
         <span>Phí vận chuyển:</span>
-        <span id="cartShippingText">0 VNĐ</span>
+        <strong id="cartShippingText">0 VNĐ</strong>
       </div>
       <div class="cart-summary-line total-line">
         <span>Tổng thanh toán:</span>
-        <span id="cartTotalText">0 VNĐ</span>
+        <strong id="cartTotalText" style="color: var(--color-primary-light); font-size: 20px;">0 VNĐ</strong>
       </div>
-      <button id="openCheckoutBtn" class="btn btn-primary btn-block" disabled onclick="openCheckout()">Tiến Hành Đặt Hàng</button>
-    </div>
-  </aside>
-  <div class="cart-backdrop" id="cartBackdrop" onclick="closeCart()"></div>
 
-  <!-- Multi-Step Checkout Modal -->
+      <button class="btn btn-primary btn-block" id="openCheckoutBtn">Tiến Hành Đặt Hàng</button>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
   <div class="modal" id="checkoutModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Xác Nhận Đặt Hàng & Thanh Toán</h3>
+        <h3>Xác Nhận Đơn Hàng & Thanh Toán ACID</h3>
         <button class="btn-close" onclick="closeCheckoutModal()">&times;</button>
       </div>
-      <form id="checkoutForm" class="checkout-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="custName">Họ và Tên</label>
-            <input type="text" id="custName" required placeholder="Trần Văn Trọng">
-          </div>
-          <div class="form-group">
-            <label for="custPhone">Số Điện Thoại</label>
-            <input type="tel" id="custPhone" required placeholder="0901234567">
-          </div>
-        </div>
-
+      <form id="checkoutForm">
         <div class="form-group">
-          <label for="custAddress">Địa Chỉ Nhận Hàng</label>
-          <input type="text" id="custAddress" required placeholder="Số nhà, tên đường, phường/xã...">
+          <label>Họ và tên người nhận</label>
+          <input type="text" id="custName" required placeholder="Ví dụ: Nguyễn Văn An">
         </div>
-
         <div class="form-group">
-          <label for="custCity">Tỉnh / Thành Phố</label>
-          <select id="custCity">
-            <option value="TP. Ho Chi Minh">TP. Hồ Chí Minh</option>
-            <option value="Ha Noi">Hà Nội</option>
-            <option value="Da Nang">Đà Nẵng</option>
-            <option value="Can Tho">Cần Thơ</option>
-            <option value="Soc Trang">Sóc Trăng</option>
-            <option value="Dak Lak">Đắk Lắk</option>
-            <option value="Lam Dong">Lâm Đồng</option>
+          <label>Số điện thoại liên hệ</label>
+          <input type="tel" id="custPhone" required placeholder="Ví dụ: 0901234567">
+        </div>
+        <div class="form-group">
+          <label>Địa chỉ nhận hàng chi tiết</label>
+          <input type="text" id="custAddress" required placeholder="Số nhà, tên đường, phường/xã, quận/huyện...">
+        </div>
+        <div class="form-group">
+          <label>Hình thức thanh toán</label>
+          <select id="paymentMethod">
+            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+            <option value="Chuyển khoản Ngân hàng (VietQR)">Chuyển khoản Ngân hàng (VietQR Tự Động)</option>
+            <option value="Ví MoMo / ZaloPay">Ví Điện Tử (MoMo / ZaloPay)</option>
           </select>
         </div>
-
         <div class="form-group">
-          <label>Phương Thức Thanh Toán</label>
-          <div class="payment-methods">
-            <label class="payment-option">
-              <input type="radio" name="payMethod" value="COD" checked>
-              <span>Tiền mặt khi nhận hàng (COD)</span>
-            </label>
-            <label class="payment-option">
-              <input type="radio" name="payMethod" value="VIETQR">
-              <span>Chuyển khoản VietQR Tự Động</span>
-            </label>
-          </div>
+          <label>Ghi chú đơn hàng (Tùy chọn)</label>
+          <textarea id="orderNote" placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."></textarea>
         </div>
 
-        <div class="order-preview-box">
-          <div class="preview-row">
-            <span>Tổng tiền thanh toán:</span>
-            <strong id="modalOrderTotal" class="highlight-price">0 VNĐ</strong>
-          </div>
-          <small class="acid-guarantee">Bảo vệ giao dịch: SQLite ACID Transaction Rollback Engine được kích hoạt.</small>
+        <div class="order-total-preview">
+          <span>Tổng tiền thanh toán:</span>
+          <strong id="modalOrderTotal" style="color: var(--color-primary-light); font-size: 18px;">0 VNĐ</strong>
         </div>
 
-        <button type="submit" id="submitOrderBtn" class="btn btn-primary btn-block">Hoàn Tất & Gửi Đơn Hàng</button>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeCheckoutModal()">Hủy Bỏ</button>
+          <button type="submit" class="btn btn-primary">Xác Nhận Đặt Hàng</button>
+        </div>
       </form>
     </div>
   </div>
@@ -295,19 +317,19 @@
   <div class="modal" id="trackModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Tra Cứu Tình Trạng Đơn Hàng</h3>
+        <h3>Tra Cứu Hành Trình Đơn Hàng</h3>
         <button class="btn-close" onclick="closeTrackModal()">&times;</button>
       </div>
       <div class="track-form-box">
         <div class="form-group">
           <label>Nhập Mã Đơn Hàng hoặc Số Điện Thoại</label>
           <div class="search-inline">
-            <input type="text" id="trackInput" placeholder="Ví dụ: 90001 hoặc 0901234567">
+            <input type="text" id="trackInput" placeholder="Ví dụ: NSV102938 hoặc 0901234567">
             <button id="doTrackBtn" class="btn btn-primary">Tra Cứu</button>
           </div>
         </div>
         <div id="trackResultBox" class="track-result-box">
-          <p class="text-muted">Nhập thông tin bên trên để kiểm tra hành trình đơn hàng.</p>
+          <p class="text-muted">Nhập thông tin bên trên để kiểm tra hành trình đơn hàng được lưu trong SQLite.</p>
         </div>
       </div>
     </div>
@@ -322,7 +344,7 @@
       </div>
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="switchAdminTab('stats')">Thống Kê Tài Chính</button>
-        <button class="admin-tab" onclick="switchAdminTab('inventory')">Quản Lý Tồn Kho</button>
+        <button class="admin-tab" onclick="switchAdminTab('inventory')">Quản Lý Tồn Kho (24 Sản Phẩm)</button>
         <button class="admin-tab" onclick="switchAdminTab('orders')">Đơn Hàng Gần Đây</button>
       </div>
 
@@ -340,7 +362,7 @@
             </div>
             <div class="stat-card">
               <span class="stat-title">Sản Phẩm Trong Hệ Thống</span>
-              <span class="stat-number" id="admTotalProds">12</span>
+              <span class="stat-number" id="admTotalProds">24</span>
             </div>
             <div class="stat-card alert">
               <span class="stat-title">Cảnh Báo Tồn Kho Thấp</span>
@@ -401,15 +423,15 @@
           <div class="brand-logo-mark">NV</div>
           <span class="brand-title">NÔNG SẢN VIỆT</span>
         </div>
-        <p class="footer-desc">Nền tảng kết nối trực tiếp chuỗi cung ứng nông sản sạch từ các Hợp Tác Xã trên toàn lãnh thổ Việt Nam.</p>
+        <p class="footer-desc">Nền tảng kết nối trực tiếp chuỗi cung ứng nông sản sạch từ 6+ Hợp Tác Xã trên toàn lãnh thổ Việt Nam.</p>
       </div>
       <div class="footer-col">
         <h4>Vùng Trồng Liên Kết</h4>
         <ul>
-          <li>Đồng Bằng Sông Cửu Long (Gạo ST25, Sầu Riêng, Xoài Cát)</li>
-          <li>Tây Nguyên (Cà Phê Robusta, Mắc Ca, Hạt Điều)</li>
-          <li>Đà Lạt - Lâm Đồng (Rau Củ Hữu Cơ, Dâu Tây, Trà Ô Long)</li>
-          <li>Rừng Ngập Mặn U Minh (Mật Ong Hoa Tràm Tự Nhiên)</li>
+          <li>Đồng Bằng Sông Cửu Long (Gạo ST25, Sầu Riêng, Xoài Cát, Nếp Cái)</li>
+          <li>Tây Nguyên (Cà Phê Robusta, Mắc Ca, Bơ Sáp, Nấm Linh Chi)</li>
+          <li>Đà Lạt - Lâm Đồng (Dâu Tây, Trà Ô Long, Cà Chua Cherry)</li>
+          <li>Miền Bắc & Miền Trung (Vải Thiều Lục Ngạn, Nhãn Lồng, Tỏi Lý Sơn)</li>
         </ul>
       </div>
       <div class="footer-col">

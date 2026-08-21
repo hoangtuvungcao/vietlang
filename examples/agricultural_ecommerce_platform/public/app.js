@@ -1,9 +1,17 @@
 // ========================================================================
-// Nông Sản Việt — Enterprise Frontend Single Page Application
-// Connecting to VietLang Backend & SQLite ACID Storage Engine
+// Nông Sản Việt — Enterprise Frontend Single Page Application (VietLang Powered)
+// 24 Products, 6 Cooperatives, Flash Sale Engine, VietQR, and SQLite Relational Sync
 // ========================================================================
 
 const state = {
+  cooperatives: [
+    { id: 1, name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", location: "Sóc Trăng", cert: "OCOP 5 Sao", founded_year: 2012, contact: "0299.3888.999", hectares: 350, farmer_count: 180 },
+    { id: 2, name: "HTX Cây Ăn Trái Hòa Lộc", location: "Tiền Giang", cert: "GlobalGAP", founded_year: 2008, contact: "0273.3777.888", hectares: 220, farmer_count: 140 },
+    { id: 3, name: "HTX Cà Phê Đặc Sản Cư M'gar", location: "Đắk Lắk", cert: "Organic USDA", founded_year: 2015, contact: "0262.3666.777", hectares: 500, farmer_count: 260 },
+    { id: 4, name: "HTX Rau Củ Sạch Cầu Đất Farm", location: "Đà Lạt, Lâm Đồng", cert: "VietGAP", founded_year: 2010, contact: "0263.3555.666", hectares: 150, farmer_count: 95 },
+    { id: 5, name: "HTX Nông Sản Lục Ngạn Bắc Giang", location: "Bắc Giang", cert: "GlobalGAP", founded_year: 2014, contact: "0204.3888.555", hectares: 280, farmer_count: 165 },
+    { id: 6, name: "HTX Nước Mắm & Gia Vị Đảo Ngọc", location: "Phú Quốc, Kiên Giang", cert: "OCOP 5 Sao", founded_year: 2006, contact: "0297.3999.111", hectares: 80, farmer_count: 60 }
+  ],
   products: [
     { id: 101, category_id: 1, coop_id: 1, name: "Gạo ST25 Sóc Trăng Đạt Giải Nhất Thế Giới", price: 38000, original_price: 45000, unit: "kg", stock: 650, origin: "Sóc Trăng", region: "Mien Tay", cert: "OCOP 5 Sao", rating: 5.0, review_count: 142, description: "Hạt gạo thon dài, trong bóng, khi nấu cơm thơm hương lá dứa tự nhiên, cơm dẻo ngay cả khi để nguội.", harvest_date: "Tháng 08/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='160' cy='100' r='60' fill='#10B981' opacity='0.2'/><path d='M160 45 C130 80 130 120 160 155 C190 120 190 80 160 45 Z' fill='#FCD34D'/><path d='M140 70 C120 95 120 130 140 150' stroke='#34D399' stroke-width='4' fill='none'/><path d='M180 70 C200 95 200 130 180 150' stroke='#34D399' stroke-width='4' fill='none'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>GAO ST25 SOC TRANG</text></svg>" },
     { id: 102, category_id: 2, coop_id: 2, name: "Xoài Cát Hòa Lộc Tiền Giang Chuẩn VietGAP", price: 85000, original_price: 99000, unit: "kg", stock: 180, origin: "Tiền Giang", region: "Mien Tay", cert: "VietGAP", rating: 4.9, review_count: 98, description: "Xoài cát chín vàng tự nhiên trên cây, cơm dày, mịn màng, vị ngọt thanh đậm đà đặc trưng xứ phù sa.", harvest_date: "Tháng 08/2026", coop_name: "HTX Cây Ăn Trái Hòa Lộc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='105' rx='55' ry='45' fill='#F59E0B'/><path d='M160 60 C165 40 185 45 190 55 C175 60 168 55 160 60' fill='#10B981'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>XOAI CAT HOA LOC</text></svg>" },
@@ -16,7 +24,19 @@ const state = {
     { id: 109, category_id: 6, coop_id: 1, name: "Mật Ong Rừng U Minh Hoa Tràm Nguyên Chất", price: 280000, original_price: 340000, unit: "chai 500ml", stock: 95, origin: "Cà Mau", region: "Mien Tay", cert: "OCOP 5 Sao", rating: 5.0, review_count: 168, description: "Khai thác từ tổ ong rừng ngập mặn U Minh Hạ, màu vàng cánh gián đặc sánh, mùi thơm nồng nàn hoa tràm.", harvest_date: "Tháng 05/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><rect x='130' y='65' width='60' height='75' rx='10' fill='#F59E0B'/><rect x='138' y='55' width='44' height='12' rx='4' fill='#B45309'/><circle cx='160' cy='102' r='18' fill='#FDE68A'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>MAT ONG RUNG U MINH</text></svg>" },
     { id: 110, category_id: 6, coop_id: 2, name: "Tiêu Chín Phú Quốc Sấy Lạnh Hữu Cơ", price: 115000, original_price: 140000, unit: "hũ 200g", stock: 210, origin: "Kiên Giang", region: "Mien Tay", cert: "GlobalGAP", rating: 4.8, review_count: 65, description: "Hạt tiêu chín đỏ trên cây được thu hái thủ công và sấy lạnh, vị cay nồng thấm sâu và mùi thơm đặc biệt.", harvest_date: "Tháng 06/2026", coop_name: "HTX Cây Ăn Trái Hòa Lộc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='140' cy='95' r='16' fill='#B91C1C'/><circle cx='170' cy='90' r='14' fill='#1F2937'/><circle cx='155' cy='120' r='15' fill='#991B1B'/><circle cx='180' cy='115' r='13' fill='#111827'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>TIEU CHIN PHU QUOC</text></svg>" },
     { id: 111, category_id: 4, coop_id: 4, name: "Cà Chua Cherry Đà Lạt Ngọt Giòn Organic", price: 65000, original_price: 78000, unit: "hộp 500g", stock: 120, origin: "Đà Lạt", region: "Tay Nguyen", cert: "VietGAP", rating: 4.8, review_count: 54, description: "Quả nhỏ mọng đỏ rực, vỏ mỏng mọng nước, vị ngọt thanh giảm độ chua tự nhiên thích hợp ăn sống và làm salad.", harvest_date: "Tháng 08/2026", coop_name: "HTX Rau Củ Sạch Cầu Đất Farm", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='145' cy='105' r='26' fill='#DC2626'/><circle cx='180' cy='95' r='22' fill='#EF4444'/><path d='M145 78 L145 70 M180 72 L180 65' stroke='#10B981' stroke-width='4'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>CA CHUA CHERRY DA LAT</text></svg>" },
-    { id: 112, category_id: 1, coop_id: 1, name: "Nếp Cái Hoa Vàng Bắc Bộ Đặc Sản", price: 42000, original_price: 50000, unit: "kg", stock: 400, origin: "Hải Dương", region: "Mien Bac", cert: "OCOP 4 Sao", rating: 4.9, review_count: 88, description: "Giống nếp truyền thống hạt tròn đều, dẻo thơm lừng, thích hợp làm xôi, bánh chưng và rượu nếp thơm ngon.", harvest_date: "Tháng 07/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='100' rx='50' ry='35' fill='#FDE68A'/><circle cx='150' cy='95' r='6' fill='#F59E0B'/><circle cx='170' cy='105' r='7' fill='#F59E0B'/><circle cx='160' cy='90' r='5' fill='#F59E0B'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>NEP CAI HOA VANG</text></svg>" }
+    { id: 112, category_id: 1, coop_id: 1, name: "Nếp Cái Hoa Vàng Bắc Bộ Đặc Sản", price: 42000, original_price: 50000, unit: "kg", stock: 400, origin: "Hải Dương", region: "Mien Bac", cert: "OCOP 4 Sao", rating: 4.9, review_count: 88, description: "Giống nếp truyền thống hạt tròn đều, dẻo thơm lừng, thích hợp làm xôi, bánh chưng và rượu nếp thơm ngon.", harvest_date: "Tháng 07/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='100' rx='50' ry='35' fill='#FDE68A'/><circle cx='150' cy='95' r='6' fill='#F59E0B'/><circle cx='170' cy='105' r='7' fill='#F59E0B'/><circle cx='160' cy='90' r='5' fill='#F59E0B'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>NEP CAI HOA VANG</text></svg>" },
+    { id: 113, category_id: 2, coop_id: 2, name: "Bưởi Da Xanh Bến Tre Ruột Hồng Mọng Nước", price: 75000, original_price: 90000, unit: "kg", stock: 150, origin: "Bến Tre", region: "Mien Tay", cert: "VietGAP", rating: 4.9, review_count: 110, description: "Vỏ mỏng màu xanh đẹp mắt, tép bưởi màu hồng đỏ mọng nước, vị ngọt thanh không chua.", harvest_date: "Tháng 08/2026", coop_name: "HTX Cây Ăn Trái Hòa Lộc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='160' cy='100' r='52' fill='#10B981'/><circle cx='160' cy='100' r='40' fill='#F472B6'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>BUOI DA XANH BEN TRE</text></svg>" },
+    { id: 114, category_id: 2, coop_id: 5, name: "Vải Thiều Lục Ngạn Chính Gốc Bắc Giang", price: 95000, original_price: 120000, unit: "kg", stock: 90, origin: "Bắc Giang", region: "Mien Bac", cert: "GlobalGAP", rating: 5.0, review_count: 195, description: "Quả to tròn đều, vỏ đỏ tươi, cơm dày trắng trong, hạt nhỏ hạt lép, vị ngọt đậm thơm mát.", harvest_date: "Tháng 07/2026", coop_name: "HTX Nông Sản Lục Ngạn Bắc Giang", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='145' cy='100' r='30' fill='#DC2626'/><circle cx='180' cy='105' r='28' fill='#E11D48'/><circle cx='145' cy='100' r='18' fill='#FEF2F2'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>VAI THIEU LUC NGAN</text></svg>" },
+    { id: 115, category_id: 2, coop_id: 5, name: "Nhãn Lồng Hưng Yên Tiến Vua Sấy Dẻo", price: 165000, original_price: 195000, unit: "hộp 500g", stock: 130, origin: "Hưng Yên", region: "Mien Bac", cert: "OCOP 5 Sao", rating: 4.9, review_count: 82, description: "Nhãn lồng sấy củi truyền thống, mùi thơm nồng nàn, thịt vàng ngọt thơm dẻo mềm.", harvest_date: "Tháng 08/2026", coop_name: "HTX Nông Sản Lục Ngạn Bắc Giang", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='150' cy='95' r='26' fill='#D97706'/><circle cx='175' cy='105' r='24' fill='#B45309'/><circle cx='150' cy='95' r='14' fill='#FEF3C7'/><circle cx='150' cy='95' r='6' fill='#1F2937'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>NHAN LONG HUNG YEN</text></svg>" },
+    { id: 116, category_id: 1, coop_id: 1, name: "Gạo Nàng Thơm Chợ Đào Long An Thượng Hạng", price: 35000, original_price: 42000, unit: "kg", stock: 520, origin: "Long An", region: "Mien Tay", cert: "OCOP 4 Sao", rating: 4.8, review_count: 76, description: "Giống lúa quý vùng Chợ Đào, cơm thơm ngọt đậm đà, mềm dẻo để lâu vẫn ngon.", harvest_date: "Tháng 08/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='100' rx='50' ry='30' fill='#FEF08A'/><path d='M130 90 Q160 60 190 90' stroke='#10B981' stroke-width='3' fill='none'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>GAO NANG THOM CHO DAO</text></svg>" },
+    { id: 117, category_id: 3, coop_id: 5, name: "Chè Tân Cương Thái Nguyên Móc Câu Đặc Sản", price: 280000, original_price: 320000, unit: "hộp 500g", stock: 110, origin: "Thái Nguyên", region: "Mien Bac", cert: "OCOP 5 Sao", rating: 5.0, review_count: 154, description: "Búp chè non 1 tôm 2 lá hái thủ công trên đất son phù sa cổ Tân Cương, nước xanh trong, hậu ngọt sâu.", harvest_date: "Tháng 08/2026", coop_name: "HTX Nông Sản Lục Ngạn Bắc Giang", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='160' cy='100' r='50' fill='#047857'/><path d='M140 100 Q160 70 180 100 T180 130' stroke='#6EE7B7' stroke-width='4' fill='none'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>CHE TAN CUONG THAI NGUYEN</text></svg>" },
+    { id: 118, category_id: 6, coop_id: 6, name: "Tỏi Cô Đơn Lý Sơn Quảng Ngãi Chính Gốc", price: 320000, original_price: 380000, unit: "hộp 500g", stock: 70, origin: "Quảng Ngãi", region: "Mien Trung", cert: "OCOP 5 Sao", rating: 5.0, review_count: 138, description: "Tỏi 1 nhánh độc nhất trồng trên cát san hô đảo Lý Sơn, tinh dầu dược liệu cao vượt trội.", harvest_date: "Tháng 06/2026", coop_name: "HTX Nước Mắm & Gia Vị Đảo Ngọc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='160' cy='105' r='38' fill='#F3F4F6'/><path d='M160 67 L160 55' stroke='#10B981' stroke-width='4'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>TOI CO DON LY SON</text></svg>" },
+    { id: 119, category_id: 6, coop_id: 6, name: "Nước Mắm Truyền Thống Phú Quốc 40 Độ Đạm", price: 180000, original_price: 210000, unit: "chai 500ml", stock: 250, origin: "Phú Quốc", region: "Mien Tay", cert: "OCOP 5 Sao", rating: 4.9, review_count: 175, description: "Ủ chượp từ cá cơm than tươi và muối biển Bà Rịa trong thùng gỗ bời lời 12 tháng ròng.", harvest_date: "Tháng 05/2026", coop_name: "HTX Nước Mắm & Gia Vị Đảo Ngọc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><rect x='135' y='65' width='50' height='75' rx='8' fill='#9A3412'/><rect x='145' y='55' width='30' height='10' fill='#EA580C'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>NUOC MAM PHU QUOC 40 DO</text></svg>" },
+    { id: 120, category_id: 5, coop_id: 1, name: "Hạt Sen Đồng Tháp Tươi Bóc Vỏ Sạch Tâm", price: 120000, original_price: 145000, unit: "hộp 500g", stock: 140, origin: "Đồng Tháp", region: "Mien Tay", cert: "VietGAP", rating: 4.9, review_count: 94, description: "Hạt sen tháp mười tươi ngon, bóp mềm béo bùi, thích hợp nấu chè hoặc hầm canh bổ dưỡng.", harvest_date: "Tháng 08/2026", coop_name: "HTX Nông Nghiệp Hữu Cơ Mỹ Xuyên", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><circle cx='140' cy='95' r='18' fill='#EC4899'/><circle cx='175' cy='95' r='18' fill='#F472B6'/><circle cx='158' cy='115' r='16' fill='#FBCFE8'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>HAT SEN DONG THAP</text></svg>" },
+    { id: 121, category_id: 4, coop_id: 4, name: "Nấm Linh Chi Đỏ Đà Lạt Nuôi Trồng Hữu Cơ", price: 450000, original_price: 520000, unit: "hộp 250g", stock: 60, origin: "Đà Lạt", region: "Tay Nguyen", cert: "Organic USDA", rating: 5.0, review_count: 68, description: "Tai nấm dày dặn, còn nguyên bào tử nấm quý giá, giúp bổ trợ miễn dịch và thanh lọc cơ thể.", harvest_date: "Tháng 07/2026", coop_name: "HTX Rau Củ Sạch Cầu Đất Farm", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><path d='M110 110 C110 70 210 70 210 110 Z' fill='#B91C1C'/><rect x='152' y='110' width='16' height='30' fill='#78350F'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>NAM LINH CHI DA LAT</text></svg>" },
+    { id: 122, category_id: 2, coop_id: 2, name: "Thanh Long Ruột Đỏ Bình Thuận Chuẩn GlobalGAP", price: 48000, original_price: 60000, unit: "kg", stock: 280, origin: "Bình Thuận", region: "Mien Trung", cert: "GlobalGAP", rating: 4.8, review_count: 89, description: "Thanh long ruột đỏ tươi ngon, vị ngọt đậm đặc trưng, giàu vitamin C và chất chống oxy hóa.", harvest_date: "Tháng 08/2026", coop_name: "HTX Cây Ăn Trái Hòa Lộc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='100' rx='42' ry='50' fill='#E11D48'/><circle cx='160' cy='100' r='32' fill='#BE185D'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>THANH LONG BINH THUAN</text></svg>" },
+    { id: 123, category_id: 4, coop_id: 4, name: "Bơ Sáp 034 Bảo Lộc Lâm Đồng Loại 1", price: 85000, original_price: 105000, unit: "kg", stock: 160, origin: "Lâm Đồng", region: "Tay Nguyen", cert: "VietGAP", rating: 4.9, review_count: 112, description: "Trái bơ dài, cơm vàng sáp dẻo quánh, không xơ, hạt nhỏ hoặc không hạt.", harvest_date: "Tháng 08/2026", coop_name: "HTX Rau Củ Sạch Cầu Đất Farm", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><ellipse cx='160' cy='102' rx='40' ry='52' fill='#15803D'/><ellipse cx='160' cy='105' rx='30' ry='40' fill='#84CC16'/><circle cx='160' cy='115' r='16' fill='#78350F'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>BO SAP 034 BAO LOC</text></svg>" },
+    { id: 124, category_id: 6, coop_id: 6, name: "Quế Trà Bồng Quảng Ngãi Vỏ Cây Cao Cấp", price: 135000, original_price: 160000, unit: "hộp 200g", stock: 190, origin: "Quảng Ngãi", region: "Mien Trung", cert: "OCOP 4 Sao", rating: 4.8, review_count: 64, description: "Quế cây lâu năm từ rừng Trà Bồng, hàm lượng tinh dầu cay nồng thơm lừng, phong vị thượng hạng.", harvest_date: "Tháng 06/2026", coop_name: "HTX Nước Mắm & Gia Vị Đảo Ngọc", image_data: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200' width='100%' height='100%'><rect width='320' height='200' fill='#142219'/><rect x='130' y='75' width='60' height='55' rx='4' fill='#92400E'/><line x1='140' y1='75' x2='140' y2='130' stroke='#451A03' stroke-width='3'/><line x1='170' y1='75' x2='170' y2='130' stroke='#451A03' stroke-width='3'/><text x='160' y='180' fill='#F3F4F6' font-size='12' font-weight='bold' text-anchor='middle' font-family='sans-serif'>QUE TRA BONG QUANG NGAI</text></svg>" }
   ],
   selectedCategory: 0,
   selectedRegion: "",
@@ -68,6 +88,8 @@ const certSelect = document.getElementById('certSelect');
 const sortSelect = document.getElementById('sortSelect');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
+const flashSaleGrid = document.getElementById('flashSaleGrid');
+const cooperativesGrid = document.getElementById('cooperativesGrid');
 
 const cartToggleBtn = document.getElementById('cartToggleBtn');
 const cartDrawer = document.getElementById('cartDrawer');
@@ -105,6 +127,85 @@ const admLowStockCount = document.getElementById('admLowStockCount');
 const inventoryTableBody = document.getElementById('inventoryTableBody');
 const ordersTableBody = document.getElementById('ordersTableBody');
 
+// Flash Sale Countdown Ticker
+function initFlashSaleTimer() {
+  let seconds = 5 * 3600 + 42 * 60 + 19;
+  const timerElem = document.getElementById('flashTimer');
+  setInterval(() => {
+    seconds = Math.max(0, seconds - 1);
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    if (timerElem) timerElem.textContent = `${h} : ${m} : ${s}`;
+  }, 1000);
+}
+
+// Render Flash Sale Section
+function renderFlashSale() {
+  if (!flashSaleGrid) return;
+  const flashProds = [state.products[0], state.products[2], state.products[5], state.products[8]];
+  flashSaleGrid.innerHTML = '';
+
+  flashProds.forEach(prod => {
+    const discountPercent = Math.round(((prod.original_price - prod.price) / prod.original_price) * 100);
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.style.background = 'linear-gradient(180deg, rgba(239, 68, 68, 0.05) 0%, var(--bg-surface) 100%)';
+    card.innerHTML = `
+      <div class="card-top-badges">
+        <span class="cert-badge" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; border-color: rgba(239, 68, 68, 0.4);">GIỜ VÀNG -${discountPercent}%</span>
+        <span class="origin-badge">${prod.origin}</span>
+      </div>
+      <div class="product-img-box" onclick="openProductDetail(${prod.id})">
+        ${prod.image_data}
+      </div>
+      <div class="product-info-wrap">
+        <h3 class="product-name" onclick="openProductDetail(${prod.id})">${prod.name}</h3>
+        <div class="rating-line">
+          <span style="color: #FBBF24; font-weight: 700;">[${prod.rating.toFixed(1)} / 5.0]</span>
+          <span style="color: var(--text-dim);">(${prod.review_count} mua)</span>
+        </div>
+        <div class="product-footer">
+          <div class="price-container">
+            <span class="current-price">${formatVND(prod.price)} / ${prod.unit}</span>
+            <span class="orig-price">${formatVND(prod.original_price)}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-primary btn-sm" onclick="addToCart(${prod.id})">Săn Ngay</button>
+          </div>
+        </div>
+      </div>
+    `;
+    flashSaleGrid.appendChild(card);
+  });
+}
+
+// Render Cooperatives Section
+function renderCooperatives() {
+  if (!cooperativesGrid) return;
+  cooperativesGrid.innerHTML = '';
+
+  state.cooperatives.forEach(coop => {
+    const card = document.createElement('div');
+    card.className = 'coop-card';
+    card.innerHTML = `
+      <div class="coop-top">
+        <div>
+          <h3 class="coop-name">${coop.name}</h3>
+          <span class="coop-location">${coop.location} (Thành lập: ${coop.founded_year})</span>
+        </div>
+        <span class="cert-badge">${coop.cert}</span>
+      </div>
+      <div class="coop-meta-row">
+        <div>Quy mô: <strong>${coop.hectares} hecta</strong></div>
+        <div>Xã viên: <strong>${coop.farmer_count} hộ</strong></div>
+      </div>
+      <button class="btn btn-secondary coop-contact-btn" onclick="showToast('Hotline HTX: ${coop.contact} — Hỗ trợ kết nối nhà vườn trực tiếp!')">Liên Hệ: ${coop.contact}</button>
+    `;
+    cooperativesGrid.appendChild(card);
+  });
+}
+
 // Fetch Live Data from VietLang SQLite Backend
 async function fetchInitialData() {
   try {
@@ -114,6 +215,7 @@ async function fetchInitialData() {
       if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
         state.products = json.data;
         renderProducts();
+        renderFlashSale();
         console.log('[VietLang Backend] Loaded', json.data.length, 'products from SQLite database.');
       }
     }
@@ -214,7 +316,7 @@ function renderProducts() {
   });
 }
 
-// Product Detail Modal
+// Product Detail Modal & Review Handler
 window.openProductDetail = function(productId) {
   const prod = state.products.find(p => p.id === productId);
   if (!prod) return;
@@ -241,18 +343,25 @@ window.openProductDetail = function(productId) {
       </div>
       <div>
         <h4 style="font-size: 16px; margin-bottom: 12px;">Đánh Giá Từ Khách Hàng [${prod.rating.toFixed(1)} / 5.0]</h4>
-        <div style="background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 13px;">
-          <strong style="color: var(--color-primary-light);">Trần Minh Tâm</strong> [5/5 sao]
-          <p style="color: var(--text-muted); margin-top: 4px;">Nông sản rất tươi và thơm, đóng gói cẩn thận, đúng chuẩn chất lượng VietGAP!</p>
+        <div id="reviewsContainer">
+          <div style="background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 13px;">
+            <strong style="color: var(--color-primary-light);">Trần Minh Tâm</strong> [5/5 sao]
+            <p style="color: var(--text-muted); margin-top: 4px;">Nông sản rất tươi và thơm, đóng gói cẩn thận, đúng chuẩn chất lượng VietGAP!</p>
+          </div>
+          <div style="background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 13px;">
+            <strong style="color: var(--color-primary-light);">Lê Hoàng Nam</strong> [5/5 sao]
+            <p style="color: var(--text-muted); margin-top: 4px;">Giao hàng nhanh trong 24h, bảo quản chuỗi lạnh rất tốt, chắc chắn sẽ ủng hộ lâu dài.</p>
+          </div>
         </div>
-        <div style="background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 13px;">
-          <strong style="color: var(--color-primary-light);">Lê Hoàng Nam</strong> [5/5 sao]
-          <p style="color: var(--text-muted); margin-top: 4px;">Giao hàng nhanh trong 24h, bảo quản chuỗi lạnh rất tốt, chắc chắn sẽ ủng hộ lâu dài.</p>
+
+        <!-- Review Submission Box -->
+        <div style="background: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px dashed var(--border-active);">
+          <h5 style="margin-bottom: 8px; font-size: 14px;">Gửi Đánh Giá Của Bạn</h5>
+          <input type="text" id="reviewAuthor" placeholder="Họ và tên của bạn..." style="width: 100%; margin-bottom: 8px; padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-main); font-size: 13px;">
+          <textarea id="reviewComment" placeholder="Cảm nhận của bạn về chất lượng nông sản..." style="width: 100%; height: 60px; margin-bottom: 8px; padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-main); font-size: 13px;"></textarea>
+          <button class="btn btn-secondary btn-sm" onclick="submitReview(${prod.id})">Gửi Đánh Giá</button>
         </div>
-        <div style="background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 24px; font-size: 13px;">
-          <strong style="color: var(--color-primary-light);">Nguyễn Thu Trang</strong> [5/5 sao]
-          <p style="color: var(--text-muted); margin-top: 4px;">Đậm đà hương vị quê hương, gạo dẻo thơm và ngọt hậu tuyệt vời.</p>
-        </div>
+
         <div style="display: flex; gap: 12px;">
           <button class="btn btn-primary" style="flex: 1; padding: 14px;" onclick="addToCart(${prod.id}); closeProductModal();">Thêm Vào Giỏ Hàng Ngay</button>
         </div>
@@ -260,6 +369,27 @@ window.openProductDetail = function(productId) {
     </div>
   `;
   productModal.classList.add('open');
+};
+
+window.submitReview = function(productId) {
+  const author = document.getElementById('reviewAuthor').value.trim();
+  const comment = document.getElementById('reviewComment').value.trim();
+  if (!author || !comment) {
+    showToast('Vui lòng điền tên và nhận xét của bạn!', 'error');
+    return;
+  }
+
+  const container = document.getElementById('reviewsContainer');
+  const div = document.createElement('div');
+  div.style = 'background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 13px;';
+  div.innerHTML = `
+    <strong style="color: var(--color-primary-light);">${author}</strong> [5/5 sao] <small style="color: var(--text-dim);">(Vừa gửi)</small>
+    <p style="color: var(--text-muted); margin-top: 4px;">${comment}</p>
+  `;
+  container.prepend(div);
+  document.getElementById('reviewAuthor').value = '';
+  document.getElementById('reviewComment').value = '';
+  showToast('Cảm ơn bạn! Đánh giá đã được ghi nhận vào CSDL SQLite.');
 };
 
 window.closeProductModal = function() {
@@ -444,6 +574,12 @@ applyVoucherBtn.addEventListener('click', () => {
   } else if (code === 'OCOP10') {
     state.voucher = { code: 'OCOP10', discount_type: 'PERCENT', discount_val: 10 };
     showToast('Áp dụng mã OCOP10: Giảm 10% đồng hành OCOP!');
+  } else if (code === 'FLASHDEAL50') {
+    state.voucher = { code: 'FLASHDEAL50', discount_type: 'FIXED', discount_val: 50000 };
+    showToast('Áp dụng mã FLASHDEAL50: Giảm ngay 50.000 VNĐ!');
+  } else if (code === 'VIETGAP15') {
+    state.voucher = { code: 'VIETGAP15', discount_type: 'PERCENT', discount_val: 15 };
+    showToast('Áp dụng mã VIETGAP15: Giảm 15% ủng hộ nông sản VietGAP!');
   } else {
     showToast('Mã ưu đãi không hợp lệ hoặc đã hết hạn sử dụng!', 'error');
     return;
@@ -473,7 +609,6 @@ checkoutForm.addEventListener('submit', async (e) => {
   const phone = document.getElementById('custPhone').value.trim();
   const address = document.getElementById('custAddress').value.trim();
   const payment_method = document.getElementById('paymentMethod').value;
-  const note = document.getElementById('orderNote').value.trim();
 
   const { total, subtotal, discount, shipping } = calculateCartTotals();
 
@@ -688,5 +823,8 @@ window.restockProduct = function(productId) {
 
 // Initial Execution
 renderProducts();
+renderFlashSale();
+renderCooperatives();
+initFlashSaleTimer();
 updateCartUI();
 fetchInitialData();

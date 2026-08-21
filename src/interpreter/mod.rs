@@ -1295,6 +1295,8 @@ impl Interpreter {
             "hex_encode" => crate::stdlib::builtin_hex_encode(args, span.line, span.column),
             "hex_decode" => crate::stdlib::builtin_hex_decode(args, span.line, span.column),
             "crypto_random_hex" => crate::stdlib::builtin_crypto_random_hex(args, span.line, span.column),
+            "uuid_v4" => crate::stdlib::builtin_uuid_v4(args, span.line, span.column),
+            "time_unix_ms" => crate::stdlib::builtin_time_unix_ms(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

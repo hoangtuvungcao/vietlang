@@ -7,6 +7,7 @@ import examples.agricultural_ecommerce_platform.src.repositories.product_repo
 import examples.agricultural_ecommerce_platform.src.repositories.order_repo
 import examples.agricultural_ecommerce_platform.src.services.order_service
 import examples.agricultural_ecommerce_platform.src.controllers.admin_controller
+import std.db_sqlite
 
 fn api_response(status_code: Int, data, message: String = "OK") {
     let mut resp = map_new()
@@ -25,7 +26,12 @@ fn api_error(status_code: Int, error_msg: String) {
 
 fn api_dispatch_request(db, method: String, path: String, body_map) {
     if method == "GET" && path == "/api/v1/health" {
-        return api_response(200, map_set(map_set(map_new(), "status", "HEALTHY"), "uptime", time_now()), "System Operational")
+        let mut health_data = map_new()
+        health_data = map_set(health_data, "status", "HEALTHY")
+        health_data = map_set(health_data, "uptime", time_now())
+        health_data = map_set(health_data, "engine", "VietLang SQLite ACID Relational DB")
+        health_data = map_set(health_data, "version", "0.1.0-enterprise")
+        return api_response(200, health_data, "System Operational")
     }
 
     if method == "GET" && path == "/api/v1/categories" {
@@ -41,6 +47,32 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
     if method == "GET" && path == "/api/v1/cooperatives" {
         let coops = product_repo_get_cooperatives(db)
         return api_response(200, coops, "Lay danh sach hop tac xa nong nghiep thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/flash_sales" {
+        let prods = sqlite_query(db, "products", fn(p) {
+            let orig = map_get(p, "original_price")
+            let cur = map_get(p, "price")
+            let diff = orig - cur
+            return diff >= 20000
+        })
+        return api_response(200, prods, "Lay danh sach flash sale thanh cong")
+    }
+
+    if method == "GET" && path == "/api/v1/reviews" {
+        let reviews = sqlite_query(db, "reviews", none)
+        return api_response(200, reviews, "Lay danh sach danh gia thanh cong")
+    }
+
+    if method == "POST" && path == "/api/v1/reviews" {
+        let prod_id = map_get(body_map, "product_id")
+        let author = to_string(map_get(body_map, "author_name"))
+        let rating = map_get(body_map, "rating")
+        let comment = to_string(map_get(body_map, "comment"))
+
+        let r = map_set(map_set(map_set(map_set(map_set(map_set(map_new(), "id", time_now()), "product_id", prod_id), "author_name", author), "rating", rating), "comment", comment), "created_at", time_now())
+        let db2 = sqlite_insert(db, "reviews", r)
+        return api_response(201, r, "Gui danh gia san pham thanh cong")
     }
 
     if method == "GET" && path == "/api/v1/products" {
@@ -72,6 +104,18 @@ fn api_dispatch_request(db, method: String, path: String, body_map) {
     if method == "GET" && path == "/api/v1/admin/analytics" {
         let analytics = handle_admin_analytics(db)
         return api_response(200, analytics, "Thong ke admin")
+    }
+
+    if method == "POST" && path == "/api/v1/admin/restock" {
+        let prod_id = map_get(body_map, "product_id")
+        let amount = map_get(body_map, "amount")
+        let db2 = sqlite_update(db, "products", fn(p) {
+            return map_get(p, "id") == prod_id
+        }, fn(p) {
+            let cur_stock = map_get(p, "stock")
+            return map_set(p, "stock", cur_stock + amount)
+        })
+        return api_response(200, map_set(map_new(), "product_id", prod_id), "Nhap hang thanh cong")
     }
 
     if method == "GET" && path == "/api/v1/orders/track" {

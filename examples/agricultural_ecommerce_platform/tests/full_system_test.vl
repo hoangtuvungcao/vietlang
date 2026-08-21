@@ -20,7 +20,7 @@ test("1. Database, Categories, and Cooperative Seed Data", fn() {
     let resp_coop = api_dispatch_request(db, "GET", "/api/v1/cooperatives", map_new())
     assert_eq(map_get(resp_coop, "status_code"), 200, "Lay danh sach HTX phai tra ve 200")
     let coops = map_get(resp_coop, "data")
-    assert_eq(coops.len(), 4, "Phai co dung 4 Hop tac xa nong nghiep lien ket")
+    assert_eq(coops.len(), 6, "Phai co dung 6 Hop tac xa nong nghiep lien ket")
 })
 
 test("2. User Registration and Password Verification", fn() {
@@ -118,7 +118,7 @@ test("7. Admin Analytics and Low Stock Monitor", fn() {
     let resp = api_dispatch_request(db, "GET", "/api/v1/admin/analytics", map_new())
     assert_eq(map_get(resp, "status_code"), 200, "Lay thong ke admin thanh cong")
     let data = map_get(resp, "data")
-    assert_eq(map_get(data, "total_products"), 12, "Tong cong 12 san pham nong san")
+    assert_eq(map_get(data, "total_products"), 24, "Tong cong 24 san pham nong san")
     assert_true(map_get(data, "low_stock_count") > 0, "Phai phat hien cac san pham ton kho thap (< 100)")
 })
 

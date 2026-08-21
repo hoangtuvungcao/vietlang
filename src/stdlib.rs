@@ -1427,3 +1427,30 @@ pub fn builtin_crypto_random_hex(args: &[Value], _line: usize, _col: usize) -> V
     Ok(Value::String(out))
 }
 
+pub fn builtin_uuid_v4(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let mut seed = now.as_nanos() as u64;
+    let mut random_bytes = [0u8; 16];
+    for b in &mut random_bytes {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        *b = (seed >> 33) as u8;
+    }
+    random_bytes[6] = (random_bytes[6] & 0x0f) | 0x40;
+    random_bytes[8] = (random_bytes[8] & 0x3f) | 0x80;
+
+    let uuid = format!(
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+        random_bytes[0], random_bytes[1], random_bytes[2], random_bytes[3],
+        random_bytes[4], random_bytes[5],
+        random_bytes[6], random_bytes[7],
+        random_bytes[8], random_bytes[9],
+        random_bytes[10], random_bytes[11], random_bytes[12], random_bytes[13], random_bytes[14], random_bytes[15]
+    );
+    Ok(Value::String(uuid))
+}
+
+pub fn builtin_time_unix_ms(_args: &[Value], _line: usize, _col: usize) -> VietResult<Value> {
+    let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
+    Ok(Value::Int(ms))
+}
+

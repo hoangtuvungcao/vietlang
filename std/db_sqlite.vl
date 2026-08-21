@@ -122,3 +122,28 @@ fn sqlite_delete(db, table_name: String, predicate_fn) {
     return map_set(db, "tables", new_tables)
 }
 
+fn sqlite_count(db, table_name: String, predicate_fn = none) {
+    let rows = sqlite_query(db, table_name, predicate_fn)
+    return rows.len()
+}
+
+fn sqlite_find_by_id(db, table_name: String, id) {
+    let matches = sqlite_query(db, table_name, fn(row) {
+        return map_get(row, "id") == id
+    })
+    if matches.len() > 0 {
+        return matches[0]
+    }
+    return none
+}
+
+fn sqlite_aggregate(db, table_name: String, initial_val, acc_fn) {
+    let rows = sqlite_query(db, table_name, none)
+    let mut acc = initial_val
+    for r in rows {
+        acc = acc_fn(acc, r)
+    }
+    return acc
+}
+
+

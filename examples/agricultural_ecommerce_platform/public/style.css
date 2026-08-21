@@ -370,6 +370,178 @@ body {
   color: var(--text-muted);
 }
 
+/* Flash Sale Section */
+.flash-sale-section {
+  max-width: 1280px;
+  width: 100%;
+  margin: 32px auto 0;
+  padding: 0 24px;
+}
+
+.flash-sale-container {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.flash-sale-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.flash-tag {
+  background: #EF4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.flash-sale-title h2 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.flash-timer-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.flash-timer {
+  background: #111827;
+  color: #EF4444;
+  font-family: 'Space Grotesk', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  letter-spacing: 2px;
+}
+
+.flash-sale-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* Cooperatives Network Section */
+.cooperatives-section {
+  max-width: 1280px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 0 24px;
+}
+
+.coops-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+}
+
+.coops-header {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 32px;
+}
+
+.coops-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-primary-light);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.coops-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.coops-header p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.coops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.coop-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: var(--transition-fast);
+}
+
+.coop-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.coop-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.coop-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.coop-location {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.coop-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0;
+  font-size: 12px;
+  background: var(--bg-surface);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+}
+
+.coop-meta-row strong {
+  color: var(--color-primary-light);
+}
+
+.coop-contact-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 /* Main Layout */
 .main-layout {
   max-width: 1280px;
