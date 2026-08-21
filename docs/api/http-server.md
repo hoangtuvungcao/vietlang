@@ -70,7 +70,8 @@ not currently provide an HTTP/3 client.
 ## Production boundary
 
 These changes remove the hand-written plaintext protocol path from normal
-execution, but they do not by themselves make VietLang 0.2.0-alpha.2 production-ready.
-Protocol conformance, WebSocket migration, load/soak tests, fuzzing, database
-pool hardening, semantic type checking, and independent security review remain
-release blockers. See `docs/upgrade-roadmap.md`.
+execution, but they do not by themselves make VietLang 0.3.0-alpha.1 production-certified.
+CI covers bounded HTTP load, HTTP/2 TLS, HTTP/3 QUIC, async WebSocket framing,
+deterministic fuzzing, SQL pool construction, and semantic/module checks. An
+independent security review and externally operated extended failure-injection
+campaign remain release gates. See `docs/upgrade-roadmap.md`.

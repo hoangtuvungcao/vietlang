@@ -52,10 +52,10 @@ fn handle_login(request_body) {
 
 ## Recipe 2: Relational Databases
 
-SQLite is the currently enabled native database path. Native MySQL is disabled
-in 0.2.0-alpha.2 because the available synchronous driver depends on a
-RustSec-unsound cache version; PostgreSQL remains experimental. Do not replace
-a failed connection with a fake in-memory “connected” object.
+SQLite is the embedded database path. MySQL and PostgreSQL use bounded async
+SQLx pools. Load credentials from secrets/environment configuration and pass
+parameter arrays rather than interpolating SQL. Lazy pool creation validates the
+DSN; `ping` or the first query establishes and verifies the network connection.
 
 ```rust
 import std.db_sqlite

@@ -21,17 +21,12 @@ fn migration_add_step(engine, name: String, up_sql: String, down_sql: String) {
     return map_set(engine, "migrations", new_migrations)
 }
 
-fn migration_run_all(engine) {
+fn migration_run_all(engine, connection = none) {
     let steps = map_get(engine, "migrations")
-    let mut applied = map_get(engine, "applied")
-
-    for step in steps {
-        let name = map_get(step, "name")
-        let up_sql = map_get(step, "up")
-        db_query(up_sql)
-        applied = push(applied, name)
+    if connection != none {
+        let applied_count = sqlite_migrate(connection, steps)
+        let updated = map_set(engine, "applied_count", applied_count)
+        return updated
     }
-
-    let updated = map_set(engine, "applied", applied)
-    return updated
+    throw("migration_run_all requires a real database connection; in-memory simulation was removed")
 }

@@ -1,4 +1,4 @@
-# VietLang 0.2.0-alpha.2 language specification (draft)
+# VietLang 0.3.0-alpha.1 language specification (draft)
 
 Status: descriptive draft for the Rust reference interpreter. This document
 does not claim a stable language specification. Where interpreter and VM differ,
@@ -89,10 +89,11 @@ Tuple enum variants are constructor functions whose payload count and locally
 known payload types are checked. `match` tries arms in source order and `_` is
 the wildcard pattern. Matches over `Bool` and locally declared enums must cover
 every case unless a wildcard/variable arm exists; enum pattern payloads receive
-their declared types. Generic spellings such as `Result<Int, String>` preserve
-the nominal enum name, but generic type parameters are not yet substituted and
-there is no built-in algebraic `Option`/`Result` definition. Applications may
-declare these enums locally; full generic semantics remain a P1 blocker.
+their declared types. `Option<T>` and `Result<T,E>` are built-in algebraic data
+types. `Some(value)`, `None`, `Ok(value)`, and `Err(error)` infer their payload
+positions; pattern bindings substitute concrete payload types, and matches must
+cover both variants unless they contain a wildcard. Arbitrary user-defined
+generic type parameters are not yet supported.
 
 ## Errors
 
@@ -112,10 +113,11 @@ provided.
 ## Modules
 
 `import` resolves project modules, the bundled `std/` directory, or the
-installed `VIETLANG_STD` directory. Duplicate/circular module execution is
-suppressed by the interpreter's loaded-module set. Package resolution is not
-yet reproducible because the package manager lacks a lockfile and install-time
-checksum enforcement.
+installed `VIETLANG_STD` directory. Before execution, the frontend constructs a
+canonical dependency graph, rejects missing imports and cycles, checks every
+module, and lowers declarations to typed IR. Package installation requires an
+exact resolved version, immutable Git revision, SHA-256 verification,
+Ed25519-signed metadata, and a versioned `vietlang.lock`.
 
 ## Compatibility requirements
 

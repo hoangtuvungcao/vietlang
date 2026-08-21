@@ -13,7 +13,7 @@ use std::{
 
 use axum::{
     body::{to_bytes, Body},
-    extract::{ConnectInfo, Request, State},
+    extract::{ws::WebSocketUpgrade, ConnectInfo, FromRequestParts, Request, State},
     http::{header, HeaderName, HeaderValue, StatusCode, Version},
     response::Response,
     routing::any,
@@ -347,11 +347,30 @@ impl ServerConfig {
     }
 }
 
+pub(crate) fn validate_config_for_fuzz(value: Value) -> VietResult<()> {
+    ServerConfig::from_args(&[value], &Span::new(1, 1, 0, 0)).map(|_| ())
+}
+
 async fn dispatch(
     State(state): State<ServerState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     request: Request,
 ) -> Response<Body> {
+    if crate::ws_runtime::endpoint().as_deref() == Some(request.uri().path()) {
+        let (mut parts, _body) = request.into_parts();
+        return match WebSocketUpgrade::from_request_parts(&mut parts, &state).await {
+            Ok(upgrade) => upgrade
+                .max_message_size(state.max_body_bytes)
+                .max_frame_size(state.max_body_bytes)
+                .on_upgrade(crate::ws_runtime::serve),
+            Err(_) => error_response(
+                StatusCode::BAD_REQUEST,
+                "websocket_upgrade_required",
+                "A valid RFC 6455 WebSocket upgrade is required",
+                &state,
+            ),
+        };
+    }
     let permit = match state.concurrency.clone().try_acquire_owned() {
         Ok(permit) => permit,
         Err(_) => {

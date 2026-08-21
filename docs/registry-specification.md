@@ -1,10 +1,9 @@
 # VietLang Central Package Registry Specification & Sharded Index Architecture
 
-Draft design for the experimental VietLang community registry. The current CLI
-clones Git repositories and does not yet provide a secure, reproducible package
-installation path. Do not treat registry metadata as trusted or use community
-packages in production until checksum enforcement, immutable revisions,
-lockfiles, signatures, and dependency resolution are implemented.
+Specification for the experimental VietLang community registry. The 0.3 CLI
+requires semver resolution to an exact release, Ed25519-signed metadata,
+SHA-256 verification, an immutable Git revision, atomic activation, and a
+versioned lockfile. Legacy unsigned records are rejected rather than trusted.
 
 Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoangtuvungcao/vietlang)
 
@@ -105,13 +104,14 @@ vietlang search payment
 # Install from Central Registry (by short name)
 vietlang install vietpay
 
-# Request an explicit version (this is not yet an immutable lock)
+# Request an explicit version (recorded as an immutable lock)
 vietlang install vietpay@1.0.0
 
 # Update to latest version
 vietlang update vietpay
 ```
 
-Current security limitation: the installer does not yet enforce the published
-checksum after clone and does not write an immutable lockfile. These are P3
-release blockers, not optional enhancements.
+The installer clones into an isolated staging directory, verifies metadata and
+content before activation, then records the exact revision and digest in
+`vietlang.lock`. Registry transparency/provenance and yanking policy remain
+future ecosystem controls.

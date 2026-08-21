@@ -1,10 +1,9 @@
-# Module `std.db_mysql` — disabled compatibility API
+# Module `std.db_mysql` — async SQLx pool
 
-Native MySQL operations are disabled in VietLang 0.2.0-alpha.2. The previous
-synchronous driver depended on a RustSec-unsound cache release. Every connection,
-query, transaction, and close operation now fails explicitly; no fake pool or
-successful result is returned. Use SQLite or a separately reviewed adapter until
-the async core migration is complete.
+MySQL operations use a bounded SQLx/Tokio pool with Rustls, acquisition timeout,
+prepared parameter binding, health probing, and explicit pool shutdown. Pool
+creation is lazy; the first health check/query reports network or credential
+errors instead of returning a fake connected object.
 
 ## Quickstart
 

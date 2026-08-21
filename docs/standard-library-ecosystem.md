@@ -12,7 +12,7 @@ services, databases, caching, and real-time modules remain opt-in:
 | Domain / Use Case | Standard Modules to Import | Primary Functions |
 | :--- | :--- | :--- |
 | **REST & API Gateway** | `std.http_router`, `std.openapi`, `std.validator` | `http_serve_static`, `openapi_spec_new`, `validator_validate` |
-| **Relational Database & ACID** | `std.db_sqlite` (enabled); `std.db_mysql` (disabled); `std.db_postgres` (experimental) | `sqlite_open`, `sqlite_execute`, `sqlite_query` |
+| **Relational Database & ACID** | `std.db_sqlite`; async pooled `std.db_mysql` / `std.db_postgres` | `sqlite_migrate`, `mysql_query`, `postgres_query` |
 | **Real-Time WebSocket** | `std.ws` | `ws_init("/ws")`, `ws_emit("event", data)`, `ws_send_text()` |
 | **Distributed Caching & Redis** | `std.redis`, `std.cache_lru` | `redis_connect()`, `redis_get()`, `redis_set()` |
 | **Security primitives** | `std.security`, `std.session` | `security_hash_password()`, `session_create()` |

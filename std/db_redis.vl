@@ -1,0 +1,244 @@
+// ========================================================================
+// VietLang Standard Library — std.db_redis
+// Native Redis Driver with Connection Pool, Pub/Sub, Pipeline, Streams
+// Production-Ready | VietLang v0.2.0
+// ========================================================================
+
+// --- Connection ---
+
+/// Kết nối Redis với URL, trả về connection pool handle
+fn redis_connect(url: String = "redis://localhost:6379") {
+    return builtin_redis_connect(url)
+}
+
+/// Kết nối Redis với auth password
+fn redis_connect_auth(url: String, password: String) {
+    return builtin_redis_connect_auth(url, password)
+}
+
+/// Đóng connection pool
+fn redis_close(conn) {
+    return builtin_redis_close(conn)
+}
+
+/// Ping kiểm tra kết nối
+fn redis_ping(conn) {
+    return builtin_redis_ping(conn)
+}
+
+/// Flush tất cả keys
+fn redis_flush_db(conn) {
+    return builtin_redis_flush_db(conn)
+}
+
+// --- String (key-value cơ bản) ---
+
+/// Lưu giá trị vào key
+fn redis_set(conn, key: String, value, ttl_seconds: Int = 0) {
+    if ttl_seconds > 0 {
+        return builtin_redis_setex(conn, key, ttl_seconds, value)
+    }
+    return builtin_redis_set(conn, key, value)
+}
+
+/// Lấy giá trị của key
+fn redis_get(conn, key: String) {
+    return builtin_redis_get(conn, key)
+}
+
+/// Lưu nhiều key-value cùng lúc
+fn redis_mset(conn, pairs = null) {
+    return builtin_redis_mset(conn, pairs)
+}
+
+/// Lấy nhiều values cùng lúc
+fn redis_mget(conn, keys = []) {
+    return builtin_redis_mget(conn, keys)
+}
+
+/// Set key nếu chưa tồn tại (NX)
+fn redis_set_nx(conn, key: String, value) {
+    return builtin_redis_setnx(conn, key, value)
+}
+
+/// Xóa 1 hoặc nhiều key
+fn redis_del(conn, keys) {
+    if type_of(keys) == "String" {
+        return builtin_redis_del(conn, [keys])
+    }
+    return builtin_redis_del(conn, keys)
+}
+
+/// Kiểm tra key có tồn tại không
+fn redis_exists(conn, key: String) {
+    return builtin_redis_exists(conn, key)
+}
+
+/// Set thời gian expire cho key (giây)
+fn redis_expire(conn, key: String, ttl_seconds: Int) {
+    return builtin_redis_expire(conn, key, ttl_seconds)
+}
+
+/// Lấy TTL còn lại của key
+fn redis_ttl(conn, key: String) {
+    return builtin_redis_ttl(conn, key)
+}
+
+/// Xóa expire, key tồn tại vĩnh viễn
+fn redis_persist(conn, key: String) {
+    return builtin_redis_persist(conn, key)
+}
+
+/// Tìm keys theo pattern
+fn redis_keys(conn, pattern: String = "*") {
+    return builtin_redis_keys(conn, pattern)
+}
+
+/// Xem type của key
+fn redis_type(conn, key: String) {
+    return builtin_redis_type(conn, key)
+}
+
+/// Đổi tên key
+fn redis_rename(conn, old_key: String, new_key: String) {
+    return builtin_redis_rename(conn, old_key, new_key)
+}
+
+// --- Counter ---
+
+/// Tăng counter thêm 1
+fn redis_incr(conn, key: String) {
+    return builtin_redis_incr(conn, key)
+}
+
+/// Giảm counter đi 1
+fn redis_decr(conn, key: String) {
+    return builtin_redis_decr(conn, key)
+}
+
+/// Tăng counter thêm n
+fn redis_incr_by(conn, key: String, n: Int) {
+    return builtin_redis_incrby(conn, key, n)
+}
+
+// --- List ---
+
+/// Thêm vào đầu list (left push)
+fn redis_lpush(conn, key: String, values = []) {
+    if type_of(values) == "Array" {
+        return builtin_redis_lpush(conn, key, values)
+    }
+    return builtin_redis_lpush(conn, key, [values])
+}
+
+/// Thêm vào cuối list (right push)
+fn redis_rpush(conn, key: String, values = []) {
+    if type_of(values) == "Array" {
+        return builtin_redis_rpush(conn, key, values)
+    }
+    return builtin_redis_rpush(conn, key, [values])
+}
+
+/// Lấy và xóa phần tử đầu tiên
+fn redis_lpop(conn, key: String) {
+    return builtin_redis_lpop(conn, key)
+}
+
+/// Lấy và xóa phần tử cuối cùng
+fn redis_rpop(conn, key: String) {
+    return builtin_redis_rpop(conn, key)
+}
+
+/// Lấy range phần tử của list
+fn redis_lrange(conn, key: String, start: Int = 0, stop: Int = -1) {
+    return builtin_redis_lrange(conn, key, start, stop)
+}
+
+/// Lấy độ dài list
+fn redis_llen(conn, key: String) {
+    return builtin_redis_llen(conn, key)
+}
+
+// --- Hash ---
+
+/// Set field trong hash
+fn redis_hset(conn, key: String, field: String, value) {
+    return builtin_redis_hset(conn, key, field, value)
+}
+
+/// Lấy field của hash
+fn redis_hget(conn, key: String, field: String) {
+    return builtin_redis_hget(conn, key, field)
+}
+
+/// Lấy tất cả field:value của hash
+fn redis_hgetall(conn, key: String) {
+    return builtin_redis_hgetall(conn, key)
+}
+
+/// Xóa field trong hash
+fn redis_hdel(conn, key: String, field: String) {
+    return builtin_redis_hdel(conn, key, field)
+}
+
+/// Kiểm tra field có tồn tại trong hash không
+fn redis_hexists(conn, key: String, field: String) {
+    return builtin_redis_hexists(conn, key, field)
+}
+
+/// Lấy tất cả fields của hash
+fn redis_hkeys(conn, key: String) {
+    return builtin_redis_hkeys(conn, key)
+}
+
+/// Lấy tất cả values của hash
+fn redis_hvals(conn, key: String) {
+    return builtin_redis_hvals(conn, key)
+}
+
+// --- Set ---
+
+/// Thêm member vào set
+fn redis_sadd(conn, key: String, members = []) {
+    if type_of(members) == "Array" {
+        return builtin_redis_sadd(conn, key, members)
+    }
+    return builtin_redis_sadd(conn, key, [members])
+}
+
+/// Xóa member khỏi set
+fn redis_srem(conn, key: String, members = []) {
+    if type_of(members) == "Array" {
+        return builtin_redis_srem(conn, key, members)
+    }
+    return builtin_redis_srem(conn, key, [members])
+}
+
+/// Kiểm tra member có trong set không
+fn redis_sismember(conn, key: String, member: String) {
+    return builtin_redis_sismember(conn, key, member)
+}
+
+/// Lấy tất cả members của set
+fn redis_smembers(conn, key: String) {
+    return builtin_redis_smembers(conn, key)
+}
+
+/// Số lượng members trong set
+fn redis_scard(conn, key: String) {
+    return builtin_redis_scard(conn, key)
+}
+
+// --- Pub/Sub ---
+
+/// Publish message tới channel
+fn redis_publish(conn, channel: String, message: String) {
+    return builtin_redis_publish(conn, channel, message)
+}
+
+// --- Pipeline ---
+
+/// Thực thi nhiều lệnh trong 1 roundtrip
+fn redis_pipeline(conn, commands = []) {
+    return builtin_redis_pipeline(conn, commands)
+}

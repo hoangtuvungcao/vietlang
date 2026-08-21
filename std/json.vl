@@ -1,0 +1,5 @@
+// VietLang JSON module marker.
+//
+// json_parse, json_stringify, json_encode, and json_decode are native runtime
+// functions. Importing std.json makes that dependency explicit and keeps the
+// source compatible with the checked module graph.

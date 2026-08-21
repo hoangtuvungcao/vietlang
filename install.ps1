@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Version = "0.1.1"
+$Version = "0.3.0-alpha.1"
 $Repo = "hoangtuvungcao/vietlang"
 $VietLangHome = Join-Path $HOME ".vietlang"
 $BinDir = Join-Path $VietLangHome "bin"
@@ -22,7 +22,7 @@ New-Item -ItemType Directory -Force -Path $StdDir | Out-Null
 New-Item -ItemType Directory -Force -Path $ModDir | Out-Null
 
 $ExePath = Join-Path $BinDir "vietlang.exe"
-$DownloadUrl = "https://github.com/$Repo/releases/latest/download/vietlang-windows-x64.exe"
+$DownloadUrl = "https://github.com/$Repo/releases/download/v$Version/vietlang-windows-x64.exe"
 
 # 2. Install Binary (Local Target or GitHub Release)
 if (Test-Path "target\release\vietlang.exe") {
@@ -44,17 +44,17 @@ if (Test-Path "target\release\vietlang.exe") {
 }
 
 # 3. Sync Standard Library
-Write-Host "Syncing 55 Standard Library modules into $StdDir..." -ForegroundColor Green
+Write-Host "Syncing 60+ Standard Library modules into $StdDir..." -ForegroundColor Green
 if (Test-Path "std") {
     Copy-Item -Recurse -Force "std\*" $StdDir
 } else {
     try {
-        $ZipUrl = "https://github.com/$Repo/archive/refs/heads/main.zip"
-        $ZipPath = Join-Path $env:TEMP "vietlang-main.zip"
+        $ZipUrl = "https://github.com/$Repo/archive/refs/tags/v$Version.zip"
+        $ZipPath = Join-Path $env:TEMP "vietlang-$Version.zip"
         $ExtractPath = Join-Path $env:TEMP "vietlang-extract"
         Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipPath -UseBasicParsing
         Expand-Archive -Path $ZipPath -DestinationPath $ExtractPath -Force
-        Copy-Item -Recurse -Force (Join-Path $ExtractPath "vietlang-main\std\*") $StdDir
+        Copy-Item -Recurse -Force (Join-Path $ExtractPath "vietlang-$Version\std\*") $StdDir
         Remove-Item -Recurse -Force $ZipPath, $ExtractPath -ErrorAction SilentlyContinue
     } catch {
         Write-Host "Warning: Could not fetch stdlib remote archive." -ForegroundColor Yellow
@@ -75,11 +75,11 @@ $env:VIETLANG_STD = $StdDir
 Write-Host ""
 Write-Host " VietLang installed successfully on Windows!" -ForegroundColor Green
 Write-Host "   Binary:   $ExePath" -ForegroundColor Yellow
-Write-Host "   Standard: $StdDir (55 modules)" -ForegroundColor Yellow
+Write-Host "   Standard: $StdDir (60+ modules)" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Quickstart commands:" -ForegroundColor White
 Write-Host "  vietlang                  # Start interactive REPL" -ForegroundColor Cyan
-Write-Host "  vietlang doc              # Browse all 55 standard modules" -ForegroundColor Cyan
+Write-Host "  vietlang doc              # Browse standard modules" -ForegroundColor Cyan
 Write-Host "  vietlang new my_app       # Scaffold a Clean Architecture backend service" -ForegroundColor Cyan
 Write-Host "  vietlang dev              # Start development server" -ForegroundColor Cyan
 Write-Host "  vietlang build src/main.vl# Compile to standalone executable" -ForegroundColor Cyan

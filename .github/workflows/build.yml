@@ -28,6 +28,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Run Core Cargo Tests
         run: cargo test --all
+      - name: Run Deterministic Mutation Fuzzing
+        run: cargo run -- fuzz --iterations 10000 --seed 1447642452
       - name: Run P0 Security Conformance Smoke Test
         run: cargo run -- tests/p0_security.vl
       - name: Run HTTP/1.1 Runtime Smoke Test
@@ -45,6 +47,21 @@ jobs:
           done
           grep -Eq '"protocol"[[:space:]]*:[[:space:]]*"HTTP/1.1"' /tmp/vietlang-response.json
           grep -qi '^x-content-type-options: nosniff' <(curl --silent --dump-header - --output /dev/null http://127.0.0.1:18080/health)
+          VIETLANG_LOAD_URL=http://127.0.0.1:18080/health \
+            VIETLANG_LOAD_REQUESTS=500 VIETLANG_LOAD_CONCURRENCY=32 \
+            scripts/load_soak.sh
+          kill -INT "$server_pid"
+          wait "$server_pid"
+      - name: Run Async WebSocket Runtime Smoke Test
+        run: |
+          target/debug/vietlang tests/websocket_runtime_smoke.vl > /tmp/vietlang-ws.log 2>&1 &
+          server_pid=$!
+          trap 'kill -INT "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/ >/dev/null; then break; fi
+            sleep 0.2
+          done
+          python3 tests/websocket_client_smoke.py
           kill -INT "$server_pid"
           wait "$server_pid"
       - name: Run VietLang Integration Tests
@@ -145,11 +162,12 @@ jobs:
           path: artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
+          body_path: docs/release-0.3.0-alpha.1.md
           files: |
             artifacts/**/*
         env:

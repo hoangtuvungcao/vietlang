@@ -78,6 +78,20 @@ mod tests {
     }
 
     #[test]
+    fn builtin_generic_option_and_result_construct_and_match() {
+        let option = execute(
+            "let value: Option<Int> = Some(42)\nmatch value { Some(number) => number, None => 0 }",
+        )
+        .unwrap();
+        assert_eq!(option, Value::Int(42));
+        let result = execute(
+            "let value: Result<Int, String> = Err(\"no\")\nmatch value { Ok(number) => number, Err(message) => len(message) }",
+        )
+        .unwrap();
+        assert_eq!(result, Value::Int(2));
+    }
+
+    #[test]
     fn enum_equality_includes_the_declaring_type() {
         let left = Value::EnumVariant {
             type_name: "Left".into(),
@@ -145,7 +159,31 @@ impl Interpreter {
             base_dir: None,
         };
         interp.register_builtins();
+        interp.register_core_adts();
         interp
+    }
+
+    fn register_core_adts(&mut self) {
+        for (type_name, variant) in [("Option", "Some"), ("Result", "Ok"), ("Result", "Err")] {
+            self.env.define(
+                variant,
+                Value::EnumConstructor {
+                    type_name: type_name.to_string(),
+                    variant: variant.to_string(),
+                    arity: 1,
+                },
+                false,
+            );
+        }
+        self.env.define(
+            "None",
+            Value::EnumVariant {
+                type_name: "Option".to_string(),
+                variant: "None".to_string(),
+                fields: Vec::new(),
+            },
+            false,
+        );
     }
 
     fn register_builtins(&mut self) {
@@ -225,6 +263,7 @@ impl Interpreter {
             ("builtin_sqlite_execute", None),
             ("builtin_sqlite_query", None),
             ("builtin_sqlite_close", Some(1)),
+            ("sqlite_migrate", Some(2)),
             // MySQL Native Driver Builtins
             ("mysql_connect", None),
             ("mysql_exec", Some(2)),
@@ -235,6 +274,136 @@ impl Interpreter {
             ("builtin_mysql_exec", Some(2)),
             ("builtin_mysql_execute", None),
             ("builtin_mysql_query", None),
+            ("builtin_mysql_close", Some(1)),
+            ("postgres_connect", None),
+            ("postgres_exec", None),
+            ("postgres_execute", None),
+            ("postgres_query", None),
+            ("postgres_ping", Some(1)),
+            ("postgres_close", Some(1)),
+            ("builtin_postgres_connect", None),
+            ("builtin_postgres_exec", None),
+            ("builtin_postgres_query", None),
+            ("builtin_postgres_ping", Some(1)),
+            ("builtin_postgres_close", Some(1)),
+            ("db_migration_lock", None),
+            // MongoDB builtins
+            ("builtin_mongo_connect", None),
+            ("builtin_mongo_close", Some(1)),
+            ("builtin_mongo_ping", Some(1)),
+            ("builtin_mongo_find", None),
+            ("builtin_mongo_find_one", None),
+            ("builtin_mongo_insert_one", None),
+            ("builtin_mongo_insert_many", None),
+            ("builtin_mongo_update_one", None),
+            ("builtin_mongo_update_many", None),
+            ("builtin_mongo_delete_one", None),
+            ("builtin_mongo_delete_many", None),
+            ("builtin_mongo_count", None),
+            ("builtin_mongo_aggregate", None),
+            ("builtin_mongo_create_index", None),
+            ("builtin_mongo_list_indexes", None),
+            ("builtin_mongo_drop_index", None),
+            ("builtin_mongo_list_collections", Some(1)),
+            ("builtin_mongo_create_collection", None),
+            ("builtin_mongo_drop_collection", None),
+            ("builtin_mongo_begin_transaction", Some(1)),
+            ("builtin_mongo_commit_transaction", Some(1)),
+            ("builtin_mongo_abort_transaction", Some(1)),
+            // Redis builtins
+            ("builtin_redis_connect", None),
+            ("builtin_redis_connect_auth", None),
+            ("builtin_redis_close", Some(1)),
+            ("builtin_redis_ping", Some(1)),
+            ("builtin_redis_flush_db", Some(1)),
+            ("builtin_redis_set", None),
+            ("builtin_redis_setex", None),
+            ("builtin_redis_setnx", None),
+            ("builtin_redis_get", Some(2)),
+            ("builtin_redis_mset", None),
+            ("builtin_redis_mget", None),
+            ("builtin_redis_del", None),
+            ("builtin_redis_exists", Some(2)),
+            ("builtin_redis_expire", None),
+            ("builtin_redis_ttl", Some(2)),
+            ("builtin_redis_persist", Some(2)),
+            ("builtin_redis_keys", None),
+            ("builtin_redis_type", Some(2)),
+            ("builtin_redis_rename", Some(3)),
+            ("builtin_redis_incr", Some(2)),
+            ("builtin_redis_decr", Some(2)),
+            ("builtin_redis_incrby", None),
+            ("builtin_redis_lpush", None),
+            ("builtin_redis_rpush", None),
+            ("builtin_redis_lpop", Some(2)),
+            ("builtin_redis_rpop", Some(2)),
+            ("builtin_redis_lrange", None),
+            ("builtin_redis_llen", Some(2)),
+            ("builtin_redis_hset", None),
+            ("builtin_redis_hget", Some(3)),
+            ("builtin_redis_hgetall", Some(2)),
+            ("builtin_redis_hdel", Some(3)),
+            ("builtin_redis_hexists", Some(3)),
+            ("builtin_redis_hkeys", Some(2)),
+            ("builtin_redis_hvals", Some(2)),
+            ("builtin_redis_sadd", None),
+            ("builtin_redis_srem", None),
+            ("builtin_redis_sismember", Some(3)),
+            ("builtin_redis_smembers", Some(2)),
+            ("builtin_redis_scard", Some(2)),
+            ("builtin_redis_publish", Some(3)),
+            ("builtin_redis_pipeline", None),
+            // ClickHouse builtins
+            ("builtin_clickhouse_connect", None),
+            ("builtin_clickhouse_connect_url", Some(1)),
+            ("builtin_clickhouse_close", Some(1)),
+            ("builtin_clickhouse_ping", Some(1)),
+            ("builtin_clickhouse_query", None),
+            ("builtin_clickhouse_execute", None),
+            ("builtin_clickhouse_insert", None),
+            // Cassandra builtins
+            ("builtin_cassandra_connect", None),
+            ("builtin_cassandra_connect_auth", None),
+            ("builtin_cassandra_close", Some(1)),
+            ("builtin_cassandra_ping", Some(1)),
+            ("builtin_cassandra_query", None),
+            ("builtin_cassandra_execute", None),
+            ("builtin_cassandra_prepare", Some(2)),
+            ("builtin_cassandra_execute_prepared", None),
+            ("builtin_cassandra_batch", None),
+            ("builtin_cassandra_query_paged", None),
+            ("builtin_cassandra_replication_string", None),
+            // Elasticsearch builtins
+            ("builtin_elastic_connect", None),
+            ("builtin_elastic_connect_basic", None),
+            ("builtin_elastic_connect_cloud", None),
+            ("builtin_elastic_close", Some(1)),
+            ("builtin_elastic_ping", Some(1)),
+            ("builtin_elastic_info", Some(1)),
+            ("builtin_elastic_create_index", None),
+            ("builtin_elastic_delete_index", Some(2)),
+            ("builtin_elastic_index_exists", Some(2)),
+            ("builtin_elastic_list_indexes", None),
+            ("builtin_elastic_get_mapping", Some(2)),
+            ("builtin_elastic_update_mapping", None),
+            ("builtin_elastic_get_settings", Some(2)),
+            ("builtin_elastic_refresh", Some(2)),
+            ("builtin_elastic_index_doc", None),
+            ("builtin_elastic_index_doc_auto", None),
+            ("builtin_elastic_get_doc", Some(3)),
+            ("builtin_elastic_doc_exists", Some(3)),
+            ("builtin_elastic_update_doc", None),
+            ("builtin_elastic_delete_doc", Some(3)),
+            ("builtin_elastic_bulk", None),
+            ("builtin_elastic_search", None),
+            ("builtin_elastic_delete_by_query", None),
+            ("builtin_elastic_update_by_query", None),
+            ("builtin_elastic_scroll_start", None),
+            ("builtin_elastic_scroll_next", None),
+            ("builtin_elastic_scroll_clear", Some(2)),
+            ("builtin_elastic_cluster_health", Some(1)),
+            ("builtin_elastic_cluster_stats", Some(1)),
+            ("builtin_elastic_nodes_info", Some(1)),
             // HTTP & Network Clients & WebSockets & Security
             ("http_fetch", None),
             ("csv_parse", Some(1)),
@@ -1853,6 +2022,7 @@ impl Interpreter {
             "sqlite_close" | "builtin_sqlite_close" => {
                 crate::stdlib::builtin_sqlite_close(args, span.line, span.column)
             }
+            "sqlite_migrate" => crate::stdlib::builtin_sqlite_migrate(args, span.line, span.column),
 
             "mysql_connect" | "builtin_mysql_connect" => {
                 crate::stdlib::builtin_mysql_connect(args, span.line, span.column)
@@ -1869,6 +2039,24 @@ impl Interpreter {
             "mysql_close" | "builtin_mysql_close" => {
                 crate::stdlib::builtin_mysql_close(args, span.line, span.column)
             }
+            "postgres_connect" | "builtin_postgres_connect" => {
+                crate::stdlib::builtin_postgres_connect(args, span.line, span.column)
+            }
+            "postgres_exec" | "postgres_execute" | "builtin_postgres_exec" => {
+                crate::stdlib::builtin_postgres_exec(args, span.line, span.column)
+            }
+            "postgres_query" | "builtin_postgres_query" => {
+                crate::stdlib::builtin_postgres_query(args, span.line, span.column)
+            }
+            "postgres_ping" | "builtin_postgres_ping" => {
+                crate::stdlib::builtin_postgres_ping(args, span.line, span.column)
+            }
+            "postgres_close" | "builtin_postgres_close" => {
+                crate::stdlib::builtin_postgres_close(args, span.line, span.column)
+            }
+            "db_migration_lock" => {
+                crate::stdlib::builtin_db_migration_lock(args, span.line, span.column)
+            }
 
             "http_fetch" | "builtin_http_fetch" => {
                 crate::stdlib::builtin_http_fetch(args, span.line, span.column)
@@ -1882,12 +2070,127 @@ impl Interpreter {
             "ws_enable" | "builtin_ws_enable" => {
                 crate::stdlib::builtin_ws_enable(args, span.line, span.column)
             }
-            "ws_broadcast" | "builtin_ws_broadcast" => {
-                crate::stdlib::builtin_ws_broadcast(args, span.line, span.column)
-            }
-            "html_escape" | "builtin_html_escape" => {
-                crate::stdlib::builtin_html_escape(args, span.line, span.column)
-            }
+            // MongoDB builtins
+            "builtin_mongo_connect" => crate::stdlib::builtin_mongo_connect(args, span.line, span.column),
+            "builtin_mongo_close" => crate::stdlib::builtin_mongo_close(args, span.line, span.column),
+            "builtin_mongo_ping" => crate::stdlib::builtin_mongo_ping(args, span.line, span.column),
+            "builtin_mongo_find" => crate::stdlib::builtin_mongo_find(args, span.line, span.column),
+            "builtin_mongo_find_one" => crate::stdlib::builtin_mongo_find_one(args, span.line, span.column),
+            "builtin_mongo_insert_one" => crate::stdlib::builtin_mongo_insert_one(args, span.line, span.column),
+            "builtin_mongo_insert_many" => crate::stdlib::builtin_mongo_insert_many(args, span.line, span.column),
+            "builtin_mongo_update_one" => crate::stdlib::builtin_mongo_update_one(args, span.line, span.column),
+            "builtin_mongo_update_many" => crate::stdlib::builtin_mongo_update_many(args, span.line, span.column),
+            "builtin_mongo_delete_one" => crate::stdlib::builtin_mongo_delete_one(args, span.line, span.column),
+            "builtin_mongo_delete_many" => crate::stdlib::builtin_mongo_delete_many(args, span.line, span.column),
+            "builtin_mongo_count" => crate::stdlib::builtin_mongo_count(args, span.line, span.column),
+            "builtin_mongo_aggregate" => crate::stdlib::builtin_mongo_aggregate(args, span.line, span.column),
+            "builtin_mongo_create_index" => crate::stdlib::builtin_mongo_create_index(args, span.line, span.column),
+            "builtin_mongo_list_indexes" => crate::stdlib::builtin_mongo_list_indexes(args, span.line, span.column),
+            "builtin_mongo_drop_index" => crate::stdlib::builtin_mongo_drop_index(args, span.line, span.column),
+            "builtin_mongo_list_collections" => crate::stdlib::builtin_mongo_list_collections(args, span.line, span.column),
+            "builtin_mongo_create_collection" => crate::stdlib::builtin_mongo_create_collection(args, span.line, span.column),
+            "builtin_mongo_drop_collection" => crate::stdlib::builtin_mongo_drop_collection(args, span.line, span.column),
+            "builtin_mongo_begin_transaction" => crate::stdlib::builtin_mongo_begin_transaction(args, span.line, span.column),
+            "builtin_mongo_commit_transaction" => crate::stdlib::builtin_mongo_commit_transaction(args, span.line, span.column),
+            "builtin_mongo_abort_transaction" => crate::stdlib::builtin_mongo_abort_transaction(args, span.line, span.column),
+
+            // Redis builtins
+            "builtin_redis_connect" => crate::stdlib::builtin_redis_connect(args, span.line, span.column),
+            "builtin_redis_connect_auth" => crate::stdlib::builtin_redis_connect_auth(args, span.line, span.column),
+            "builtin_redis_close" => crate::stdlib::builtin_redis_close(args, span.line, span.column),
+            "builtin_redis_ping" => crate::stdlib::builtin_redis_ping(args, span.line, span.column),
+            "builtin_redis_flush_db" => crate::stdlib::builtin_redis_flush_db(args, span.line, span.column),
+            "builtin_redis_set" => crate::stdlib::builtin_redis_set(args, span.line, span.column),
+            "builtin_redis_setex" => crate::stdlib::builtin_redis_setex(args, span.line, span.column),
+            "builtin_redis_setnx" => crate::stdlib::builtin_redis_setnx(args, span.line, span.column),
+            "builtin_redis_get" => crate::stdlib::builtin_redis_get(args, span.line, span.column),
+            "builtin_redis_mset" => crate::stdlib::builtin_redis_mset(args, span.line, span.column),
+            "builtin_redis_mget" => crate::stdlib::builtin_redis_mget(args, span.line, span.column),
+            "builtin_redis_del" => crate::stdlib::builtin_redis_del(args, span.line, span.column),
+            "builtin_redis_exists" => crate::stdlib::builtin_redis_exists(args, span.line, span.column),
+            "builtin_redis_expire" => crate::stdlib::builtin_redis_expire(args, span.line, span.column),
+            "builtin_redis_ttl" => crate::stdlib::builtin_redis_ttl(args, span.line, span.column),
+            "builtin_redis_persist" => crate::stdlib::builtin_redis_persist(args, span.line, span.column),
+            "builtin_redis_keys" => crate::stdlib::builtin_redis_keys(args, span.line, span.column),
+            "builtin_redis_type" => crate::stdlib::builtin_redis_type(args, span.line, span.column),
+            "builtin_redis_rename" => crate::stdlib::builtin_redis_rename(args, span.line, span.column),
+            "builtin_redis_incr" => crate::stdlib::builtin_redis_incr(args, span.line, span.column),
+            "builtin_redis_decr" => crate::stdlib::builtin_redis_decr(args, span.line, span.column),
+            "builtin_redis_incrby" => crate::stdlib::builtin_redis_incrby(args, span.line, span.column),
+            "builtin_redis_lpush" => crate::stdlib::builtin_redis_lpush(args, span.line, span.column),
+            "builtin_redis_rpush" => crate::stdlib::builtin_redis_rpush(args, span.line, span.column),
+            "builtin_redis_lpop" => crate::stdlib::builtin_redis_lpop(args, span.line, span.column),
+            "builtin_redis_rpop" => crate::stdlib::builtin_redis_rpop(args, span.line, span.column),
+            "builtin_redis_lrange" => crate::stdlib::builtin_redis_lrange(args, span.line, span.column),
+            "builtin_redis_llen" => crate::stdlib::builtin_redis_llen(args, span.line, span.column),
+            "builtin_redis_hset" => crate::stdlib::builtin_redis_hset(args, span.line, span.column),
+            "builtin_redis_hget" => crate::stdlib::builtin_redis_hget(args, span.line, span.column),
+            "builtin_redis_hgetall" => crate::stdlib::builtin_redis_hgetall(args, span.line, span.column),
+            "builtin_redis_hdel" => crate::stdlib::builtin_redis_hdel(args, span.line, span.column),
+            "builtin_redis_hexists" => crate::stdlib::builtin_redis_hexists(args, span.line, span.column),
+            "builtin_redis_hkeys" => crate::stdlib::builtin_redis_hkeys(args, span.line, span.column),
+            "builtin_redis_hvals" => crate::stdlib::builtin_redis_hvals(args, span.line, span.column),
+            "builtin_redis_sadd" => crate::stdlib::builtin_redis_sadd(args, span.line, span.column),
+            "builtin_redis_srem" => crate::stdlib::builtin_redis_srem(args, span.line, span.column),
+            "builtin_redis_sismember" => crate::stdlib::builtin_redis_sismember(args, span.line, span.column),
+            "builtin_redis_smembers" => crate::stdlib::builtin_redis_smembers(args, span.line, span.column),
+            "builtin_redis_scard" => crate::stdlib::builtin_redis_scard(args, span.line, span.column),
+            "builtin_redis_publish" => crate::stdlib::builtin_redis_publish(args, span.line, span.column),
+            "builtin_redis_pipeline" => crate::stdlib::builtin_redis_pipeline(args, span.line, span.column),
+
+            // ClickHouse builtins
+            "builtin_clickhouse_connect" => crate::stdlib::builtin_clickhouse_connect(args, span.line, span.column),
+            "builtin_clickhouse_connect_url" => crate::stdlib::builtin_clickhouse_connect_url(args, span.line, span.column),
+            "builtin_clickhouse_close" => crate::stdlib::builtin_clickhouse_close(args, span.line, span.column),
+            "builtin_clickhouse_ping" => crate::stdlib::builtin_clickhouse_ping(args, span.line, span.column),
+            "builtin_clickhouse_query" => crate::stdlib::builtin_clickhouse_query(args, span.line, span.column),
+            "builtin_clickhouse_execute" => crate::stdlib::builtin_clickhouse_execute(args, span.line, span.column),
+            "builtin_clickhouse_insert" => crate::stdlib::builtin_clickhouse_insert(args, span.line, span.column),
+
+            // Cassandra builtins
+            "builtin_cassandra_connect" => crate::stdlib::builtin_cassandra_connect(args, span.line, span.column),
+            "builtin_cassandra_connect_auth" => crate::stdlib::builtin_cassandra_connect_auth(args, span.line, span.column),
+            "builtin_cassandra_close" => crate::stdlib::builtin_cassandra_close(args, span.line, span.column),
+            "builtin_cassandra_ping" => crate::stdlib::builtin_cassandra_ping(args, span.line, span.column),
+            "builtin_cassandra_query" => crate::stdlib::builtin_cassandra_query(args, span.line, span.column),
+            "builtin_cassandra_execute" => crate::stdlib::builtin_cassandra_execute(args, span.line, span.column),
+            "builtin_cassandra_prepare" => crate::stdlib::builtin_cassandra_prepare(args, span.line, span.column),
+            "builtin_cassandra_execute_prepared" => crate::stdlib::builtin_cassandra_execute_prepared(args, span.line, span.column),
+            "builtin_cassandra_batch" => crate::stdlib::builtin_cassandra_batch(args, span.line, span.column),
+            "builtin_cassandra_query_paged" => crate::stdlib::builtin_cassandra_query_paged(args, span.line, span.column),
+            "builtin_cassandra_replication_string" => crate::stdlib::builtin_cassandra_replication_string(args, span.line, span.column),
+
+            // Elasticsearch builtins
+            "builtin_elastic_connect" => crate::stdlib::builtin_elastic_connect(args, span.line, span.column),
+            "builtin_elastic_connect_basic" => crate::stdlib::builtin_elastic_connect_basic(args, span.line, span.column),
+            "builtin_elastic_connect_cloud" => crate::stdlib::builtin_elastic_connect_cloud(args, span.line, span.column),
+            "builtin_elastic_close" => crate::stdlib::builtin_elastic_close(args, span.line, span.column),
+            "builtin_elastic_ping" => crate::stdlib::builtin_elastic_ping(args, span.line, span.column),
+            "builtin_elastic_info" => crate::stdlib::builtin_elastic_info(args, span.line, span.column),
+            "builtin_elastic_create_index" => crate::stdlib::builtin_elastic_create_index(args, span.line, span.column),
+            "builtin_elastic_delete_index" => crate::stdlib::builtin_elastic_delete_index(args, span.line, span.column),
+            "builtin_elastic_index_exists" => crate::stdlib::builtin_elastic_index_exists(args, span.line, span.column),
+            "builtin_elastic_list_indexes" => crate::stdlib::builtin_elastic_list_indexes(args, span.line, span.column),
+            "builtin_elastic_get_mapping" => crate::stdlib::builtin_elastic_get_mapping(args, span.line, span.column),
+            "builtin_elastic_update_mapping" => crate::stdlib::builtin_elastic_update_mapping(args, span.line, span.column),
+            "builtin_elastic_get_settings" => crate::stdlib::builtin_elastic_get_settings(args, span.line, span.column),
+            "builtin_elastic_refresh" => crate::stdlib::builtin_elastic_refresh(args, span.line, span.column),
+            "builtin_elastic_index_doc" => crate::stdlib::builtin_elastic_index_doc(args, span.line, span.column),
+            "builtin_elastic_index_doc_auto" => crate::stdlib::builtin_elastic_index_doc_auto(args, span.line, span.column),
+            "builtin_elastic_get_doc" => crate::stdlib::builtin_elastic_get_doc(args, span.line, span.column),
+            "builtin_elastic_doc_exists" => crate::stdlib::builtin_elastic_doc_exists(args, span.line, span.column),
+            "builtin_elastic_update_doc" => crate::stdlib::builtin_elastic_update_doc(args, span.line, span.column),
+            "builtin_elastic_delete_doc" => crate::stdlib::builtin_elastic_delete_doc(args, span.line, span.column),
+            "builtin_elastic_bulk" => crate::stdlib::builtin_elastic_bulk(args, span.line, span.column),
+            "builtin_elastic_search" => crate::stdlib::builtin_elastic_search(args, span.line, span.column),
+            "builtin_elastic_delete_by_query" => crate::stdlib::builtin_elastic_delete_by_query(args, span.line, span.column),
+            "builtin_elastic_update_by_query" => crate::stdlib::builtin_elastic_update_by_query(args, span.line, span.column),
+            "builtin_elastic_scroll_start" => crate::stdlib::builtin_elastic_scroll_start(args, span.line, span.column),
+            "builtin_elastic_scroll_next" => crate::stdlib::builtin_elastic_scroll_next(args, span.line, span.column),
+            "builtin_elastic_scroll_clear" => crate::stdlib::builtin_elastic_scroll_clear(args, span.line, span.column),
+            "builtin_elastic_cluster_health" => crate::stdlib::builtin_elastic_cluster_health(args, span.line, span.column),
+            "builtin_elastic_cluster_stats" => crate::stdlib::builtin_elastic_cluster_stats(args, span.line, span.column),
+            "builtin_elastic_nodes_info" => crate::stdlib::builtin_elastic_nodes_info(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

@@ -1,8 +1,5 @@
 // ========================================================================
-// VietLang MySQL compatibility API (disabled in 0.2.0-alpha.2)
-// The previous synchronous native driver has been removed because its dependency
-// graph contains a RustSec-unsound cache crate. These calls fail explicitly until
-// a reviewed async pool implementation replaces it.
+// VietLang MySQL async SQLx pool API (0.3.0-alpha.1)
 // ========================================================================
 
 fn mysql_parse_dsn(dsn: String) {

@@ -1,0 +1,6 @@
+import std.ws
+
+ws_init("/ws")
+http_listen(18081, fn(req) {
+    return "{\"status\":\"ok\"}"
+})

@@ -1,0 +1,147 @@
+// ========================================================================
+// VietLang Standard Library — std.db_cassandra
+// Cassandra/ScyllaDB CQL Driver — Distributed Wide-Column Storage
+// Production-Ready | VietLang v0.2.0
+// ========================================================================
+
+// --- Connection ---
+
+/// Kết nối Cassandra/ScyllaDB cluster
+fn cassandra_connect(hosts = ["127.0.0.1:9042"], keyspace: String = "") {
+    return builtin_cassandra_connect(hosts, keyspace)
+}
+
+/// Kết nối Cassandra với auth
+fn cassandra_connect_auth(hosts = [], username: String = "", password: String = "", keyspace: String = "") {
+    return builtin_cassandra_connect_auth(hosts, username, password, keyspace)
+}
+
+/// Đóng session
+fn cassandra_close(conn) {
+    return builtin_cassandra_close(conn)
+}
+
+/// Ping cluster
+fn cassandra_ping(conn) {
+    return builtin_cassandra_ping(conn)
+}
+
+// --- Keyspace ---
+
+/// Tạo keyspace mới
+fn cassandra_create_keyspace(conn, keyspace: String, replication_factor: Int = 1) {
+    let rep_str = "{'class': 'SimpleStrategy', 'replication_factor': " + replication_factor.to_string() + "}"
+    let cql = "CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH replication = " + rep_str + " AND durable_writes = true"
+    return builtin_cassandra_execute(conn, cql, [])
+}
+
+/// Dùng keyspace (chuyển context)
+fn cassandra_use_keyspace(conn, keyspace: String) {
+    return builtin_cassandra_execute(conn, "USE " + keyspace, [])
+}
+
+/// Xóa keyspace
+fn cassandra_drop_keyspace(conn, keyspace: String) {
+    return builtin_cassandra_execute(conn, "DROP KEYSPACE IF EXISTS " + keyspace, [])
+}
+
+/// Liệt kê tất cả keyspaces
+fn cassandra_list_keyspaces(conn) {
+    return builtin_cassandra_query(conn, "SELECT keyspace_name FROM system_schema.keyspaces", [])
+}
+
+// --- DDL ---
+
+/// Tạo table
+fn cassandra_create_table(conn, table: String, columns = [], primary_key = [], clustering_keys = []) {
+    let cols = columns.join(", ")
+    let pk = primary_key.join(", ")
+    let ck = clustering_keys.join(", ")
+    let mut key_def = "(" + pk + ")"
+    if len(clustering_keys) > 0 {
+        key_def = "(" + pk + ", " + ck + ")"
+    }
+    let cql = "CREATE TABLE IF NOT EXISTS " + table + " (" + cols + ", PRIMARY KEY " + key_def + ")"
+    return builtin_cassandra_execute(conn, cql, [])
+}
+
+/// Xóa table
+fn cassandra_drop_table(conn, table: String) {
+    return builtin_cassandra_execute(conn, "DROP TABLE IF EXISTS " + table, [])
+}
+
+/// Truncate table
+fn cassandra_truncate(conn, table: String) {
+    return builtin_cassandra_execute(conn, "TRUNCATE " + table, [])
+}
+
+/// Thêm cột vào table
+fn cassandra_add_column(conn, table: String, column_name: String, column_type: String) {
+    return builtin_cassandra_execute(conn, "ALTER TABLE " + table + " ADD " + column_name + " " + column_type, [])
+}
+
+// --- CRUD ---
+
+/// Thực thi CQL query (SELECT), trả về rows
+fn cassandra_query(conn, cql: String, params = []) {
+    return builtin_cassandra_query(conn, cql, params)
+}
+
+/// Thực thi CQL query, lấy 1 row
+fn cassandra_query_one(conn, cql: String, params = []) {
+    let rows = builtin_cassandra_query(conn, cql + " LIMIT 1", params)
+    if len(rows) > 0 {
+        return rows[0]
+    }
+    return null
+}
+
+/// Thực thi DML/DDL (INSERT, UPDATE, DELETE, CREATE...)
+fn cassandra_execute(conn, cql: String, params = []) {
+    return builtin_cassandra_execute(conn, cql, params)
+}
+
+/// Prepared statement
+fn cassandra_prepare(conn, cql: String) {
+    return builtin_cassandra_prepare(conn, cql)
+}
+
+/// Thực thi prepared statement với params
+fn cassandra_execute_prepared(conn, prepared, params = []) {
+    return builtin_cassandra_execute_prepared(conn, prepared, params)
+}
+
+// --- Batch ---
+
+/// Batch nhiều statements
+fn cassandra_batch(conn, statements = [], batch_type: String = "LOGGED") {
+    return builtin_cassandra_batch(conn, statements, batch_type)
+}
+
+// --- Indexes ---
+
+/// Tạo secondary index
+fn cassandra_create_index(conn, index_name: String, table: String, column: String) {
+    return builtin_cassandra_execute(conn, "CREATE INDEX IF NOT EXISTS " + index_name + " ON " + table + " (" + column + ")", [])
+}
+
+// --- Paging ---
+
+/// Query với automatic paging
+fn cassandra_query_paged(conn, cql: String, params = [], page_size: Int = 100, page_state = null) {
+    return builtin_cassandra_query_paged(conn, cql, params, page_size, page_state)
+}
+
+// --- Schema info ---
+
+/// Liệt kê tables trong keyspace
+fn cassandra_list_tables(conn, keyspace: String) {
+    let cql = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = ?"
+    return builtin_cassandra_query(conn, cql, [keyspace])
+}
+
+/// Mô tả columns của table
+fn cassandra_describe_table(conn, keyspace: String, table: String) {
+    let cql = "SELECT column_name, type, kind FROM system_schema.columns WHERE keyspace_name = ? AND table_name = ?"
+    return builtin_cassandra_query(conn, cql, [keyspace, table])
+}

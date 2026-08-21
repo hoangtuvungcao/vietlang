@@ -207,7 +207,7 @@ println(u.format_display())
 VietLang includes **30 pure-VietLang standard modules**:
 
 1. `std.db_sqlite`: SQLite in-memory and file-backed database engine with ACID transactions.
-2. `std.db_mysql`: disabled compatibility API pending a reviewed async driver;
+2. `std.db_mysql`: bounded async SQLx/Tokio/Rustls connection pool;
    it must not be presented as a working connection pool.
 3. `std.db_postgres`: PostgreSQL client, connection management, and health checks.
 4. `std.multipart`: Streaming multipart form-data and file upload parser.

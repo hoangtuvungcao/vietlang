@@ -1,6 +1,6 @@
 # VietLang Upgrade Roadmap
 
-VietLang 0.2.0-alpha.2 is an experimental language/runtime. This roadmap separates
+VietLang 0.3.0-alpha.1 is an experimental language/runtime. This roadmap separates
 correctness and safety work from feature expansion. A phase is complete only
 when all of its acceptance criteria are automated in CI.
 
@@ -51,7 +51,9 @@ formats:
       Tokio, Rustls, Quinn, and h3 libraries.
 - [x] Add bounded concurrency, body/header/response limits, request timeout,
       graceful shutdown, secure response headers, TLS, and request isolation.
-- [ ] Pass HTTP protocol conformance, load, soak, and failure-injection suites.
+- [x] Add CI protocol smoke tests, async WebSocket handshake/frame coverage,
+      bounded HTTP load, deterministic mutation fuzzing, and a soak harness.
+- [ ] Complete an externally operated multi-hour failure-injection campaign.
 - [x] Add interpreter-versus-VM differential tests for the currently shared,
       documented compiler subset; every newly shared construct must extend it.
 
@@ -89,8 +91,9 @@ standalone bundling, imported modules, and the REPL now run semantic checks.
 The analyzer covers lexical scopes, mutability, local annotations, function
 arity/defaults/returns, exact local struct fields, method signatures and `self`,
 enum constructors/pattern payloads, and Bool/enum match exhaustiveness. Runtime
-arity checks remain defense in depth. Typed module interfaces, generic
-substitution and a resolved typed IR are still required for P1 exit. Lexical
+arity checks remain defense in depth. The 0.3 frontend adds a canonical module
+graph, cycle rejection, typed IR, and generic substitution for built-in
+`Option`/`Result`. Lexical
 closure capture, recursion, mutable sibling captures, typed/inferred lambda
 returns, and a differential suite for the current VM subset are implemented.
 
@@ -98,16 +101,17 @@ returns, and a differential suite for the current VM subset are implemented.
 
 Target outcome: a bounded, observable, protocol-conformant service runtime.
 
-1. Replace the legacy WebSocket implementation with a maintained async implementation.
+1. [x] Replace the production WebSocket path with Axum/Tokio/Tungstenite and
+   bounded broadcast backpressure.
 2. Complete cancellation propagation for timed-out handlers and database calls.
 3. Add connection/read/write timeouts plus protocol conformance tests;
    request timeout, body/header/response limits, graceful shutdown, and
    overload rejection are implemented.
-4. Add bounded database pools, prepared statements, transaction/rollback tests,
-   migration locking, cancellation, and stable error mapping.
-   Native MySQL is currently disabled rather than shipping its RustSec-unsound
-   synchronous dependency; replace it with a reviewed async pool before re-enabling.
-5. Fuzz lexer, parser, JSON, HTTP inputs, manifests, and bytecode decoding.
+4. [x] Add bounded SQLx PostgreSQL/MySQL pools, parameter binding, acquisition
+   timeouts, health checks, explicit close, and SQLite/server migration locks.
+   Multi-statement callback transaction ergonomics remain future language API work.
+5. [x] Fuzz lexer, parser, JSON, HTTP configuration, and manifests with a
+   deterministic CI mutation harness; malformed bytecode has panic-free tests.
 6. Publish reproducible latency, throughput, memory, and concurrency benchmarks.
 
 Exit criteria: protocol suites, fuzzing, soak tests, and failure-injection tests
@@ -117,10 +121,10 @@ run in CI; performance statements link to reproducible benchmark artifacts.
 
 Target outcome: reproducible builds and a usable daily development workflow.
 
-1. Add a lockfile with immutable source revisions and cryptographic content hashes.
+1. [x] Add a lockfile with immutable source revisions and cryptographic content hashes.
 2. Add dependency resolution, signed registry metadata, provenance, yanking, and
    a vulnerability/advisory process.
-3. Ship a formatter, LSP, documentation generator, debugger hooks, and stable
+3. [x] Ship a formatter, LSP, documentation generator, top-level source debugger, and stable
    machine-readable diagnostics.
 4. Continue self-hosting through semantic analysis and bytecode generation only
    after the Rust reference implementation has conformance coverage.
@@ -128,6 +132,7 @@ Target outcome: reproducible builds and a usable daily development workflow.
 Exit criteria: identical inputs and lockfiles resolve to identical verified
 dependency trees; editor tools consume the same compiler diagnostics as CI.
 
-Implemented hardening short of the P3 exit criteria: package names cannot escape
-the `modules/` directory, failed Git clone/pull/checkout operations abort, and
-publishing computes deterministic SHA-256 over the manifest and source tree.
+The installer rejects unsigned/placeholder metadata, resolves semver ranges to
+an exact release, verifies Ed25519 metadata and package SHA-256 before atomic
+activation, and records the Git revision in `vietlang.lock`. Registry
+yanking/provenance transparency and an independent ecosystem audit remain open.

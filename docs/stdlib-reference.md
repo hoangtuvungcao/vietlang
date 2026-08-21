@@ -161,12 +161,10 @@ Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.com/hoan
 - `sqlite_commit(db) -> Map`: Commits pending changes.
 - `sqlite_rollback(db) -> Map`: Rolls back to pre-transaction snapshot on failure.
 
-### `std.db_mysql` (disabled compatibility API)
-- Native connection/query calls return an explicit error in 0.2.0-alpha.2.
-- The synchronous driver was removed because its dependency graph contains a
-  RustSec-unsound `lru` release. A reviewed async driver/pool is required before
-  this module can be enabled again.
-- `mysql_parse_dsn` remains a string/configuration helper only.
+### `std.db_mysql` (async SQLx pool)
+- `mysql_connect_pool` creates a bounded lazy pool on Tokio/Rustls.
+- `mysql_execute` and `mysql_query` bind parameter arrays.
+- `mysql_ping` checks a live connection and `mysql_close` drains the pool.
 
 ### `std.db_postgres` (PostgreSQL Client & Schema Manager)
 - `postgres_parse_url(url: String) -> Map`: Parses PostgreSQL URL (`postgres://user:pass@host:5432/db`).

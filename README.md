@@ -9,7 +9,7 @@
  ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
  ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
  ║                                               __/ |        ║
- ║           Backend-First Language v0.2.0-alpha.2 |___/      ║
+ ║           Backend-First Language v0.3.0-alpha.1 |___/      ║
  ║              Type 'help' for usage, 'exit' to quit         ║
  ╚════════════════════════════════════════════════════════════╝
 ```
@@ -20,7 +20,7 @@
 
 [![Build](https://github.com/hoangtuvungcao/vietlang/actions/workflows/build.yml/badge.svg)](https://github.com/hoangtuvungcao/vietlang/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.2.0--alpha.2-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
+[![Version](https://img.shields.io/badge/version-0.3.0--alpha.1-blue.svg)](https://github.com/hoangtuvungcao/vietlang/releases)
 
 [Getting Started](docs/getting-started.md) | [Draft Specification](docs/language-specification.md) | [Stdlib Reference](docs/stdlib-reference.md) | [Contributing](CONTRIBUTING.md)
 
@@ -29,7 +29,7 @@
 ---
 
 > [!WARNING]
-> **Experimental status:** VietLang 0.2.0-alpha.2 is a language/runtime prototype. It is
+> **Experimental status:** VietLang 0.3.0-alpha.1 is a language/runtime prerelease. It is
 > suitable for learning, local demos, and non-sensitive experiments, but it has
 > not completed a security audit, protocol conformance program, or production
 > hardening. Do not use it for real authentication, payments, secrets, or public
@@ -59,9 +59,6 @@ VietLang is designed from the ground up for **backend development**. It combines
 ```bash
 # Linux & macOS (Bash, Zsh, Fish) — Auto-detects CPU & sets PATH
 curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
-
-# macOS (via Homebrew)
-brew tap hoangtuvungcao/vietlang && brew install vietlang
 
 # Windows (PowerShell)
 iex (irm https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.ps1)
@@ -257,11 +254,11 @@ passing `check` is therefore not a whole-program safety proof.
 
 ## Package Manager & Central Registry
 
-VietLang includes an experimental package-manager prototype and npm-style
-script execution. The current installer does not yet enforce immutable revisions
-or package checksums and must not be used as a production supply-chain boundary.
-Package names are constrained to a safe single path segment and failed Git
-operations stop installation instead of being reported as success:
+VietLang includes an experimental package manager and npm-style scripts. The
+installer resolves semver to an exact version, requires Ed25519 registry
+signatures and SHA-256 content checks, activates from an isolated staging
+directory, and records the immutable Git revision in `vietlang.lock`. Legacy
+unsigned registry entries fail closed:
 
 ```bash
 # 1-Command Backend Project Scaffolding (Clean Architecture, SQLite, Services & REST Routes)
@@ -280,7 +277,7 @@ vietlang install redis@1.2.0
 vietlang install auth@3.0.0
 
 # Interactive Documentation & API Inspector
-vietlang doc                       # Browse all 55 standard library modules
+vietlang doc                       # Browse standard library modules
 vietlang doc std.vietqr            # Inspect signatures, types, and comments for VietQR
 vietlang doc my_package            # Inspect custom or community package docs
 vietlang doc --all                 # Generate complete Markdown docs into docs/api/
@@ -383,7 +380,7 @@ vietlang --vm examples/bytecode_vm_demo.vl
 ```text
 vietlang/
 ├── src/                     # Core Rust Engine (Parser, Lexer, Interpreter, VM, Package Manager)
-├── std/                     # 55 Standard Library Modules (VietQR, VNPay, MoMo, Zalo, Concurrency, SQLite, GUI)
+├── std/                     # 60+ Standard Library Modules (including experimental/disabled integrations)
 ├── registry/                # Central Community Package Registry & GitOps Shards
 ├── bootstrap/               # Self-Hosting Compiler (Lexer & Parser written in VietLang)
 ├── examples/                # Curated Showcase Examples & Full Applications
@@ -423,7 +420,7 @@ make demo
 - [x] Phase 2: Memory & Concurrency (CSP Channels, Spawn, Mutex, Control Flow Signals)
 - [x] Phase 3: Standard Library (HTTP, DB, JSON, File I/O, Crypto, Logging, Env, Time, Collections)
 - [x] Phase 4: Extended Syntax (Compound Assignment += -= *= /= %=, Short-circuit && ||, Try/Catch)
-- [x] Phase 5 prototype library catalog (55 modules in `std.*`, with legacy modules clearly marked)
+- [x] Phase 5 prototype library catalog (60+ modules in `std.*`, with legacy modules clearly marked)
 - [x] Phase 6: Central Package Manager & Community Registry (`vietlang install`, `publish`, `search`)
 - [x] Phase 7: Standalone Source Bundler (`vietlang build` for Linux ELF & Windows `.exe`)
 - [x] Phase 8 prototype archive: VietQR/Zalo helpers and disabled legacy payment adapters

@@ -20,54 +20,37 @@ fn postgres_parse_url(url: String) {
 
 fn postgres_connect(url: String) {
     let cfg = postgres_parse_url(url)
-    let mut client = map_new()
-    client = map_set(client, "driver", "postgres")
-    client = map_set(client, "config", cfg)
-    client = map_set(client, "connected", true)
-    client = map_set(client, "status", "CONNECTED")
-    client = map_set(client, "active_queries", 0)
-    client = map_set(client, "in_transaction", false)
-    client = map_set(client, "schema", "public")
-    return client
+    return builtin_postgres_connect(url, cfg)
 }
 
 fn postgres_exec(client, sql_query: String) {
-    let count = map_get(client, "active_queries") + 1
-    return map_set(client, "active_queries", count)
+    return builtin_postgres_exec(client, sql_query, [])
 }
 
 fn postgres_execute(client, sql_query: String, params = []) {
-    let count = map_get(client, "active_queries") + 1
-    let updated = map_set(client, "active_queries", count)
-    return 1
+    return builtin_postgres_exec(client, sql_query, params)
 }
 
 fn postgres_query(client, query_sql: String, params = []) {
-    let count = map_get(client, "active_queries") + 1
-    let mut res = map_new()
-    res = map_set(res, "command", "SELECT")
-    res = map_set(res, "row_count", 0)
-    res = map_set(res, "data", [])
-    return res
+    return builtin_postgres_query(client, query_sql, params)
 }
 
 fn postgres_begin_transaction(client) {
-    return map_set(client, "in_transaction", true)
+    return builtin_postgres_exec(client, "BEGIN", [])
 }
 
 fn postgres_commit(client) {
-    return map_set(client, "in_transaction", false)
+    return builtin_postgres_exec(client, "COMMIT", [])
 }
 
 fn postgres_rollback(client) {
-    return map_set(client, "in_transaction", false)
+    return builtin_postgres_exec(client, "ROLLBACK", [])
 }
 
 fn postgres_is_healthy(client) -> Bool {
-    return map_get(client, "connected") == true
+    return postgres_ping(client)
 }
 
 fn postgres_close(client) {
-    let c1 = map_set(client, "connected", false)
-    return map_set(c1, "status", "CLOSED")
+    return builtin_postgres_close(client)
 }

@@ -85,6 +85,16 @@ impl SemanticAnalyzer {
         self.analyze_block(&program.statements)
     }
 
+    /// Returns the canonical type assigned to a top-level symbol.  This is the
+    /// stable bridge from semantic analysis into the typed IR and language
+    /// tooling; callers never need access to analyzer-internal type nodes.
+    pub fn symbol_type(&self, name: &str) -> Option<String> {
+        self.scopes
+            .first()?
+            .get(name)
+            .map(|binding| display_type(&binding.ty))
+    }
+
     fn register_builtins(&mut self) {
         self.define_builtin("len", vec![Type::Unknown], 1, Type::Int, false);
         self.define_builtin("type_of", vec![Type::Unknown], 1, Type::String, false);
@@ -654,6 +664,10 @@ impl SemanticAnalyzer {
             Expression::Identifier { name, .. } => Ok(self
                 .lookup(name)
                 .map(|binding| binding.ty.clone())
+                .or_else(|| match name.as_str() {
+                    "None" => Some(Type::Generic("Option".into(), vec![Type::Unknown])),
+                    _ => None,
+                })
                 .unwrap_or(Type::Unknown)),
             Expression::BinaryOp {
                 left,
@@ -685,11 +699,38 @@ impl SemanticAnalyzer {
                 arguments,
                 span,
             } => {
-                let callee_type = self.expression_type(callee)?;
                 let argument_types = arguments
                     .iter()
                     .map(|arg| self.expression_type(arg))
                     .collect::<VietResult<Vec<_>>>()?;
+                if let Expression::Identifier { name, .. } = callee.as_ref() {
+                    if self.lookup(name).is_none() {
+                        let result = match (name.as_str(), argument_types.as_slice()) {
+                            ("Some", [value]) => {
+                                Some(Type::Generic("Option".into(), vec![value.clone()]))
+                            }
+                            ("Ok", [value]) => Some(Type::Generic(
+                                "Result".into(),
+                                vec![value.clone(), Type::Unknown],
+                            )),
+                            ("Err", [error]) => Some(Type::Generic(
+                                "Result".into(),
+                                vec![Type::Unknown, error.clone()],
+                            )),
+                            ("Some" | "Ok" | "Err", _) => {
+                                return Err(type_error(
+                                    format!("{}() expects exactly 1 argument", name),
+                                    span,
+                                ));
+                            }
+                            _ => None,
+                        };
+                        if let Some(result) = result {
+                            return Ok(result);
+                        }
+                    }
+                }
+                let callee_type = self.expression_type(callee)?;
                 match callee_type {
                     Type::Function(signature) => {
                         if argument_types.len() < signature.required
@@ -998,8 +1039,16 @@ impl SemanticAnalyzer {
                     Err(type_error("Non-exhaustive Bool match", span))
                 }
             }
-            Type::Named(name) | Type::Generic(name, _) if self.enums.contains_key(name) => {
-                let expected = &self.enums[name].variants;
+            Type::Named(name) | Type::Generic(name, _)
+                if self.enums.contains_key(name) || builtin_adt_variants(name).is_some() =>
+            {
+                let builtin;
+                let expected = if let Some(declared) = self.enums.get(name) {
+                    &declared.variants
+                } else {
+                    builtin = builtin_adt_variants(name).expect("guarded builtin ADT");
+                    &builtin
+                };
                 for arm in arms {
                     if let Pattern::EnumVariant { name: variant, .. } = &arm.pattern {
                         if !expected.contains_key(variant) {
@@ -1051,15 +1100,20 @@ impl SemanticAnalyzer {
                 );
             }
             Pattern::EnumVariant { name, fields } => {
-                let enum_name = match subject {
-                    Type::Named(name) | Type::Generic(name, _) => Some(name.clone()),
-                    _ => None,
+                let (enum_name, generic_params) = match subject {
+                    Type::Named(name) => (Some(name.clone()), Vec::new()),
+                    Type::Generic(name, params) => (Some(name.clone()), params.clone()),
+                    _ => (None, Vec::new()),
                 };
-                let field_types = enum_name
+                let mut field_types = enum_name
                     .as_ref()
                     .and_then(|enum_name| self.enums.get(enum_name))
                     .and_then(|enum_type| enum_type.variants.get(name))
                     .cloned();
+                if field_types.is_none() {
+                    field_types =
+                        builtin_adt_field_types(enum_name.as_deref(), name, &generic_params);
+                }
                 if let Some(field_types) = field_types {
                     if fields.len() != field_types.len() {
                         return Err(type_error(
@@ -1129,6 +1183,36 @@ impl SemanticAnalyzer {
     }
     fn current_scope_mut(&mut self) -> &mut HashMap<String, Binding> {
         self.scopes.last_mut().expect("semantic scope")
+    }
+}
+
+fn builtin_adt_variants(name: &str) -> Option<HashMap<String, Vec<Type>>> {
+    let variants = match name {
+        "Option" => [
+            ("Some".to_string(), vec![Type::Unknown]),
+            ("None".to_string(), vec![]),
+        ],
+        "Result" => [
+            ("Ok".to_string(), vec![Type::Unknown]),
+            ("Err".to_string(), vec![Type::Unknown]),
+        ],
+        _ => return None,
+    };
+    Some(variants.into_iter().collect())
+}
+
+fn builtin_adt_field_types(
+    enum_name: Option<&str>,
+    variant: &str,
+    params: &[Type],
+) -> Option<Vec<Type>> {
+    match (enum_name?, variant) {
+        ("Option", "Some") => Some(vec![params.first().cloned().unwrap_or(Type::Unknown)]),
+        ("Option", "None") => Some(vec![]),
+        ("Result", "Ok") => Some(vec![params.first().cloned().unwrap_or(Type::Unknown)]),
+        ("Result", "Err") => Some(vec![params.get(1).cloned().unwrap_or(Type::Unknown)]),
+        ("Option" | "Result", _) => None,
+        _ => None,
     }
 }
 

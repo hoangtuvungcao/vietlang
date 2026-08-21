@@ -8,15 +8,23 @@
 #![allow(unknown_lints)]
 #![allow(clippy::all)]
 
+mod db_runtime;
+mod debugger;
 mod error;
+mod formatter;
+mod frontend;
+mod fuzzing;
 mod http_runtime;
 mod interpreter;
 mod lexer;
+mod lsp;
 mod parser;
 mod pm;
 mod semantic;
 mod stdlib;
+mod typed_ir;
 pub mod vm;
+mod ws_runtime;
 
 use std::env;
 use std::fs;
@@ -40,7 +48,7 @@ const BANNER: &str = r#"
  ║          \  /  | |  __/ |_| |___| (_| | | | | (_| |        ║
  ║           \/   |_|\___|\__|______\__,_|_| |_|\__, |        ║
  ║                                               __/ |        ║
- ║           Backend-First Language v0.2.0-alpha.2 |___/      ║
+ ║           Backend-First Language v0.3.0-alpha.1 |___/      ║
  ║              Type 'help' for usage, 'exit' to quit         ║
  ╚════════════════════════════════════════════════════════════╝
 "#;
@@ -79,6 +87,53 @@ fn main() {
                 println!("VietLang v{}", VERSION);
             }
             "--help" | "-h" => print_help(),
+            "fmt" | "format" => {
+                let check = args.iter().any(|arg| arg == "--check");
+                let target = args
+                    .iter()
+                    .skip(2)
+                    .find(|arg| !arg.starts_with('-'))
+                    .map(String::as_str)
+                    .unwrap_or(".");
+                format_path(std::path::Path::new(target), check);
+            }
+            "lsp" => {
+                if let Err(error) = lsp::run() {
+                    eprintln!("VietLang LSP failed: {}", error);
+                    std::process::exit(1);
+                }
+            }
+            "debug" => {
+                if args.len() < 3 {
+                    eprintln!(
+                        "Usage: vietlang debug <file.vl> [--break <line>] [--no-interactive]"
+                    );
+                    std::process::exit(1);
+                }
+                debug_file(&args[2], &args[3..]);
+            }
+            "fuzz" => {
+                let iterations = args
+                    .windows(2)
+                    .find(|pair| pair[0] == "--iterations")
+                    .and_then(|pair| pair[1].parse().ok())
+                    .unwrap_or(10_000usize);
+                let seed = args
+                    .windows(2)
+                    .find(|pair| pair[0] == "--seed")
+                    .and_then(|pair| pair[1].parse().ok())
+                    .unwrap_or(0x5649_4554u64);
+                match fuzzing::run(iterations, seed) {
+                    Ok(()) => println!(
+                        "[PASS] {} deterministic fuzz iterations (seed {})",
+                        iterations, seed
+                    ),
+                    Err(error) => {
+                        eprintln!("[FAIL] {}", error);
+                        std::process::exit(1);
+                    }
+                }
+            }
             "build" | "compile" => {
                 if args.len() < 3 {
                     eprintln!("Usage: vietlang build <source.vl> [-o <output_binary>] [--target <linux|windows|macos>]");
@@ -116,8 +171,16 @@ fn main() {
                 }
             }
             "doc" | "docs" => {
-                let target = if args.len() >= 3 { &args[2] } else { "" };
-                pm::show_docs(target);
+                if args.get(2).is_some_and(|argument| argument == "--generate") {
+                    let output = args.get(3).map(String::as_str).unwrap_or("docs/api");
+                    if let Err(error) = pm::generate_docs(std::path::Path::new(output)) {
+                        eprintln!("Documentation generation failed: {}", error);
+                        std::process::exit(1);
+                    }
+                } else {
+                    let target = if args.len() >= 3 { &args[2] } else { "" };
+                    pm::show_docs(target);
+                }
             }
             "install" | "add" | "update" | "remove" | "uninstall" | "search" | "init" | "new"
             | "create" | "list" | "ls" | "publish" | "verify" | "info" | "sync" | "registry" => {
@@ -234,34 +297,20 @@ fn main() {
 }
 
 fn check_file(path: &str) {
-    let source = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("\x1b[31mError:\x1b[0m Cannot read file '{}': {}", path, e);
-            std::process::exit(1);
+    match frontend::check_project(std::path::Path::new(path)) {
+        Ok(project) => {
+            let declarations: usize = project
+                .modules
+                .iter()
+                .map(|module| module.declarations.len())
+                .sum();
+            println!(
+                "\x1b[32m[PASS]\x1b[0m module graph, syntax, semantics, and typed IR passed for '{}' ({} modules, {} declarations)",
+                project.entry.display(), project.modules.len(), declarations
+            );
         }
-    };
-
-    let mut lexer = Lexer::new(&source);
-    let tokens = match lexer.tokenize() {
-        Ok(tokens) => tokens,
-        Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(1);
-        }
-    };
-
-    let mut parser = Parser::new(tokens);
-    match parser.parse() {
-        Ok(program) => {
-            if let Err(error) = SemanticAnalyzer::new().analyze(&program) {
-                eprintln!("{}", error);
-                std::process::exit(1);
-            }
-            println!("\x1b[32m[PASS]\x1b[0m Syntax, AST, and semantic checks passed for '{}' ({} statements)", path, program.statements.len());
-        }
-        Err(e) => {
-            eprintln!("{}", e);
+        Err(error) => {
+            eprintln!("{}", error);
             std::process::exit(1);
         }
     }
@@ -299,9 +348,10 @@ fn run_tests(target: &str) {
 
 fn print_help() {
     println!(
-        "VietLang v{} - A Backend-First Programming Language",
+        "VietLang v{} — Production-Ready Backend Programming Language",
         VERSION
     );
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
     println!("USAGE:");
     println!("  vietlang                          Start interactive REPL");
@@ -314,12 +364,27 @@ fn print_help() {
     println!("  vietlang init <name> [template]   Initialize project (api | lib | microservice)");
     println!("  vietlang list                     List installed dependencies");
     println!("  vietlang docs <module>            Inspect module exported functions");
+    println!("  vietlang docs --generate [dir]    Generate deterministic stdlib API Markdown");
     println!("  vietlang publish                  Validate & prepare release metadata");
     println!("  vietlang check <file.vl>          Run syntax and semantic/type checks");
+    println!("  vietlang fmt [path] [--check]     Format source or verify canonical formatting");
+    println!("  vietlang lsp                      Start the Language Server over stdio");
+    println!("  vietlang debug <file.vl>          Step through top-level source statements");
+    println!("  vietlang fuzz [--iterations N]    Mutate lexer/parser/JSON/manifest/HTTP inputs");
     println!("  vietlang --tokens <file>          Show tokenized output");
     println!("  vietlang --ast <file>             Show parsed AST");
     println!("  vietlang --version                Show version");
     println!("  vietlang --help                   Show this help");
+    println!();
+    println!("DATABASE SUPPORT:");
+    println!("  std.db_sqlite      SQLite (embedded, zero-config)");
+    println!("  std.db_postgres    PostgreSQL (async connection pool)");
+    println!("  std.db_mysql       MySQL / MariaDB (async connection pool)");
+    println!("  std.db_mongodb     MongoDB (BSON, Atlas, aggregation pipeline)");
+    println!("  std.db_redis       Redis (all data types, pub/sub, streams, distributed lock)");
+    println!("  std.db_clickhouse  ClickHouse (OLAP, time series, analytics)");
+    println!("  std.db_cassandra   Cassandra / ScyllaDB (CQL, LWT, TTL, paging)");
+    println!("  std.db_elasticsearch  Elasticsearch / OpenSearch (full-text search, aggregations)");
     println!();
     println!("EXAMPLES:");
     println!("  vietlang install redis@1.2.0      Install Redis module");
@@ -590,6 +655,10 @@ fn build_standalone_binary(source_path: &str, output_path: &str, target_os: &str
 }
 
 fn run_file(path: &str) {
+    if let Err(error) = frontend::check_project(std::path::Path::new(path)) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
     let source = match fs::read_to_string(path) {
         Ok(content) => content,
         Err(e) => {
@@ -598,6 +667,104 @@ fn run_file(path: &str) {
         }
     };
     run_source(&source, path);
+}
+
+fn format_path(path: &std::path::Path, check: bool) {
+    let mut files = Vec::new();
+    if path.is_file() {
+        files.push(path.to_path_buf());
+    } else if path.is_dir() {
+        collect_vietlang_files(path, &mut files);
+    } else {
+        eprintln!("Formatting target '{}' does not exist", path.display());
+        std::process::exit(1);
+    }
+    files.sort();
+    let mut changed = 0usize;
+    for file in files {
+        let source = fs::read_to_string(&file).unwrap_or_else(|error| {
+            eprintln!("Cannot read '{}': {}", file.display(), error);
+            std::process::exit(1);
+        });
+        let formatted = formatter::format_source(&source).unwrap_or_else(|error| {
+            eprintln!("Cannot format '{}': {}", file.display(), error);
+            std::process::exit(1);
+        });
+        if formatted != source {
+            changed += 1;
+            if !check {
+                fs::write(&file, formatted).unwrap_or_else(|error| {
+                    eprintln!("Cannot write '{}': {}", file.display(), error);
+                    std::process::exit(1);
+                });
+            }
+            println!(
+                "{} {}",
+                if check { "would format" } else { "formatted" },
+                file.display()
+            );
+        }
+    }
+    if check && changed > 0 {
+        std::process::exit(1);
+    }
+    println!("VietLang formatter: {} file(s) changed", changed);
+}
+
+fn collect_vietlang_files(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
+    if dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| matches!(name, ".git" | "target" | "modules"))
+    {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_vietlang_files(&path, files);
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("vl") {
+            files.push(path);
+        }
+    }
+}
+
+fn debug_file(path: &str, args: &[String]) {
+    if let Err(error) = frontend::check_project(std::path::Path::new(path)) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
+    let source = fs::read_to_string(path).unwrap_or_else(|error| {
+        eprintln!("Cannot read '{}': {}", path, error);
+        std::process::exit(1);
+    });
+    let program = Lexer::new(&source)
+        .tokenize()
+        .and_then(|tokens| Parser::new(tokens).parse())
+        .unwrap_or_else(|error| {
+            eprintln!("{}", error);
+            std::process::exit(1);
+        });
+    let mut breakpoints = std::collections::HashSet::new();
+    let mut index = 0;
+    while index < args.len() {
+        if args[index] == "--break" && index + 1 < args.len() {
+            if let Ok(line) = args[index + 1].parse() {
+                breakpoints.insert(line);
+            }
+            index += 2;
+        } else {
+            index += 1;
+        }
+    }
+    let interactive = !args.iter().any(|argument| argument == "--no-interactive");
+    if let Err(error) = debugger::run(&program, &breakpoints, interactive) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
 }
 
 fn run_vm(path: &str) {

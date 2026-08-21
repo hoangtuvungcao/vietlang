@@ -3,27 +3,51 @@
 
 #![allow(dead_code)]
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use fs2::FileExt;
+use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::path::Path;
 use std::process::Command;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageVersionEntry {
     pub version: String,
     pub description: String,
     pub author: String,
     pub source: String,
     pub checksum: String,
+    #[serde(default)]
+    pub signature: String,
+    #[serde(default)]
+    pub public_key: String,
+    #[serde(default)]
     pub keywords: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageIndexEntry {
     pub name: String,
     pub latest: String,
     pub versions: HashMap<String, PackageVersionEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct Lockfile {
+    lockfile_version: u32,
+    packages: std::collections::BTreeMap<String, LockedPackage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LockedPackage {
+    version: String,
+    source: String,
+    revision: String,
+    checksum: String,
 }
 
 pub fn handle_vpm_command(args: &[String]) {
@@ -456,6 +480,8 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
                 author: author.to_string(),
                 source: src.to_string(),
                 checksum: "unverified".to_string(),
+                signature: String::new(),
+                public_key: String::new(),
                 keywords: vec![name.to_string()],
             },
         );
@@ -469,17 +495,22 @@ fn load_registry() -> HashMap<String, PackageIndexEntry> {
         );
     }
 
-    // Merge index.json file
+    // The canonical index is parsed as JSON. Shards are discovery mirrors only;
+    // they cannot override signed canonical metadata.
     let base = get_registry_base();
     let index_file = format!("{}/index.json", base);
     if let Ok(content) = fs::read_to_string(&index_file) {
-        parse_and_merge_registry(&content, &mut map);
-    }
-
-    // Scan sharded index directory
-    let shards_dir = format!("{}/shards", base);
-    if Path::new(&shards_dir).exists() {
-        scan_shards_recursive(Path::new(&shards_dir), &mut map);
+        #[derive(Deserialize)]
+        struct RegistryDocument {
+            packages: HashMap<String, PackageIndexEntry>,
+        }
+        match serde_json::from_str::<RegistryDocument>(&content) {
+            Ok(document) => map.extend(document.packages),
+            Err(error) => eprintln!(
+                "Ignoring malformed registry index '{}': {}",
+                index_file, error
+            ),
+        }
     }
 
     map
@@ -544,6 +575,8 @@ fn parse_shard_file(raw: &str, map: &mut HashMap<String, PackageIndexEntry>) {
                 author: author_str,
                 source: src_str,
                 checksum: "unverified".to_string(),
+                signature: String::new(),
+                public_key: String::new(),
                 keywords: vec![name.clone()],
             },
         );
@@ -611,6 +644,8 @@ fn parse_and_merge_registry(raw: &str, map: &mut HashMap<String, PackageIndexEnt
                     author: current_author.clone(),
                     source: src,
                     checksum: "unverified".to_string(),
+                    signature: String::new(),
+                    public_key: String::new(),
                     keywords: vec![pkg_name.clone()],
                 },
             );
@@ -680,61 +715,41 @@ fn search_registry(query: &str) {
 }
 
 fn install_package(spec: &str) {
+    let _install_lock = match acquire_install_lock() {
+        Ok(lock) => lock,
+        Err(error) => {
+            eprintln!(
+                "\x1b[31mError:\x1b[0m Another package operation is active or the installer lock cannot be acquired: {}",
+                error
+            );
+            return;
+        }
+    };
     let registry = load_registry();
-    let parts: Vec<&str> = spec.split('@').collect();
-    let raw_name = parts[0];
-    let req_version = if parts.len() > 1 && !parts[1].is_empty() && parts[1] != "latest" {
-        Some(parts[1])
-    } else {
-        None
-    };
-
-    let (pkg_name, target_version, source_url) = if let Some(entry) = registry.get(raw_name) {
-        let ver = req_version.unwrap_or(&entry.latest);
-        let src = match entry.versions.get(ver) {
-            Some(v_entry) => v_entry.source.clone(),
-            None => {
-                println!("\x1b[33mWarning:\x1b[0m Version '{}' not found for '{}'. Using latest version '{}'", ver, raw_name, entry.latest);
-                entry
-                    .versions
-                    .get(&entry.latest)
-                    .map(|v| v.source.clone())
-                    .unwrap_or_else(|| {
-                        format!(
-                            "https://github.com/hoangtuvungcao/vietlang_{}.git",
-                            raw_name
-                        )
-                    })
+    let (raw_name, requested) = spec
+        .rsplit_once('@')
+        .map_or((spec, None), |(name, version)| {
+            if name.is_empty() || version.is_empty() {
+                (spec, None)
+            } else {
+                (name, Some(version))
             }
-        };
-        (raw_name.to_string(), ver.to_string(), src)
-    } else if raw_name.starts_with("http://")
-        || raw_name.starts_with("https://")
-        || raw_name.starts_with("git@")
-    {
-        let clean = raw_name.trim_end_matches(".git");
-        let name = clean.split('/').last().unwrap_or(clean).to_string();
-        (
-            name,
-            req_version.unwrap_or("latest").to_string(),
-            raw_name.to_string(),
-        )
-    } else if raw_name.contains('/') {
-        let clean = raw_name.trim_start_matches("github:");
-        let name = clean.split('/').last().unwrap_or(clean).to_string();
-        let url = format!("https://github.com/{}.git", clean);
-        (name, req_version.unwrap_or("latest").to_string(), url)
-    } else {
-        let url = format!(
-            "https://github.com/hoangtuvungcao/vietlang_{}.git",
-            raw_name
-        );
-        (
-            raw_name.to_string(),
-            req_version.unwrap_or("latest").to_string(),
-            url,
-        )
+        });
+    let Some(entry) = registry.get(raw_name) else {
+        eprintln!("\x1b[31mError:\x1b[0m Package '{}' is absent from the trusted registry. Direct Git installs are disabled because they have no signed metadata.", raw_name);
+        return;
     };
+    let Some(target_version) = resolve_version(entry, requested) else {
+        eprintln!(
+            "\x1b[31mError:\x1b[0m No version of '{}' satisfies '{}'.",
+            raw_name,
+            requested.unwrap_or("latest")
+        );
+        return;
+    };
+    let metadata = &entry.versions[&target_version];
+    let pkg_name = raw_name.to_string();
+    let source_url = metadata.source.clone();
 
     if !valid_package_name(&pkg_name) {
         eprintln!(
@@ -744,49 +759,81 @@ fn install_package(spec: &str) {
         return;
     }
 
-    println!("\x1b[36m[Central Registry]\x1b[0m Resolving '\x1b[33m{}\x1b[0m' (version: \x1b[32m{}\x1b[0m)...", pkg_name, target_version);
+    if let Err(error) = verify_registry_metadata(&pkg_name, metadata) {
+        eprintln!("\x1b[31mSecurity error:\x1b[0m {}", error);
+        return;
+    }
+
+    println!("\x1b[36m[Trusted Registry]\x1b[0m Resolving '\x1b[33m{}\x1b[0m' (version: \x1b[32m{}\x1b[0m)...", pkg_name, target_version);
     println!("Source Repository: {}", source_url);
 
     let _ = fs::create_dir_all("modules");
     let target_dir = format!("modules/{}", pkg_name);
-
     if Path::new(&target_dir).exists() {
-        println!(
-            "Package '{}' already exists in modules/. Updating...",
-            pkg_name
-        );
-        let status = Command::new("git")
-            .args(["-C", &target_dir, "pull"])
-            .status();
-        if !command_succeeded(status) {
-            eprintln!("\x1b[31mError:\x1b[0m Cannot update '{}'.", pkg_name);
-            return;
+        match package_sha256(Path::new(&target_dir)) {
+            Ok(checksum) if checksum == metadata.checksum => {
+                println!("Package '{}@{}' is already installed and verified.", pkg_name, target_version);
+                if let Err(error) = write_lock_entry(&pkg_name, &target_version, &source_url, &target_dir, &checksum) {
+                    eprintln!("Cannot update vietlang.lock: {}", error);
+                }
+            }
+            _ => eprintln!("\x1b[31mError:\x1b[0m Existing module '{}' differs from trusted metadata. Remove it explicitly before reinstalling.", target_dir),
         }
-    } else {
-        println!("Cloning package from source into {}...", target_dir);
-        let status = Command::new("git")
-            .args(["clone", &source_url, &target_dir])
-            .status();
-        if !command_succeeded(status) {
-            eprintln!("\x1b[31mError:\x1b[0m Cannot clone package '{}'.", pkg_name);
-            return;
-        }
+        return;
     }
-
-    if target_version != "latest" {
-        let status = Command::new("git")
-            .args(["-C", &target_dir, "checkout", &target_version])
-            .status();
-        if !command_succeeded(status) {
-            eprintln!(
-                "\x1b[31mError:\x1b[0m Cannot check out requested revision '{}'.",
-                target_version
-            );
+    let staging = format!(
+        "modules/.vietlang-install-{}-{}",
+        pkg_name,
+        std::process::id()
+    );
+    if Path::new(&staging).exists() {
+        eprintln!("\x1b[31mError:\x1b[0m Staging directory '{}' already exists; remove it after checking no installer is active.", staging);
+        return;
+    }
+    let status = Command::new("git")
+        .args(["clone", "--filter=blob:none", &source_url, &staging])
+        .status();
+    if !command_succeeded(status) {
+        eprintln!("Cannot clone '{}'.", pkg_name);
+        return;
+    }
+    let checkout = Command::new("git")
+        .args(["-C", &staging, "checkout", &target_version])
+        .status();
+    if !command_succeeded(checkout) {
+        let _ = fs::remove_dir_all(&staging);
+        eprintln!("Cannot check out immutable version '{}'.", target_version);
+        return;
+    }
+    let checksum = match package_sha256(Path::new(&staging)) {
+        Ok(checksum) => checksum,
+        Err(error) => {
+            let _ = fs::remove_dir_all(&staging);
+            eprintln!("Cannot hash package: {}", error);
             return;
         }
+    };
+    if !constant_time_hex_eq(&checksum, &metadata.checksum) {
+        let _ = fs::remove_dir_all(&staging);
+        eprintln!("\x1b[31mSecurity error:\x1b[0m checksum mismatch for '{}@{}' (expected {}, got {}). Package was not installed.", pkg_name, target_version, metadata.checksum, checksum);
+        return;
     }
-
+    if let Err(error) = fs::rename(&staging, &target_dir) {
+        let _ = fs::remove_dir_all(&staging);
+        eprintln!("Cannot activate verified package: {}", error);
+        return;
+    }
     ensure_manifest_dependency(&pkg_name, &target_version);
+    if let Err(error) = write_lock_entry(
+        &pkg_name,
+        &target_version,
+        &source_url,
+        &target_dir,
+        &checksum,
+    ) {
+        eprintln!("Package installed, but lockfile update failed: {}", error);
+        return;
+    }
 
     println!(
         "\x1b[32mSuccessfully installed\x1b[0m '{}@{}' into modules/{}",
@@ -796,11 +843,127 @@ fn install_package(spec: &str) {
     println!("  \x1b[33mimport modules.{}.src.main\x1b[0m", pkg_name);
 }
 
+fn acquire_install_lock() -> std::io::Result<File> {
+    let lock = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(".vietlang-packages.lock")?;
+    lock.try_lock_exclusive()?;
+    Ok(lock)
+}
+
+fn resolve_version(entry: &PackageIndexEntry, requested: Option<&str>) -> Option<String> {
+    if requested.is_none() || requested == Some("latest") {
+        return Some(entry.latest.clone());
+    }
+    let requested = requested?;
+    if entry.versions.contains_key(requested) {
+        return Some(requested.to_string());
+    }
+    let requirement = VersionReq::parse(requested).ok()?;
+    let mut matching: Vec<_> = entry
+        .versions
+        .keys()
+        .filter_map(|raw| {
+            Version::parse(raw)
+                .ok()
+                .filter(|version| requirement.matches(version))
+                .map(|version| (version, raw.clone()))
+        })
+        .collect();
+    matching.sort_by(|left, right| left.0.cmp(&right.0));
+    matching.pop().map(|(_, raw)| raw)
+}
+
+fn verify_registry_metadata(name: &str, metadata: &PackageVersionEntry) -> Result<(), String> {
+    if metadata.checksum.len() != 64
+        || !metadata
+            .checksum
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(format!(
+            "{}@{} has no valid SHA-256 checksum",
+            name, metadata.version
+        ));
+    }
+    if metadata.signature.is_empty() || metadata.public_key.is_empty() {
+        return Err(format!(
+            "{}@{} is unsigned; signed registry metadata is mandatory",
+            name, metadata.version
+        ));
+    }
+    let key_bytes = BASE64
+        .decode(&metadata.public_key)
+        .map_err(|_| "invalid registry public key encoding")?;
+    let key_array: [u8; 32] = key_bytes
+        .try_into()
+        .map_err(|_| "registry public key must be 32 bytes")?;
+    let key = VerifyingKey::from_bytes(&key_array).map_err(|_| "invalid registry public key")?;
+    let signature_bytes = BASE64
+        .decode(&metadata.signature)
+        .map_err(|_| "invalid metadata signature encoding")?;
+    let signature = Signature::from_slice(&signature_bytes)
+        .map_err(|_| "metadata signature must be 64 bytes")?;
+    let message = format!(
+        "{}\n{}\n{}\n{}",
+        name, metadata.version, metadata.source, metadata.checksum
+    );
+    key.verify(message.as_bytes(), &signature)
+        .map_err(|_| "registry metadata signature verification failed".to_string())
+}
+
+fn constant_time_hex_eq(left: &str, right: &str) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    left.bytes()
+        .zip(right.bytes())
+        .fold(0u8, |difference, (a, b)| difference | (a ^ b))
+        == 0
+}
+
+fn write_lock_entry(
+    name: &str,
+    version: &str,
+    source: &str,
+    target_dir: &str,
+    checksum: &str,
+) -> std::io::Result<()> {
+    let mut lock = fs::read_to_string("vietlang.lock")
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Lockfile>(&raw).ok())
+        .unwrap_or_default();
+    lock.lockfile_version = 1;
+    let revision = Command::new("git")
+        .args(["-C", target_dir, "rev-parse", "HEAD"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .unwrap_or_default();
+    lock.packages.insert(
+        name.to_string(),
+        LockedPackage {
+            version: version.to_string(),
+            source: source.to_string(),
+            revision,
+            checksum: checksum.to_string(),
+        },
+    );
+    let encoded = serde_json::to_vec_pretty(&lock).map_err(std::io::Error::other)?;
+    let temporary = "vietlang.lock.tmp";
+    fs::write(temporary, encoded)?;
+    fs::rename(temporary, "vietlang.lock")
+}
+
 fn update_package(target: Option<&str>) {
     match target {
         Some(spec) => {
-            let parts: Vec<&str> = spec.split('@').collect();
-            let pkg_name = parts[0];
+            let (pkg_name, requested) = spec
+                .rsplit_once('@')
+                .map_or((spec, None), |(name, version)| (name, Some(version)));
             if !valid_package_name(pkg_name) {
                 eprintln!("\x1b[31mError:\x1b[0m Invalid package name '{}'.", pkg_name);
                 return;
@@ -813,35 +976,87 @@ fn update_package(target: Option<&str>) {
                 );
                 return;
             }
-            println!("Updating package '{}' in {}...", pkg_name, target_dir);
-            let _ = Command::new("git")
-                .args(["-C", &target_dir, "fetch", "--all"])
-                .output();
-            if parts.len() > 1 && !parts[1].is_empty() && parts[1] != "latest" {
-                let ver = parts[1];
-                let _ = Command::new("git")
-                    .args(["-C", &target_dir, "checkout", ver])
-                    .output();
-                println!("\x1b[32mChecked out version tag '{}'\x1b[0m", ver);
+            let registry = load_registry();
+            let Some(entry) = registry.get(pkg_name) else {
+                eprintln!(
+                    "\x1b[31mError:\x1b[0m Package '{}' is absent from the trusted registry.",
+                    pkg_name
+                );
+                return;
+            };
+            let Some(version) = resolve_version(entry, requested) else {
+                eprintln!(
+                    "\x1b[31mError:\x1b[0m No trusted version satisfies '{}'.",
+                    requested.unwrap_or("latest")
+                );
+                return;
+            };
+            let metadata = &entry.versions[&version];
+            if let Err(error) = verify_registry_metadata(pkg_name, metadata) {
+                eprintln!("\x1b[31mSecurity error:\x1b[0m {}", error);
+                return;
+            }
+
+            let backup = format!(
+                "modules/.vietlang-backup-{}-{}",
+                pkg_name,
+                std::process::id()
+            );
+            if Path::new(&backup).exists() {
+                eprintln!(
+                    "\x1b[31mError:\x1b[0m Backup path '{}' already exists.",
+                    backup
+                );
+                return;
+            }
+            if let Err(error) = fs::rename(&target_dir, &backup) {
+                eprintln!("Cannot stage existing package for update: {}", error);
+                return;
+            }
+            install_package(&format!("{}@={}", pkg_name, version));
+            let verified = Path::new(&target_dir).is_dir()
+                && package_sha256(Path::new(&target_dir))
+                    .is_ok_and(|checksum| constant_time_hex_eq(&checksum, &metadata.checksum));
+            if verified {
+                if let Err(error) = fs::remove_dir_all(&backup) {
+                    eprintln!(
+                        "Package updated, but old backup '{}' could not be removed: {}",
+                        backup, error
+                    );
+                }
+                println!(
+                    "\x1b[32mUpdated and verified '{}@{}'.\x1b[0m",
+                    pkg_name, version
+                );
             } else {
-                let _ = Command::new("git")
-                    .args(["-C", &target_dir, "pull"])
-                    .output();
-                println!("\x1b[32mUpdated to latest version on default branch.\x1b[0m");
+                if Path::new(&target_dir).exists() {
+                    let _ = fs::remove_dir_all(&target_dir);
+                }
+                if let Err(error) = fs::rename(&backup, &target_dir) {
+                    eprintln!(
+                        "\x1b[31mCritical:\x1b[0m Update failed and backup restoration failed: {}. Backup remains at '{}'.",
+                        error, backup
+                    );
+                } else {
+                    eprintln!(
+                        "\x1b[31mUpdate failed.\x1b[0m The previously installed package was restored."
+                    );
+                }
             }
         }
         None => {
-            println!("Updating all packages in modules/...");
-            if let Ok(entries) = fs::read_dir("modules") {
-                for entry in entries.flatten() {
-                    if entry.path().is_dir() {
-                        let dir_str = entry.path().to_string_lossy().to_string();
-                        println!("Updating {}...", dir_str);
-                        let _ = Command::new("git").args(["-C", &dir_str, "pull"]).output();
-                    }
-                }
+            let packages: Vec<String> = fs::read_to_string("vietlang.lock")
+                .ok()
+                .and_then(|raw| serde_json::from_str::<Lockfile>(&raw).ok())
+                .map(|lock| lock.packages.into_keys().collect())
+                .unwrap_or_default();
+            if packages.is_empty() {
+                println!("No locked packages to update.");
+                return;
             }
-            println!("\x1b[32mAll installed packages updated.\x1b[0m");
+            for package in packages {
+                update_package(Some(&package));
+            }
         }
     }
 }
@@ -859,12 +1074,25 @@ fn remove_package(pkg_name: &str) {
 
     if Path::new("vietlang.json").exists() {
         if let Ok(content) = fs::read_to_string("vietlang.json") {
-            let updated = content
-                .lines()
-                .filter(|line| !line.contains(&format!("\"{}\"", pkg_name)))
-                .collect::<Vec<&str>>()
-                .join("\n");
-            let _ = fs::write("vietlang.json", updated);
+            if let Ok(mut manifest) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(dependencies) = manifest
+                    .get_mut("dependencies")
+                    .and_then(|value| value.as_object_mut())
+                {
+                    dependencies.remove(pkg_name);
+                }
+                if let Ok(encoded) = serde_json::to_vec_pretty(&manifest) {
+                    let _ = fs::write("vietlang.json", encoded);
+                }
+            }
+        }
+    }
+    if let Ok(content) = fs::read_to_string("vietlang.lock") {
+        if let Ok(mut lock) = serde_json::from_str::<Lockfile>(&content) {
+            lock.packages.remove(pkg_name);
+            if let Ok(encoded) = serde_json::to_vec_pretty(&lock) {
+                let _ = fs::write("vietlang.lock", encoded);
+            }
         }
     }
 
@@ -888,7 +1116,7 @@ fn command_succeeded(status: std::io::Result<std::process::ExitStatus>) -> bool 
 
 #[cfg(test)]
 mod tests {
-    use super::valid_package_name;
+    use super::*;
 
     #[test]
     fn package_names_cannot_escape_modules_directory() {
@@ -896,6 +1124,60 @@ mod tests {
         assert!(!valid_package_name("../outside"));
         assert!(!valid_package_name("nested/package"));
         assert!(!valid_package_name(""));
+    }
+
+    #[test]
+    fn semver_ranges_resolve_to_highest_matching_release() {
+        let mut versions = HashMap::new();
+        for version in ["1.2.0", "1.9.0", "2.0.0"] {
+            versions.insert(
+                version.into(),
+                PackageVersionEntry {
+                    version: version.into(),
+                    description: String::new(),
+                    author: String::new(),
+                    source: String::new(),
+                    checksum: "0".repeat(64),
+                    signature: String::new(),
+                    public_key: String::new(),
+                    keywords: vec![],
+                },
+            );
+        }
+        let entry = PackageIndexEntry {
+            name: "demo".into(),
+            latest: "2.0.0".into(),
+            versions,
+        };
+        assert_eq!(resolve_version(&entry, Some("^1.0")), Some("1.9.0".into()));
+        assert_eq!(
+            resolve_version(&entry, Some("=1.2.0")),
+            Some("1.2.0".into())
+        );
+        assert_eq!(resolve_version(&entry, Some(">=3")), None);
+    }
+
+    #[test]
+    fn registry_metadata_requires_valid_ed25519_signature() {
+        let signing = SigningKey::from_bytes(&[7u8; 32]);
+        let mut metadata = PackageVersionEntry {
+            version: "1.0.0".into(),
+            description: String::new(),
+            author: "tester".into(),
+            source: "https://example.invalid/demo.git".into(),
+            checksum: "a".repeat(64),
+            signature: String::new(),
+            public_key: BASE64.encode(signing.verifying_key().as_bytes()),
+            keywords: vec![],
+        };
+        let message = format!(
+            "demo\n{}\n{}\n{}",
+            metadata.version, metadata.source, metadata.checksum
+        );
+        metadata.signature = BASE64.encode(signing.sign(message.as_bytes()).to_bytes());
+        verify_registry_metadata("demo", &metadata).unwrap();
+        metadata.checksum = "b".repeat(64);
+        assert!(verify_registry_metadata("demo", &metadata).is_err());
     }
 }
 
@@ -910,36 +1192,31 @@ fn publish_package() {
     }
 
     let raw_manifest = fs::read_to_string("vietlang.json").unwrap_or_default();
-    let pkg_name = extract_json_str(
-        &raw_manifest
-            .lines()
-            .find(|l| l.trim().starts_with("\"name\":"))
-            .unwrap_or(""),
-    );
-    let version = extract_json_str(
-        &raw_manifest
-            .lines()
-            .find(|l| l.trim().starts_with("\"version\":"))
-            .unwrap_or(""),
-    );
-    let desc = extract_json_str(
-        &raw_manifest
-            .lines()
-            .find(|l| l.trim().starts_with("\"description\":"))
-            .unwrap_or(""),
-    );
-    let author = extract_json_str(
-        &raw_manifest
-            .lines()
-            .find(|l| l.trim().starts_with("\"author\":"))
-            .unwrap_or(""),
-    );
-    let mut repo = extract_json_str(
-        &raw_manifest
-            .lines()
-            .find(|l| l.trim().starts_with("\"repository\":"))
-            .unwrap_or(""),
-    );
+    let manifest: serde_json::Value = match serde_json::from_str(&raw_manifest) {
+        Ok(manifest) => manifest,
+        Err(error) => {
+            eprintln!("\x1b[31mError:\x1b[0m Invalid vietlang.json: {}", error);
+            return;
+        }
+    };
+    let manifest_string = |field: &str| {
+        manifest
+            .get(field)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
+    let pkg_name = manifest_string("name");
+    let version = manifest_string("version");
+    let desc = manifest_string("description");
+    let author = manifest_string("author");
+    let mut repo = manifest_string("repository");
+    if !valid_package_name(&pkg_name) || Version::parse(&version).is_err() {
+        eprintln!(
+            "\x1b[31mError:\x1b[0m Publishing requires a safe package name and a valid semantic version."
+        );
+        return;
+    }
 
     // Auto-detect git origin remote if not explicitly specified in manifest
     if repo.is_empty() {
@@ -973,7 +1250,7 @@ fn publish_package() {
 
     // Hash the manifest and complete source tree with stable relative paths.
     let checksum = match package_sha256(Path::new(".")) {
-        Ok(digest) => format!("sha256:{}", digest),
+        Ok(digest) => digest,
         Err(error) => {
             eprintln!(
                 "\x1b[31mError:\x1b[0m Cannot hash package contents: {}",
@@ -982,6 +1259,36 @@ fn publish_package() {
             return;
         }
     };
+
+    let encoded_key = match std::env::var("VIETLANG_SIGNING_KEY") {
+        Ok(value) => value,
+        Err(_) => {
+            eprintln!(
+                "\x1b[31mSecurity error:\x1b[0m VIETLANG_SIGNING_KEY must contain a base64-encoded 32-byte Ed25519 private key."
+            );
+            return;
+        }
+    };
+    let key_bytes = match BASE64.decode(encoded_key.trim()) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            eprintln!("\x1b[31mSecurity error:\x1b[0m VIETLANG_SIGNING_KEY is not valid base64.");
+            return;
+        }
+    };
+    let key_array: [u8; 32] = match key_bytes.try_into() {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            eprintln!(
+                "\x1b[31mSecurity error:\x1b[0m VIETLANG_SIGNING_KEY must decode to exactly 32 bytes."
+            );
+            return;
+        }
+    };
+    let signing_key = SigningKey::from_bytes(&key_array);
+    let signed_message = format!("{}\n{}\n{}\n{}", pkg_name, version, repo_display, checksum);
+    let signature = BASE64.encode(signing_key.sign(signed_message.as_bytes()).to_bytes());
+    let public_key = BASE64.encode(signing_key.verifying_key().as_bytes());
 
     println!("  Checksum:    {}", checksum);
 
@@ -994,63 +1301,65 @@ fn publish_package() {
         let _ = fs::create_dir_all(parent);
     }
 
-    let shard_content = format!(
-        r#"{{
-  "name": "{}",
-  "version": "{}",
-  "author": "{}",
-  "repository": "{}",
-  "description": "{}",
-  "checksum": "{}",
-  "keywords": ["{}"]
-}}
-"#,
-        pkg_name, version, author_display, repo_display, desc, checksum, pkg_name
-    );
+    let metadata = PackageVersionEntry {
+        version: version.clone(),
+        description: desc.clone(),
+        author: author_display.to_string(),
+        source: repo_display.clone(),
+        checksum: checksum.clone(),
+        signature,
+        public_key,
+        keywords: vec![pkg_name.clone()],
+    };
+    let shard_content = serde_json::to_vec_pretty(&serde_json::json!({
+        "name": pkg_name,
+        "latest": version,
+        "versions": { version.clone(): metadata.clone() }
+    }))
+    .expect("serializable registry metadata");
 
-    let _ = fs::write(&shard_full, shard_content);
+    if let Err(error) = fs::write(&shard_full, shard_content) {
+        eprintln!("Cannot write registry shard: {}", error);
+        return;
+    }
     println!("  Sharded Index: \x1b[32mCreated {}\x1b[0m", shard_full);
 
     // Update master index.json if present
     let master_index = format!("{}/index.json", base);
     if let Ok(reg_content) = fs::read_to_string(&master_index) {
-        let new_pkg_entry = format!(
-            r#"    "{}": {{
-      "name": "{}",
-      "latest": "{}",
-      "versions": {{
-        "{}": {{
-          "version": "{}",
-          "description": "{}",
-          "author": "{}",
-          "source": "{}",
-          "checksum": "{}",
-          "keywords": ["{}"]
-        }}
-      }}
-    }},
-"#,
-            pkg_name,
-            pkg_name,
-            version,
-            version,
-            version,
-            desc,
-            author_display,
-            repo_display,
-            checksum,
-            pkg_name
+        let mut registry: serde_json::Value = match serde_json::from_str(&reg_content) {
+            Ok(registry) => registry,
+            Err(error) => {
+                eprintln!("Cannot update malformed registry index: {}", error);
+                return;
+            }
+        };
+        let Some(packages) = registry
+            .get_mut("packages")
+            .and_then(serde_json::Value::as_object_mut)
+        else {
+            eprintln!("Cannot update registry index without a packages object.");
+            return;
+        };
+        let package = packages.entry(pkg_name.clone()).or_insert_with(
+            || serde_json::json!({"name": pkg_name, "latest": version, "versions": {}}),
         );
-
-        if !reg_content.contains(&format!("\"{}\":", pkg_name)) {
-            let updated = reg_content.replacen(
-                "\"packages\": {",
-                &format!("\"packages\": {{\n{}", new_pkg_entry),
-                1,
-            );
-            let _ = fs::write(&master_index, updated);
-            println!("  Master Index:  \x1b[32mUpdated {}\x1b[0m", master_index);
+        package["latest"] = serde_json::Value::String(version.clone());
+        if !package["versions"].is_object() {
+            package["versions"] = serde_json::json!({});
         }
+        package["versions"][&version] =
+            serde_json::to_value(&metadata).expect("serializable registry metadata");
+        let encoded = serde_json::to_vec_pretty(&registry).expect("serializable registry");
+        let temporary = format!("{}.tmp", master_index);
+        if fs::write(&temporary, encoded)
+            .and_then(|_| fs::rename(&temporary, &master_index))
+            .is_err()
+        {
+            eprintln!("Cannot atomically update registry index.");
+            return;
+        }
+        println!("  Master Index:  \x1b[32mUpdated {}\x1b[0m", master_index);
     }
 
     println!(
@@ -1372,12 +1681,26 @@ fn list_installed() {
         println!("No modules/ directory found in current path.");
         return;
     }
+    let lock = fs::read_to_string("vietlang.lock")
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Lockfile>(&raw).ok());
     println!("Installed packages in modules/:");
     if let Ok(entries) = fs::read_dir("modules") {
         for entry in entries.flatten() {
             if entry.path().is_dir() {
                 let name = entry.file_name().into_string().unwrap_or_default();
-                println!("  * \x1b[36m{}\x1b[0m", name);
+                let status = lock
+                    .as_ref()
+                    .and_then(|lock| lock.packages.get(&name))
+                    .map_or("UNLOCKED".to_string(), |package| {
+                        match package_sha256(&entry.path()) {
+                            Ok(checksum) if constant_time_hex_eq(&checksum, &package.checksum) => {
+                                format!("{} VERIFIED", package.version)
+                            }
+                            _ => format!("{} TAMPERED", package.version),
+                        }
+                    });
+                println!("  * \x1b[36m{}\x1b[0m [{}]", name, status);
             }
         }
     }
@@ -1615,6 +1938,45 @@ pub fn show_docs(module_name: &str) {
     }
 }
 
+pub fn generate_docs(output: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(output)?;
+    let mut modules: Vec<_> = fs::read_dir("std")?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().and_then(|extension| extension.to_str()) == Some("vl"))
+        .collect();
+    modules.sort();
+    for path in modules {
+        let module = path
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .unwrap_or("unknown");
+        let source = fs::read_to_string(&path)?;
+        let mut markdown = format!("# Module `std.{}`\n\nGenerated by VietLang {}. Do not edit manually.\n\n## Exports\n\n", module, env!("CARGO_PKG_VERSION"));
+        let mut found = false;
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
+                found = true;
+                let signature = trimmed.split('{').next().unwrap_or(trimmed).trim();
+                markdown.push_str(&format!("- `{}`\n", signature.replace('`', "\\`")));
+            }
+        }
+        if !found {
+            markdown.push_str("_No public VietLang functions._\n");
+        }
+        let temporary = output.join(format!(".{}.md.tmp", module));
+        let destination = output.join(format!("{}.md", module));
+        fs::write(&temporary, markdown)?;
+        fs::rename(temporary, destination)?;
+    }
+    println!(
+        "Generated standard-library API documentation in {}",
+        output.display()
+    );
+    Ok(())
+}
+
 fn show_info() {
     if let Ok(content) = fs::read_to_string("vietlang.json") {
         println!("Package Manifest (vietlang.json):");
@@ -1625,19 +1987,19 @@ fn show_info() {
 }
 
 fn ensure_manifest_dependency(pkg_name: &str, version: &str) {
-    if !Path::new("vietlang.json").exists() {
-        let manifest = format!(
-            r#"{{
-  "name": "app",
-  "version": "1.0.0",
-  "dependencies": {{
-    "{}": "{}"
-  }}
-}}
-"#,
-            pkg_name, version
-        );
-        let _ = fs::write("vietlang.json", manifest);
+    let mut manifest = fs::read_to_string("vietlang.json")
+        .ok()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+        .unwrap_or_else(|| serde_json::json!({"name":"app","version":"1.0.0","dependencies":{}}));
+    if !manifest
+        .get("dependencies")
+        .is_some_and(serde_json::Value::is_object)
+    {
+        manifest["dependencies"] = serde_json::json!({});
+    }
+    manifest["dependencies"][pkg_name] = serde_json::Value::String(format!("={}", version));
+    if let Ok(encoded) = serde_json::to_vec_pretty(&manifest) {
+        let _ = fs::write("vietlang.json", encoded);
     }
 }
 

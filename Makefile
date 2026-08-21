@@ -1,4 +1,4 @@
-.PHONY: build test clean install demo release help lint
+.PHONY: build test clean install demo release help lint fuzz load soak
 
 # Default
 help:
@@ -14,6 +14,9 @@ help:
 	@echo "  make release   Build release + strip binary"
 	@echo "  make clean     Clean build artifacts"
 	@echo "  make lint      Run cargo clippy linter"
+	@echo "  make fuzz      Run deterministic mutation fuzzing"
+	@echo "  make load      Run bounded HTTP load test (server must be running)"
+	@echo "  make soak      Run one-hour HTTP soak test (server must be running)"
 	@echo ""
 
 # Build
@@ -67,3 +70,12 @@ release:
 lint:
 	cargo clippy -- -D warnings
 	@echo "No lint issues"
+
+fuzz:
+	cargo run -- fuzz --iterations 100000 --seed 1447642452
+
+load:
+	VIETLANG_LOAD_REQUESTS=10000 VIETLANG_LOAD_CONCURRENCY=64 scripts/load_soak.sh
+
+soak:
+	VIETLANG_LOAD_REQUESTS=1000 VIETLANG_LOAD_CONCURRENCY=64 VIETLANG_SOAK_SECONDS=3600 scripts/load_soak.sh

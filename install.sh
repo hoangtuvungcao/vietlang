@@ -6,7 +6,7 @@
 
 set -e
 
-VIETLANG_VERSION="0.2.0-alpha.2"
+VIETLANG_VERSION="0.3.0-alpha.1"
 REPO="hoangtuvungcao/vietlang"
 VIETLANG_HOME="${HOME}/.vietlang"
 BIN_DIR="${VIETLANG_HOME}/bin"
@@ -58,7 +58,7 @@ mkdir -p "${STD_DIR}"
 mkdir -p "${VIETLANG_HOME}/modules"
 
 # 3. Download or Install Binary
-DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${TARGET}"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VIETLANG_VERSION}/${TARGET}"
 
 if [ -f "./target/release/vietlang" ]; then
     echo -e " installing fresh local build into ${BIN_DIR}..."
@@ -89,15 +89,15 @@ fi
 chmod +x "${BIN_DIR}/vietlang"
 
 # 4. Install Standard Library
-echo -e " syncing 55 Standard Library Modules into ${STD_DIR}..."
+echo -e " syncing 60+ Standard Library Modules into ${STD_DIR}..."
 if [ -d "./std" ]; then
     cp -r ./std/* "${STD_DIR}/"
 else
-    # Fetch from github main branch
-    curl -fsSL "https://github.com/${REPO}/archive/refs/heads/main.tar.gz" -o "/tmp/vietlang-std.tar.gz" 2>/dev/null && {
+    # Fetch the stdlib from the exact immutable release tag.
+    curl -fsSL "https://github.com/${REPO}/archive/refs/tags/v${VIETLANG_VERSION}.tar.gz" -o "/tmp/vietlang-std.tar.gz" 2>/dev/null && {
         tar -xzf "/tmp/vietlang-std.tar.gz" -C "/tmp"
-        cp -r /tmp/vietlang-main/std/* "${STD_DIR}/" 2>/dev/null || true
-        rm -rf /tmp/vietlang-std.tar.gz /tmp/vietlang-main
+        cp -r "/tmp/vietlang-${VIETLANG_VERSION}/std/"* "${STD_DIR}/" 2>/dev/null || true
+        rm -rf /tmp/vietlang-std.tar.gz "/tmp/vietlang-${VIETLANG_VERSION}"
     } || true
 fi
 
@@ -130,11 +130,11 @@ export VIETLANG_STD="${STD_DIR}"
 echo ""
 echo -e "\033[32m VietLang installed successfully!\033[0m"
 echo -e "   Binary:   \033[33m${BIN_DIR}/vietlang\033[0m"
-echo -e "   Standard: \033[33m${STD_DIR}\033[0m (55 modules)"
+echo -e "   Standard: \033[33m${STD_DIR}\033[0m (60+ modules)"
 echo ""
 echo -e "Quickstart commands:"
 echo -e "  \033[36mvietlang\033[0m                  # Start interactive REPL"
-echo -e "  \033[36mvietlang doc\033[0m              # Browse all 55 standard modules"
+echo -e "  \033[36mvietlang doc\033[0m              # Browse standard modules"
 echo -e "  \033[36mvietlang new my_app\033[0m       # Scaffold a Clean Architecture backend service"
 echo -e "  \033[36mvietlang dev\033[0m              # Start development server"
 echo -e "  \033[36mvietlang build src/main.vl\033[0m # Bundle source with the runtime"

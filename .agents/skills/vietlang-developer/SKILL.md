@@ -5,28 +5,30 @@ description: Comprehensive expert syntax guide, project architecture manual, sta
 
 # VietLang — Master Language Syntax, Project Architecture & Full-Stack Backend Manual
 
-VietLang 0.2.0-alpha.2 is an **experimental, backend-oriented language/runtime prototype**.
-Its gradual semantic analyzer enforces locally provable annotations, function
-arity and returns, struct fields, method signatures, mutability, and Bool/enum
-match exhaustiveness. Imported/native values without signatures remain
-`Unknown`, so this is not yet a sound whole-program static type guarantee. Use
-it for learning, local demos, and non-sensitive experiments—not production
-authentication, payments, or public services.
+VietLang 0.3.0-alpha.1 is an **experimental, backend-oriented language/runtime prerelease**.
+Its frontend resolves a deterministic module graph, rejects cycles, runs
+semantic analysis, and lowers checked modules to typed IR. The analyzer covers
+annotations, arity and returns, struct fields, methods, mutability, built-in
+generic `Option<T>` / `Result<T,E>`, and Bool/ADT match exhaustiveness. Dynamic
+native values can still be `Unknown`, so do not claim sound whole-program type
+safety, zero bugs, or independent security certification.
 
 Security boundary for generated code: do not use the disabled legacy
 `std.jwt`, `std.momo`, or `std.vnpay` modules in new applications. Use core
 cryptographic/HTTP primitives only where their documented contract fits, and
 select reviewed, versioned community packages for provider protocols. The
-current package installer is not reproducible or integrity-enforcing, so agents
-must not describe community dependencies as supply-chain safe.
+package installer requires exact semver resolution, SHA-256 content verification,
+Ed25519-signed registry metadata, an immutable Git revision, and `vietlang.lock`.
+Unsigned legacy registry entries are intentionally rejected.
 
-Native MySQL is disabled in 0.2.0-alpha.2 because the available synchronous
-driver depends on a RustSec-unsound cache crate. Agents must not generate code
-that assumes `std.db_mysql` can connect; use SQLite or an explicitly reviewed
-application adapter until the async core migration is complete.
+MySQL and PostgreSQL use bounded SQLx/Tokio/Rustls pools with parameter binding,
+health checks, acquisition timeouts, and explicit close. SQLite migrations use
+an immediate transaction and immutable migration table; server databases expose
+advisory migration locking. Keep multi-statement business transactions inside a
+reviewed repository/service adapter until callback transaction handles stabilize.
 
 For semantic edge cases, consult `docs/language-specification.md`. It is a
-descriptive 0.2.0-alpha.2 draft; do not infer static type safety from annotations or
+descriptive 0.3.0-alpha.1 draft; do not infer sound static type safety from annotations or
 claim whole-program type safety or interpreter/VM equivalence beyond covered
 conformance tests.
 
@@ -41,7 +43,7 @@ GitHub Repository: [https://github.com/hoangtuvungcao/vietlang](https://github.c
 curl -fsSL https://raw.githubusercontent.com/hoangtuvungcao/vietlang/main/install.sh | bash
 ```
 - **Auto-Configures PATH** in `~/.bashrc`, `~/.zshrc`, and `~/.profile`.
-- **Pre-installs all 55 Standard Library Modules** into `~/.vietlang/std`.
+- **Pre-installs the 60+ Standard Library Modules** into `~/.vietlang/std`.
 - **Zero sudo required**: Binary installed directly to `~/.vietlang/bin/vietlang`.
 
 ### 🪟 Windows (PowerShell)
@@ -132,6 +134,14 @@ vietlang dev
 vietlang run build
 vietlang run build:win
 vietlang run test
+
+# Official compiler/tooling commands
+vietlang check src/main.vl
+vietlang fmt .
+vietlang lsp
+vietlang debug src/main.vl
+vietlang docs --generate docs/api
+vietlang fuzz --iterations 10000
 ```
 
 ---

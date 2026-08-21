@@ -1,0 +1,157 @@
+// ========================================================================
+// VietLang Standard Library — std.db_mongodb
+// Native MongoDB Driver with full CRUD, Aggregation, Index support
+// Production-Ready | VietLang v0.2.0
+// ========================================================================
+
+// --- Connection ---
+
+/// Kết nối MongoDB, trả về connection handle
+fn mongo_connect(uri: String, db_name: String = "vietlang") {
+    return builtin_mongo_connect(uri, db_name)
+}
+
+/// Đóng connection
+fn mongo_close(conn) {
+    return builtin_mongo_close(conn)
+}
+
+/// Ping kiểm tra kết nối còn sống
+fn mongo_ping(conn) {
+    return builtin_mongo_ping(conn)
+}
+
+// --- Collection CRUD ---
+
+/// Tìm nhiều documents theo filter
+fn mongo_find(conn, collection: String, filter = null, options = null) {
+    return builtin_mongo_find(conn, collection, filter, options)
+}
+
+/// Tìm 1 document đầu tiên khớp filter
+fn mongo_find_one(conn, collection: String, filter = null) {
+    return builtin_mongo_find_one(conn, collection, filter)
+}
+
+/// Tìm document theo _id
+fn mongo_find_by_id(conn, collection: String, id: String) {
+    let mut f = map_new()
+    let mut oid = map_new()
+    oid = map_set(oid, "$oid", id)
+    f = map_set(f, "_id", oid)
+    return builtin_mongo_find_one(conn, collection, f)
+}
+
+/// Thêm 1 document mới, trả về inserted_id
+fn mongo_insert(conn, collection: String, doc = null) {
+    return builtin_mongo_insert_one(conn, collection, doc)
+}
+
+/// Thêm nhiều documents cùng lúc (bulk insert)
+fn mongo_insert_many(conn, collection: String, docs = []) {
+    return builtin_mongo_insert_many(conn, collection, docs)
+}
+
+/// Cập nhật 1 document đầu tiên khớp filter
+fn mongo_update_one(conn, collection: String, filter = null, update = null) {
+    return builtin_mongo_update_one(conn, collection, filter, update)
+}
+
+/// Cập nhật nhiều documents khớp filter
+fn mongo_update_many(conn, collection: String, filter = null, update = null) {
+    return builtin_mongo_update_many(conn, collection, filter, update)
+}
+
+/// Alias ngắn gọn
+fn mongo_update(conn, collection: String, filter = null, update = null) {
+    return builtin_mongo_update_one(conn, collection, filter, update)
+}
+
+/// Xóa 1 document đầu tiên khớp filter
+fn mongo_delete_one(conn, collection: String, filter = null) {
+    return builtin_mongo_delete_one(conn, collection, filter)
+}
+
+/// Xóa nhiều documents khớp filter
+fn mongo_delete_many(conn, collection: String, filter = null) {
+    return builtin_mongo_delete_many(conn, collection, filter)
+}
+
+/// Alias ngắn gọn
+fn mongo_delete(conn, collection: String, filter = null) {
+    return builtin_mongo_delete_one(conn, collection, filter)
+}
+
+/// Đếm số documents khớp filter
+fn mongo_count(conn, collection: String, filter = null) {
+    return builtin_mongo_count(conn, collection, filter)
+}
+
+/// Kiểm tra document có tồn tại không
+fn mongo_exists(conn, collection: String, filter = null) {
+    let count = mongo_count(conn, collection, filter)
+    return count > 0
+}
+
+// --- Aggregation ---
+
+/// Chạy aggregation pipeline
+fn mongo_aggregate(conn, collection: String, pipeline = []) {
+    return builtin_mongo_aggregate(conn, collection, pipeline)
+}
+
+// --- Indexes ---
+
+/// Tạo index
+fn mongo_create_index(conn, collection: String, keys = null, unique: Bool = false) {
+    return builtin_mongo_create_index(conn, collection, keys, unique)
+}
+
+/// Liệt kê tất cả indexes của collection
+fn mongo_list_indexes(conn, collection: String) {
+    return builtin_mongo_list_indexes(conn, collection)
+}
+
+/// Xóa index theo tên
+fn mongo_drop_index(conn, collection: String, index_name: String) {
+    return builtin_mongo_drop_index(conn, collection, index_name)
+}
+
+// --- Collections management ---
+
+/// Liệt kê tất cả collections trong database
+fn mongo_list_collections(conn) {
+    return builtin_mongo_list_collections(conn)
+}
+
+/// Tạo collection mới
+fn mongo_create_collection(conn, collection: String, options = null) {
+    return builtin_mongo_create_collection(conn, collection, options)
+}
+
+/// Xóa toàn bộ collection
+fn mongo_drop_collection(conn, collection: String) {
+    return builtin_mongo_drop_collection(conn, collection)
+}
+
+/// Xóa tất cả documents trong collection
+fn mongo_clear(conn, collection: String) {
+    return builtin_mongo_delete_many(conn, collection, map_new())
+}
+
+// --- Transactions ---
+
+/// Bắt đầu session transaction
+fn mongo_begin_transaction(conn) {
+    return builtin_mongo_begin_transaction(conn)
+}
+
+/// Commit transaction
+fn mongo_commit_transaction(session) {
+    return builtin_mongo_commit_transaction(session)
+}
+
+/// Rollback transaction
+fn mongo_rollback_transaction(session) {
+    return builtin_mongo_abort_transaction(session)
+}

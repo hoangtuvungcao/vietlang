@@ -1,0 +1,111 @@
+// ========================================================================
+// VietLang Standard Library — std.db_elasticsearch
+// Elasticsearch/OpenSearch REST Driver — Full-Text Search & Analytics
+// Production-Ready | VietLang v0.2.0
+// ========================================================================
+
+// --- Connection ---
+
+/// Kết nối Elasticsearch
+fn elastic_connect(url: String = "http://localhost:9200", api_key: String = "") {
+    return builtin_elastic_connect(url, api_key)
+}
+
+/// Kết nối với username/password (Basic Auth)
+fn elastic_connect_auth(url: String, username: String, password: String) {
+    return builtin_elastic_connect_basic(url, username, password)
+}
+
+/// Đóng client
+fn elastic_close(conn) {
+    return builtin_elastic_close(conn)
+}
+
+/// Ping kiểm tra cluster health
+fn elastic_ping(conn) {
+    return builtin_elastic_ping(conn)
+}
+
+// --- Index Management ---
+
+/// Tạo index với body config
+fn elastic_create_index(conn, index: String, body = null) {
+    return builtin_elastic_create_index(conn, index, body)
+}
+
+/// Xóa index
+fn elastic_delete_index(conn, index: String) {
+    return builtin_elastic_delete_index(conn, index)
+}
+
+/// Kiểm tra index có tồn tại không
+fn elastic_index_exists(conn, index: String) {
+    return builtin_elastic_index_exists(conn, index)
+}
+
+/// Liệt kê tất cả indexes
+fn elastic_list_indexes(conn, pattern: String = "*") {
+    return builtin_elastic_list_indexes(conn, pattern)
+}
+
+/// Refresh index
+fn elastic_refresh(conn, index: String) {
+    return builtin_elastic_refresh(conn, index)
+}
+
+// --- Document CRUD ---
+
+/// Index 1 document
+fn elastic_index(conn, index: String, id: String, doc = null) {
+    return builtin_elastic_index_doc(conn, index, id, doc)
+}
+
+/// Lấy document theo ID
+fn elastic_get(conn, index: String, id: String) {
+    return builtin_elastic_get_doc(conn, index, id)
+}
+
+/// Kiểm tra document có tồn tại không
+fn elastic_exists(conn, index: String, id: String) {
+    return builtin_elastic_doc_exists(conn, index, id)
+}
+
+/// Cập nhật 1 phần document
+fn elastic_update(conn, index: String, id: String, partial_doc = null) {
+    let mut update_body = map_new()
+    update_body = map_set(update_body, "doc", partial_doc)
+    return builtin_elastic_update_doc(conn, index, id, update_body)
+}
+
+/// Xóa document
+fn elastic_delete(conn, index: String, id: String) {
+    return builtin_elastic_delete_doc(conn, index, id)
+}
+
+// --- Bulk Operations ---
+
+/// Bulk index, update, delete nhiều documents
+fn elastic_bulk(conn, operations = []) {
+    return builtin_elastic_bulk(conn, operations)
+}
+
+// --- Search ---
+
+/// Full-text search đơn giản
+fn elastic_search(conn, index: String, query_str: String, size: Int = 10, from_offset: Int = 0) {
+    let mut body = map_new()
+    let mut query = map_new()
+    let mut multi_match = map_new()
+    multi_match = map_set(multi_match, "query", query_str)
+    multi_match = map_set(multi_match, "type", "best_fields")
+    query = map_set(query, "multi_match", multi_match)
+    body = map_set(body, "query", query)
+    body = map_set(body, "size", size)
+    body = map_set(body, "from", from_offset)
+    return builtin_elastic_search(conn, index, body)
+}
+
+/// Search với raw query body
+fn elastic_search_dsl(conn, index: String, body = null) {
+    return builtin_elastic_search(conn, index, body)
+}

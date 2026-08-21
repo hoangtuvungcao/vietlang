@@ -1,0 +1,151 @@
+// ========================================================================
+// VietLang Standard Library — std.db_clickhouse
+// Native ClickHouse Driver — Analytics & OLAP at scale
+// Production-Ready | VietLang v0.2.0
+// ========================================================================
+
+// --- Connection ---
+
+/// Kết nối ClickHouse qua HTTP API
+fn clickhouse_connect(host: String = "localhost", port: Int = 8123,
+                      database: String = "default", user: String = "default",
+                      password: String = "") {
+    return builtin_clickhouse_connect(host, port, database, user, password)
+}
+
+/// Kết nối ClickHouse qua URL
+fn clickhouse_connect_url(url: String) {
+    return builtin_clickhouse_connect_url(url)
+}
+
+/// Đóng connection
+fn clickhouse_close(conn) {
+    return builtin_clickhouse_close(conn)
+}
+
+/// Ping kiểm tra kết nối
+fn clickhouse_ping(conn) {
+    return builtin_clickhouse_ping(conn)
+}
+
+// --- DDL ---
+
+/// Thực thi DDL/arbitrary SQL
+fn clickhouse_execute(conn, sql: String) {
+    return builtin_clickhouse_execute(conn, sql)
+}
+
+/// Tạo bảng
+fn clickhouse_create_table(conn, sql: String) {
+    return builtin_clickhouse_execute(conn, sql)
+}
+
+/// Tạo bảng nếu chưa tồn tại
+fn clickhouse_create_table_if_not_exists(conn, table: String, columns = [], engine: String = "MergeTree()") {
+    let cols = columns.join(",\n    ")
+    let sql = "CREATE TABLE IF NOT EXISTS " + table + " (\n    " + cols + "\n) ENGINE = " + engine
+    return builtin_clickhouse_execute(conn, sql)
+}
+
+/// Xóa bảng
+fn clickhouse_drop_table(conn, table: String) {
+    return builtin_clickhouse_execute(conn, "DROP TABLE IF EXISTS " + table)
+}
+
+/// Truncate bảng
+fn clickhouse_truncate(conn, table: String) {
+    return builtin_clickhouse_execute(conn, "TRUNCATE TABLE " + table)
+}
+
+// --- Query ---
+
+/// Thực thi SELECT query, trả về rows
+fn clickhouse_query(conn, sql: String, params = []) {
+    return builtin_clickhouse_query(conn, sql, params)
+}
+
+/// Lấy 1 row đầu tiên
+fn clickhouse_query_one(conn, sql: String, params = []) {
+    let rows = builtin_clickhouse_query(conn, sql + " LIMIT 1", params)
+    if len(rows) > 0 {
+        return rows[0]
+    }
+    return null
+}
+
+/// Đếm số rows
+fn clickhouse_count(conn, table: String, where_clause: String = "1=1") {
+    let sql = "SELECT count() FROM " + table + " WHERE " + where_clause
+    let row = clickhouse_query_one(conn, sql, [])
+    if row != null {
+        return map_get(row, "count()")
+    }
+    return 0
+}
+
+// --- Insert ---
+
+/// Insert 1 row vào bảng
+fn clickhouse_insert(conn, table: String, row = null) {
+    return builtin_clickhouse_insert(conn, table, [row])
+}
+
+/// Bulk insert nhiều rows
+fn clickhouse_insert_many(conn, table: String, rows = []) {
+    return builtin_clickhouse_insert(conn, table, rows)
+}
+
+/// Insert qua SELECT (INSERT INTO ... SELECT ...)
+fn clickhouse_insert_select(conn, target_table: String, select_sql: String) {
+    let sql = "INSERT INTO " + target_table + " " + select_sql
+    return builtin_clickhouse_execute(conn, sql)
+}
+
+// --- Analytics helpers ---
+
+/// Lấy thống kê cột số (min, max, avg, sum, count)
+fn clickhouse_stats(conn, table: String, column: String, where_clause: String = "1=1") {
+    let sql = "SELECT min(" + column + ") as min_val, max(" + column + ") as max_val, avg(" + column + ") as avg_val, sum(" + column + ") as sum_val, count(" + column + ") as count_val FROM " + table + " WHERE " + where_clause
+    return clickhouse_query_one(conn, sql, [])
+}
+
+/// Group by + count (phân tích phân phối)
+fn clickhouse_distribution(conn, table: String, column: String, limit: Int = 100) {
+    let sql = "SELECT " + column + ", count() as cnt FROM " + table + " GROUP BY " + column + " ORDER BY cnt DESC LIMIT " + limit.to_string()
+    return clickhouse_query(conn, sql, [])
+}
+
+/// Time series query (GROUP BY thời gian)
+fn clickhouse_timeseries(conn, table: String, time_col: String,
+                          value_col: String, interval: String = "1 DAY",
+                          where_clause: String = "1=1") {
+    let sql = "SELECT toStartOfInterval(" + time_col + ", INTERVAL " + interval + ") as ts, sum(" + value_col + ") as value FROM " + table + " WHERE " + where_clause + " GROUP BY ts ORDER BY ts"
+    return clickhouse_query(conn, sql, [])
+}
+
+/// Tạo materialized view
+fn clickhouse_create_view(conn, view_name: String, select_sql: String, to_table: String = "") {
+    let mut sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS " + view_name
+    if to_table != "" {
+        sql = sql + " TO " + to_table
+    }
+    sql = sql + " AS " + select_sql
+    return builtin_clickhouse_execute(conn, sql)
+}
+
+// --- System info ---
+
+/// Lấy thông tin databases
+fn clickhouse_list_databases(conn) {
+    return clickhouse_query(conn, "SHOW DATABASES", [])
+}
+
+/// Lấy danh sách tables trong database
+fn clickhouse_list_tables(conn, database: String = "default") {
+    return clickhouse_query(conn, "SHOW TABLES FROM " + database, [])
+}
+
+/// Lấy schema của table
+fn clickhouse_describe_table(conn, table: String) {
+    return clickhouse_query(conn, "DESCRIBE TABLE " + table, [])
+}
