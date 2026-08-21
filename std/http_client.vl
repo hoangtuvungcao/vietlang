@@ -1,0 +1,48 @@
+// ========================================================================
+// VietLang Standard Library — Fluent HTTP Client (std.http_client)
+// Outgoing REST requests, microservice calls, and webhook dispatching
+// ========================================================================
+
+fn http_get(url: String, headers = map_new()) {
+    return http_fetch(url, "GET", headers, "")
+}
+
+fn http_post(url: String, body_data, headers = map_new()) {
+    let mut h = headers
+    let mut body_str = ""
+    if type_of(body_data) == "Struct" || type_of(body_data) == "Map" || type_of(body_data) == "Array" {
+        body_str = json_stringify(body_data)
+        if !map_has(h, "Content-Type") {
+            h = map_set(h, "Content-Type", "application/json; charset=utf-8")
+        }
+    } else {
+        body_str = to_string(body_data)
+    }
+    return http_fetch(url, "POST", h, body_str)
+}
+
+fn http_put(url: String, body_data, headers = map_new()) {
+    let mut h = headers
+    let mut body_str = ""
+    if type_of(body_data) == "Struct" || type_of(body_data) == "Map" || type_of(body_data) == "Array" {
+        body_str = json_stringify(body_data)
+        if !map_has(h, "Content-Type") {
+            h = map_set(h, "Content-Type", "application/json; charset=utf-8")
+        }
+    } else {
+        body_str = to_string(body_data)
+    }
+    return http_fetch(url, "PUT", h, body_str)
+}
+
+fn http_delete(url: String, headers = map_new()) {
+    return http_fetch(url, "DELETE", headers, "")
+}
+
+fn http_client_builder(base_url: String, default_headers = map_new()) {
+    let mut client = map_new()
+    client = map_set(client, "base_url", base_url)
+    client = map_set(client, "headers", default_headers)
+    client = map_set(client, "timeout_ms", 5000)
+    return client
+}

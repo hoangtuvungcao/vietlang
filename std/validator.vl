@@ -87,3 +87,28 @@ fn validate(v, data_map) {
     let result = map_set(result, "errors", errors)
     return result
 }
+
+fn validator_validate(data_map, rules_map) {
+    let mut v = validator_new()
+    let fields = map_keys(rules_map)
+    for f in fields {
+        let rule_str = to_string(map_get(rules_map, f))
+        let rule_items = rule_str.split("|")
+        for r in rule_items {
+            if r == "required" {
+                v = validator_add_rule(v, f, "required")
+            } else if r == "email" {
+                v = validator_add_rule(v, f, "email")
+            } else if r.starts_with("min:") {
+                let parts = r.split(":")
+                let min_num = parse_int(parts[1])
+                v = validator_add_rule(v, f, "min_len", min_num)
+            }
+        }
+    }
+    let res = validate(v, data_map)
+    let mut out = map_new()
+    out = map_set(out, "valid", map_get(res, "is_valid"))
+    out = map_set(out, "errors", map_get(res, "errors"))
+    return out
+}

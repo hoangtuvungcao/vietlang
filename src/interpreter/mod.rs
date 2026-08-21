@@ -132,7 +132,10 @@ impl Interpreter {
             ("builtin_mysql_exec", Some(2)),
             ("builtin_mysql_execute", None),
             ("builtin_mysql_query", None),
-            ("builtin_mysql_close", Some(1)),
+            // HTTP & Network Clients
+            ("http_fetch", None),
+            ("csv_parse", Some(1)),
+            ("csv_stringify", Some(1)),
 
             // Concurrency
             ("spawn", None),
@@ -1331,6 +1334,10 @@ impl Interpreter {
             "mysql_execute" | "builtin_mysql_execute" => crate::stdlib::builtin_mysql_execute(args, span.line, span.column),
             "mysql_query" | "builtin_mysql_query" => crate::stdlib::builtin_mysql_query(args, span.line, span.column),
             "mysql_close" | "builtin_mysql_close" => crate::stdlib::builtin_mysql_close(args, span.line, span.column),
+
+            "http_fetch" | "builtin_http_fetch" => crate::stdlib::builtin_http_fetch(args, span.line, span.column),
+            "csv_parse" | "builtin_csv_parse" => crate::stdlib::builtin_csv_parse(args, span.line, span.column),
+            "csv_stringify" | "builtin_csv_stringify" => crate::stdlib::builtin_csv_stringify(args, span.line, span.column),
 
             _ => Err(VietError::runtime_error(
                 format!("Unknown builtin function: '{}'", name),

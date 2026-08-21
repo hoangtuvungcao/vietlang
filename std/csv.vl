@@ -1,0 +1,25 @@
+// ========================================================================
+// VietLang Standard Library — CSV Processing Engine (std.csv)
+// High-Performance CSV Parsing, Stringification, File Export & Reporting
+// ========================================================================
+
+fn csv_decode(csv_text: String) {
+    return csv_parse(csv_text)
+}
+
+fn csv_encode(rows: Array) -> String {
+    return csv_stringify(rows)
+}
+
+fn csv_read_file(file_path: String) {
+    if !file_exists(file_path) {
+        return []
+    }
+    let content = file_read(file_path)
+    return csv_parse(content)
+}
+
+fn csv_write_file(file_path: String, rows: Array) -> Bool {
+    let csv_content = csv_stringify(rows)
+    return file_write(file_path, csv_content)
+}

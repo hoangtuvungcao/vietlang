@@ -1,0 +1,71 @@
+// ========================================================================
+// VietLang Enterprise Framework & Ecosystem Verification Suite
+// Tests: HTTP Client, Redis, CSV Engine, ORM, Validator, Security & RBAC
+// ========================================================================
+
+import std.test
+import std.http_client
+import std.redis
+import std.csv
+import std.security
+import std.jwt
+import std.validator
+
+suite("VietLang Enterprise Backend Framework & Architecture Ecosystem")
+
+test("1. CSV Processing & Reporting Engine (std.csv)", fn() {
+    let sample_csv = "id,name,role,city\n1,Nguyen Van A,ADMIN,Ha Noi\n2,Tran Van B,FARMER,Soc Trang\n3,Le Thi C,CUSTOMER,Can Tho"
+    let parsed = csv_decode(sample_csv)
+    assert_eq(parsed.len(), 3, "CSV phai parse ra dung 3 ban ghi")
+    
+    let row1 = parsed[0]
+    assert_eq(map_get(row1, "name"), "Nguyen Van A", "Ten dong 1 phai khop")
+    assert_eq(map_get(row1, "role"), "ADMIN", "Role phai la ADMIN")
+
+    let re_encoded = csv_encode(parsed)
+    assert_true(re_encoded.contains("Nguyen Van A"), "CSV stringify phai chua ten")
+    assert_true(re_encoded.contains("Soc Trang"), "CSV stringify phai chua dia diem")
+})
+
+test("2. Redis Distributed Caching & RESP Engine (std.redis)", fn() {
+    let redis = redis_connect("127.0.0.1", 6379)
+    assert_eq(map_get(redis, "status"), "READY", "Redis client phai READY")
+
+    let session_data = map_set(map_set(map_new(), "user_id", 101), "role", "ADMIN")
+    let updated_redis = redis_set(redis, "session:user_101", session_data, 3600)
+    
+    let cached = redis_get(updated_redis, "session:user_101")
+    assert_true(cached != none, "Redis phai doc duoc cache")
+    assert_true(to_string(cached).contains("ADMIN"), "Cache phai chua dung session role")
+})
+
+test("3. Declarative Schema Validator (std.validator)", fn() {
+    let valid_payload = map_set(map_set(map_set(map_new(), "email", "admin@vietlang.dev"), "phone", "0901234567"), "age", 25)
+    
+    let mut rules = map_new()
+    rules = map_set(rules, "email", "required|email")
+    rules = map_set(rules, "phone", "required|min:10")
+    
+    let v_res = validator_validate(valid_payload, rules)
+    assert_true(map_get(v_res, "valid"), "Payload hop le phai pass validation")
+})
+
+test("4. Cryptographic Hashing, JWT Token Signing & Verification (std.security & std.jwt)", fn() {
+    let password = "SuperSecretPassword@2026"
+    let hash = security_hash_password(password)
+    assert_true(security_verify_password(password, hash), "Password hash phai verify dung")
+    assert_false(security_verify_password("WrongPassword", hash), "Password sai phai bi reject")
+
+    let secret = "VietLangSecretKey2026"
+    let payload = map_set(map_set(map_new(), "user_id", 999), "role", "ADMIN")
+    let token = jwt_sign(payload, secret)
+    assert_true(token.len() > 20, "Token phai co do dai hop le")
+
+    let verified = jwt_verify(token, secret)
+    assert_true(map_get(verified, "valid"), "JWT Token phai hop le")
+})
+
+test("5. Outgoing HTTP Microservice Client Builder (std.http_client)", fn() {
+    let client = http_client_builder("http://127.0.0.1:9090", map_set(map_new(), "X-Custom-Header", "VietLangClient"))
+    assert_eq(map_get(client, "base_url"), "http://127.0.0.1:9090", "Base URL phai khop")
+})

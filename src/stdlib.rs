@@ -637,6 +637,186 @@ pub fn builtin_base64_encode(args: &[Value], line: usize, col: usize) -> VietRes
     Ok(Value::String(result))
 }
 
+pub fn builtin_http_fetch(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("http_fetch() takes at least 1 argument (url)".into(), line, col));
+    }
+    let url_str = match &args[0] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("http_fetch() expects url string".into(), line, col)),
+    };
+    let method = if args.len() >= 2 {
+        match &args[1] {
+            Value::String(s) => s.to_uppercase(),
+            _ => "GET".to_string(),
+        }
+    } else {
+        "GET".to_string()
+    };
+    let headers_map: HashMap<String, String> = if args.len() >= 3 {
+        match &args[2] {
+            Value::Struct { fields, .. } => {
+                let mut map = HashMap::new();
+                for (k, v) in fields {
+                    map.insert(k.clone(), format!("{}", v));
+                }
+                map
+            }
+            _ => HashMap::new(),
+        }
+    } else {
+        HashMap::new()
+    };
+    let body = if args.len() >= 4 {
+        match &args[3] {
+            Value::String(s) => s.clone(),
+            _ => "".to_string(),
+        }
+    } else {
+        "".to_string()
+    };
+
+    let clean_url = url_str.trim();
+    let without_proto = if clean_url.starts_with("https://") {
+        clean_url.trim_start_matches("https://")
+    } else if clean_url.starts_with("http://") {
+        clean_url.trim_start_matches("http://")
+    } else {
+        clean_url
+    };
+
+    let mut parts = without_proto.splitn(2, '/');
+    let host_port = parts.next().unwrap_or("127.0.0.1");
+    let path = format!("/{}", parts.next().unwrap_or(""));
+
+    let mut hp_parts = host_port.split(':');
+    let host = hp_parts.next().unwrap_or("127.0.0.1");
+    let port: u16 = hp_parts.next().and_then(|p| p.parse().ok()).unwrap_or(80);
+    let query_str = "";
+
+    let addr = format!("{}:{}", host, port);
+    let timeout = std::time::Duration::from_millis(5000);
+
+    use std::net::ToSocketAddrs;
+    if let Ok(mut addrs) = addr.to_socket_addrs() {
+        if let Some(sock_addr) = addrs.next() {
+            if let Ok(mut stream) = std::net::TcpStream::connect_timeout(&sock_addr, timeout) {
+                let _ = stream.set_read_timeout(Some(timeout));
+                let mut req_raw = format!("{} {}{} HTTP/1.1\r\nHost: {}\r\nUser-Agent: VietLang-HttpClient/0.1.0\r\nConnection: close\r\n", method, path, query_str, host);
+                for (k, v) in &headers_map {
+                    req_raw.push_str(&format!("{}: {}\r\n", k, v));
+                }
+                if !body.is_empty() {
+                    req_raw.push_str(&format!("Content-Length: {}\r\n", body.len()));
+                }
+                req_raw.push_str("\r\n");
+                if !body.is_empty() {
+                    req_raw.push_str(&body);
+                }
+
+                let _ = stream.write_all(req_raw.as_bytes());
+                let _ = stream.flush();
+
+                let mut resp_data = Vec::new();
+                let _ = stream.read_to_end(&mut resp_data);
+                let resp_str = String::from_utf8_lossy(&resp_data).to_string();
+
+                let parts: Vec<&str> = resp_str.splitn(2, "\r\n\r\n").collect();
+                let header_part = parts.first().copied().unwrap_or("");
+                let body_part = if parts.len() > 1 { parts[1].to_string() } else { "".to_string() };
+
+                let mut status_code = 200;
+                if let Some(first_line) = header_part.lines().next() {
+                    let sp: Vec<&str> = first_line.split_whitespace().collect();
+                    if sp.len() >= 2 {
+                        status_code = sp[1].parse().unwrap_or(200);
+                    }
+                }
+
+                let mut res_map = HashMap::new();
+                res_map.insert("status_code".to_string(), Value::Int(status_code as i64));
+                res_map.insert("body".to_string(), Value::String(body_part));
+                res_map.insert("raw_headers".to_string(), Value::String(header_part.to_string()));
+                res_map.insert("url".to_string(), Value::String(url_str));
+
+                return Ok(Value::Struct {
+                    type_name: "HttpResponse".to_string(),
+                    fields: res_map,
+                });
+            }
+        }
+    }
+
+    Err(VietError::runtime_error(format!("HTTP connection failed to '{}'", url_str), line, col))
+}
+
+pub fn builtin_csv_parse(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("csv_parse() takes 1 argument (csv_string)".into(), line, col));
+    }
+    let csv_str = match &args[0] {
+        Value::String(s) => s.clone(),
+        _ => return Err(VietError::type_error("csv_parse() expects a string".into(), line, col)),
+    };
+    let mut lines = csv_str.lines();
+    let header_line = match lines.next() {
+        Some(h) => h,
+        None => return Ok(Value::Array(Vec::new())),
+    };
+    let headers: Vec<String> = header_line.split(',').map(|s| s.trim().trim_matches('"').to_string()).collect();
+
+    let mut result = Vec::new();
+    for l in lines {
+        let trimmed = l.trim();
+        if trimmed.is_empty() { continue; }
+        let fields: Vec<String> = trimmed.split(',').map(|s| s.trim().trim_matches('"').to_string()).collect();
+        let mut row_map = HashMap::new();
+        for (idx, h) in headers.iter().enumerate() {
+            let val = fields.get(idx).cloned().unwrap_or_default();
+            row_map.insert(h.clone(), Value::String(val));
+        }
+        result.push(Value::Struct {
+            type_name: "Map".to_string(),
+            fields: row_map,
+        });
+    }
+    Ok(Value::Array(result))
+}
+
+pub fn builtin_csv_stringify(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
+    if args.is_empty() {
+        return Err(VietError::runtime_error("csv_stringify() takes 1 argument (array_of_maps)".into(), line, col));
+    }
+    let arr = match &args[0] {
+        Value::Array(a) => a.clone(),
+        _ => return Err(VietError::type_error("csv_stringify() expects an array of Maps".into(), line, col)),
+    };
+    if arr.is_empty() {
+        return Ok(Value::String("".to_string()));
+    }
+    let headers: Vec<String> = if let Some(Value::Struct { fields, .. }) = arr.first() {
+        let mut h: Vec<String> = fields.keys().cloned().collect();
+        h.sort();
+        h
+    } else {
+        vec![]
+    };
+
+    let mut out = headers.join(",") + "\n";
+    for item in &arr {
+        if let Value::Struct { fields, .. } = item {
+            let row_strs: Vec<String> = headers.iter().map(|h| {
+                match fields.get(h) {
+                    Some(v) => format!("\"{}\"", format!("{}", v).replace('"', "\"\"")),
+                    None => "\"\"".to_string(),
+                }
+            }).collect();
+            out.push_str(&(row_strs.join(",") + "\n"));
+        }
+    }
+    Ok(Value::String(out))
+}
+
 pub fn builtin_random_int(args: &[Value], line: usize, col: usize) -> VietResult<Value> {
     if args.len() != 2 {
         return Err(VietError::runtime_error("random_int() takes 2 arguments (min, max)".into(), line, col));
