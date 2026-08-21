@@ -1,6 +1,6 @@
 // ========================================================================
 // Module: std.ws
-// Standard WebSocket Real-Time Communication Engine
+// Standard Opt-In WebSocket Real-Time Communication Engine
 // ========================================================================
 
 fn ws_init(endpoint: String = "/ws") {
@@ -18,4 +18,17 @@ fn ws_emit(event_type: String, data_map) {
 
 fn ws_send_text(message: String) {
     return ws_broadcast(message)
+}
+
+fn ws_room_new(name: String = "general") {
+    let mut r = map_new()
+    r = map_set(r, "name", name)
+    r = map_set(r, "clients", [])
+    return r
+}
+
+fn ws_room_join(room, client_id: String) {
+    let clients = map_get(room, "clients")
+    let new_clients = push(clients, client_id)
+    return map_set(room, "clients", new_clients)
 }
